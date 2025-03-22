@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/81aa7404-9210-44d4-8be1-fe2fc0a9a977)# ВСети - Серверная часть
+# ВСети - Серверная часть
 
 Серверная часть социальной сети "ВСети", реализованная с использованием Node.js, Express, TypeScript и PostgreSQL.
 
