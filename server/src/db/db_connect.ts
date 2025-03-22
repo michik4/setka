@@ -13,11 +13,11 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USERNAME || "postgres",
     password: process.env.DB_PASSWORD || "postgres",
     database: process.env.DB_NAME || "vkclone",
-    synchronize: process.env.NODE_ENV !== "production", // Автоматическая синхронизация схемы только в development
-    logging: process.env.NODE_ENV !== "production", // Логирование SQL запросов только в development
+    synchronize: process.env.NODE_ENV === "development", // Включаем синхронизацию только в режиме разработки
+    logging: process.env.NODE_ENV !== "production",
     entities: [path.join(__dirname, "..", "entities", "*.entity.{ts,js}")],
-    migrations: [path.join(__dirname, "..", "migrations", "*.{ts,js}")],
-    subscribers: [path.join(__dirname, "..", "subscribers", "*.subscriber.{ts,js}")],
+    migrations: [path.join(__dirname, "migrations", "*.{ts,js}")],
+    migrationsTableName: "migrations"
 })
 
 // Функция инициализации подключения

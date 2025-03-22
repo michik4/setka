@@ -34,6 +34,18 @@ export class UserController {
         }
     }
 
+    async getUserByNickname(req: Request, res: Response) {
+        try {
+            const user = await this.userService.getUserByNickname(req.params.nickname)
+            if (!user) {
+                return res.status(404).json({ message: 'Пользователь не найден' })
+            }
+            res.json(user)
+        } catch (error) {
+            res.status(500).json({ message: 'Ошибка при поиске пользователя', error })
+        }
+    }
+
     async updateUser(req: Request, res: Response) {
         try {
             const user = await this.userService.updateUser(parseInt(req.params.id), req.body)

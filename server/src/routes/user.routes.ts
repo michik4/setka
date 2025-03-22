@@ -16,6 +16,9 @@ router.post('/random', (req, res) => userController.createRandomUser(req, res))
 // Получение пользователя по email
 router.get('/email/:email', (req, res) => userController.getUserByEmail(req, res))
 
+// Получение пользователя по nickname
+router.get('/nickname/:nickname', (req, res) => userController.getUserByNickname(req, res))
+
 // Обновление пользователя
 router.put('/:id', (req, res) => userController.updateUser(req, res))
 

@@ -18,6 +18,10 @@ export class UserService {
         return await this.userRepository.findOne({ where: { email } })
     }
 
+    async getUserByNickname(nickname: string) {
+        return await this.userRepository.findOne({ where: { nickname } })
+    }
+
     async getUserById(id: number) {
         return await this.userRepository.findOne({ where: { id } })
     }
@@ -36,10 +40,12 @@ export class UserService {
     }
 
     async createRandomUser() {
+        const randomNum = Math.floor(Math.random() * 1000)
         const randomUser = {
-            firstName: `User${Math.floor(Math.random() * 1000)}`,
-            lastName: `LastName${Math.floor(Math.random() * 1000)}`,
-            email: `user${Math.floor(Math.random() * 1000)}@example.com`,
+            firstName: `User${randomNum}`,
+            lastName: `LastName${randomNum}`,
+            nickname: `user${randomNum}`,
+            email: `user${randomNum}@example.com`,
             password: Math.random().toString(36).slice(-8)  
         }
         return await this.createUser(randomUser)

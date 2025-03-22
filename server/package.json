@@ -9,7 +9,11 @@
     "build": "tsc",
     "test": "jest --config jest.config.ts",
     "test:watch": "jest --config jest.config.ts --watch",
-    "test:coverage": "jest --config jest.config.ts --coverage"
+    "test:coverage": "jest --config jest.config.ts --coverage",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:generate": "npm run typeorm migration:generate -d src/db/db_connect.ts",
+    "migration:run": "npm run typeorm migration:run -d src/db/db_connect.ts",
+    "migration:revert": "npm run typeorm migration:revert -d src/db/db_connect.ts"
   },
   "repository": {
     "type": "git",

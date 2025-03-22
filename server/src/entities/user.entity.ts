@@ -11,6 +11,9 @@ export class User {
     @Column({ length: 100 })
     lastName: string
 
+    @Column({ length: 50, unique: true, nullable: true }) // Временно делаем nullable
+    nickname: string
+
     @Column({ unique: true })
     email: string
 

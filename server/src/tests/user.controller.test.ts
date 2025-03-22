@@ -34,7 +34,8 @@ describe('UserController', () => {
                     email: 'test@example.com',
                     password: 'password123',
                     firstName: 'Test',
-                    lastName: 'User'
+                    lastName: 'User',
+                    nickname: 'testuser'
                 }
             };
         });
@@ -115,6 +116,7 @@ describe('UserController', () => {
                 email: 'test@example.com',
                 firstName: 'Test',
                 lastName: 'User',
+                nickname: 'testuser',
                 password: 'hashedPassword',
                 createdAt: new Date(),
                 updatedAt: new Date()
@@ -131,6 +133,46 @@ describe('UserController', () => {
             mockUserService.getUserByEmail.mockResolvedValue(null);
 
             await userController.getUserByEmail(mockRequest as Request, mockResponse as Response);
+
+            expect(mockResponse.status).toHaveBeenCalledWith(404);
+            expect(mockResponse.json).toHaveBeenCalledWith({
+                message: 'Пользователь не найден'
+            });
+        });
+    });
+
+    describe('getUserByNickname', () => {
+        beforeEach(() => {
+            mockRequest = {
+                params: {
+                    nickname: 'testuser'
+                }
+            };
+        });
+
+        it('должен найти пользователя по nickname', async () => {
+            const mockUser = {
+                id: 1,
+                email: 'test@example.com',
+                firstName: 'Test',
+                lastName: 'User',
+                nickname: 'testuser',
+                password: 'hashedPassword',
+                createdAt: new Date(),
+                updatedAt: new Date()
+            } as User;
+
+            mockUserService.getUserByNickname.mockResolvedValue(mockUser);
+
+            await userController.getUserByNickname(mockRequest as Request, mockResponse as Response);
+
+            expect(mockResponse.json).toHaveBeenCalledWith(mockUser);
+        });
+
+        it('должен вернуть 404 если пользователь не найден', async () => {
+            mockUserService.getUserByNickname.mockResolvedValue(null);
+
+            await userController.getUserByNickname(mockRequest as Request, mockResponse as Response);
 
             expect(mockResponse.status).toHaveBeenCalledWith(404);
             expect(mockResponse.json).toHaveBeenCalledWith({
