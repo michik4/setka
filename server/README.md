@@ -207,6 +207,8 @@ npm run test:watch
 
 ### Покрытие кода
 
+![image](https://github.com/user-attachments/assets/1f765d24-e96e-47ae-9634-69dc583e6b73)
+
 - Общее покрытие: 71.83%
 - Покрытие контроллеров: 83.08%
 - Покрытие сущностей: 87.03%
