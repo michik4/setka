@@ -1,4 +1,4 @@
-# ВСети - Серверная часть
+![image](https://github.com/user-attachments/assets/81aa7404-9210-44d4-8be1-fe2fc0a9a977)# ВСети - Серверная часть
 
 Серверная часть социальной сети "ВСети", реализованная с использованием Node.js, Express, TypeScript и PostgreSQL.
 
@@ -206,6 +206,8 @@ npm run test:watch
   - Покрытие: 85%
 
 ### Покрытие кода
+
+![image](https://github.com/user-attachments/assets/1f765d24-e96e-47ae-9634-69dc583e6b73)
 
 - Общее покрытие: 71.83%
 - Покрытие контроллеров: 83.08%
