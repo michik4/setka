@@ -122,6 +122,37 @@ POST /api/chats/1/messages
 }
 ```
 
+### Фотографии
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| POST | `/api/photos` | Загрузка фотографии |
+| GET | `/api/photos/user/:userId` | Получение фотографий пользователя |
+| DELETE | `/api/photos/:id` | Удаление фотографии |
+
+#### Пример загрузки фотографии:
+```bash
+# Используя curl
+curl -X POST \
+  -F "photo=@path/to/photo.jpg" \
+  -F "userId=1" \
+  -F "description=Моя фотография" \
+  http://localhost:3000/api/photos
+
+# Используя HTML форму
+<form method="post" enctype="multipart/form-data" action="/api/photos">
+  <input type="file" name="photo" accept="image/jpeg,image/png,image/gif">
+  <input type="hidden" name="userId" value="1">
+  <input type="text" name="description" placeholder="Описание">
+  <button type="submit">Загрузить</button>
+</form>
+```
+
+Ограничения для фотографий:
+- Максимальный размер: 5MB
+- Поддерживаемые форматы: JPEG, PNG, GIF
+- Файлы сохраняются в директории: `uploads/photos`
+
 ## WebSocket События
 
 | Событие | Направление | Данные | Описание |
@@ -204,6 +235,13 @@ npm run test:watch
   - Отправка сообщений
   - Управление участниками
   - Покрытие: 85%
+
+- `photo.controller.test.ts` - тесты управления фотографиями
+  - Загрузка фотографий
+  - Получение фотографий пользователя
+  - Удаление фотографий
+  - Обработка ошибок
+  - Покрытие: 82.5%
 
 ### Покрытие кода
 

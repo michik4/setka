@@ -46,7 +46,8 @@ export class UserService {
             lastName: `LastName${randomNum}`,
             nickname: `user${randomNum}`,
             email: `user${randomNum}@example.com`,
-            password: Math.random().toString(36).slice(-8)  
+            password: Math.random().toString(36).slice(-8),
+            photos: []
         }
         return await this.createUser(randomUser)
     }
