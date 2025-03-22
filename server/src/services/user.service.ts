@@ -14,8 +14,12 @@ export class UserService {
         return await this.userRepository.save(user)
     }
 
-    async findUserByEmail(email: string) {
+    async getUserByEmail(email: string) {
         return await this.userRepository.findOne({ where: { email } })
+    }
+
+    async getUserById(id: number) {
+        return await this.userRepository.findOne({ where: { id } })
     }
 
     async getAllUsers() {

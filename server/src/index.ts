@@ -2,9 +2,10 @@ import express from 'express'
 import { createServer } from 'http'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import cookieParser from 'cookie-parser'
 import { AppDataSource } from './db/db_connect'
 import routes from './routes/routes'
-import { WebSocketService } from './services/WebSocketService'
+import { WebSocketService } from './services/WebSocket.service'
 
 dotenv.config()
 
@@ -12,8 +13,12 @@ const app = express()
 const server = createServer(app)
 
 // Middleware
-app.use(cors())
+app.use(cors({
+  credentials: true,
+  origin: process.env.CLIENT_URL || 'http://localhost:3000'
+}))
 app.use(express.json())
+app.use(cookieParser())
 
 // Подключение к базе данных
 AppDataSource.initialize()

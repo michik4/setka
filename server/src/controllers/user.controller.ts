@@ -24,7 +24,7 @@ export class UserController {
 
     async getUserByEmail(req: Request, res: Response) {
         try {
-            const user = await this.userService.findUserByEmail(req.params.email)
+            const user = await this.userService.getUserByEmail(req.params.email)
             if (!user) {
                 return res.status(404).json({ message: 'Пользователь не найден' })
             }
