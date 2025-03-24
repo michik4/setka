@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm"
 import { Photo } from "./photo.entity"
+import { Post } from "./post.entity"
 
 @Entity('users')
 export class User {
@@ -29,4 +30,7 @@ export class User {
 
     @OneToMany(() => Photo, photo => photo.user)
     photos: Photo[]
+
+    @OneToMany(() => Post, post => post.author)
+    posts: Post[]
 } 

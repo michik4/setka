@@ -1,21 +1,51 @@
 import { AppDataSource } from "../db/db_connect"
 import { User } from "../entities/user.entity"
-import { hash } from "bcrypt"
+import { hash, genSalt } from "bcrypt"
 
 export class UserService {
     private userRepository = AppDataSource.getRepository(User)
 
     async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) {
-        const hashedPassword = await hash(userData.password, 10)
+        console.log('Создание пользователя:', { email: userData.email });
+        
+        // Проверяем, не является ли пароль уже хешем bcrypt
+        const isBcryptHash = /^\$2[ayb]\$[0-9]{2}\$[A-Za-z0-9./]{53}$/.test(userData.password);
+        
+        let hashedPassword;
+        if (isBcryptHash) {
+            console.log('Пароль уже захеширован, пропускаем хеширование');
+            hashedPassword = userData.password;
+        } else {
+            console.log('Хешируем пароль...');
+            const salt = await genSalt(10);
+            hashedPassword = await hash(userData.password, salt);
+        }
+        
+        console.log('Длина пароля:', { 
+            originalLength: userData.password.length,
+            finalLength: hashedPassword.length 
+        });
+        
         const user = this.userRepository.create({
             ...userData,
             password: hashedPassword
-        })
-        return await this.userRepository.save(user)
+        });
+        
+        const savedUser = await this.userRepository.save(user);
+        console.log('Пользователь сохранен:', { 
+            id: savedUser.id, 
+            email: savedUser.email 
+        });
+        
+        return savedUser;
     }
 
     async getUserByEmail(email: string) {
-        return await this.userRepository.findOne({ where: { email } })
+        return await this.userRepository
+            .createQueryBuilder('user')
+            .addSelect('user.password')
+            .where('user.email = :email', { email })
+            .getOne();
     }
 
     async getUserByNickname(nickname: string) {
@@ -23,7 +53,11 @@ export class UserService {
     }
 
     async getUserById(id: number) {
-        return await this.userRepository.findOne({ where: { id } })
+        return await this.userRepository
+            .createQueryBuilder('user')
+            .addSelect('user.password')
+            .where('user.id = :id', { id })
+            .getOne();
     }
 
     async getAllUsers() {
@@ -31,6 +65,9 @@ export class UserService {
     }
 
     async updateUser(id: number, userData: Partial<User>) {
+        if (userData.password) {
+            userData.password = await hash(userData.password, 10)
+        }
         await this.userRepository.update(id, userData)
         return await this.userRepository.findOne({ where: { id } })
     }
@@ -47,7 +84,8 @@ export class UserService {
             nickname: `user${randomNum}`,
             email: `user${randomNum}@example.com`,
             password: Math.random().toString(36).slice(-8),
-            photos: []
+            photos: [],
+            posts: []
         }
         return await this.createUser(randomUser)
     }

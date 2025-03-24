@@ -80,6 +80,25 @@ export class PhotoController {
         }
     }
 
+    async getPhotoById(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const photo = await this.photoRepository.findOne({
+                where: { id: parseInt(id) },
+                relations: ['user']
+            });
+
+            if (!photo) {
+                return res.status(404).json({ message: 'Photo not found' });
+            }
+
+            return res.json(photo);
+        } catch (error) {
+            console.error('Error getting photo:', error);
+            return res.status(500).json({ message: 'Error getting photo' });
+        }
+    }
+
     async deletePhoto(req: Request, res: Response) {
         try {
             const { id } = req.params;

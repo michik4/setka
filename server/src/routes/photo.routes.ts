@@ -7,6 +7,9 @@ const photoController = new PhotoController();
 // Загрузка фотографии
 router.post('/', upload.single('photo'), photoController.uploadPhoto.bind(photoController));
 
+// Получение фотографии по ID
+router.get('/:id', photoController.getPhotoById.bind(photoController));
+
 // Получение фотографий пользователя
 router.get('/user/:userId', photoController.getUserPhotos.bind(photoController));
 

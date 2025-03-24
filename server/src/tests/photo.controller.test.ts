@@ -105,6 +105,23 @@ describe('PhotoController', () => {
         });
     });
 
+    describe('getPhotoById', () => {
+        it('should return 404 when photo not found', async () => {
+            mockRequest = {
+                params: {
+                    id: '999'
+                }
+            };
+
+            await photoController.getPhotoById(mockRequest as Request, mockResponse as Response);
+
+            expect(mockResponse.status).toHaveBeenCalledWith(404);
+            expect(mockResponse.json).toHaveBeenCalledWith({
+                message: 'Photo not found'
+            });
+        });
+    });
+
     describe('deletePhoto', () => {
         it('should return 404 when photo not found', async () => {
             mockRequest = {

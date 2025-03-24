@@ -2,6 +2,8 @@
 
 Серверная часть социальной сети "ВСети", реализованная с использованием Node.js, Express, TypeScript и PostgreSQL.
 
+> Потом нормальную документацию в виде html сделаю
+
 ## Технологии
 
 - Node.js
@@ -127,8 +129,33 @@ POST /api/chats/1/messages
 | Метод | URL | Описание |
 |-------|-----|----------|
 | POST | `/api/photos` | Загрузка фотографии |
+| GET | `/api/photos/:id` | Получение фотографии по ID |
 | GET | `/api/photos/user/:userId` | Получение фотографий пользователя |
 | DELETE | `/api/photos/:id` | Удаление фотографии |
+
+#### Пример получения фотографии по ID:
+```bash
+GET /api/photos/1
+
+Ответ:
+{
+    "id": 1,
+    "filename": "1711073000000-123456789.jpg",
+    "originalName": "my-photo.jpg",
+    "mimetype": "image/jpeg",
+    "size": 1024567,
+    "path": "uploads/photos/1711073000000-123456789.jpg",
+    "userId": 1,
+    "description": "Моя фотография",
+    "createdAt": "2024-03-22T10:30:00.000Z",
+    "user": {
+        "id": 1,
+        "firstName": "Иван",
+        "lastName": "Иванов",
+        // ... другие поля пользователя
+    }
+}
+```
 
 #### Пример загрузки фотографии:
 ```bash
@@ -152,6 +179,171 @@ curl -X POST \
 - Максимальный размер: 5MB
 - Поддерживаемые форматы: JPEG, PNG, GIF
 - Файлы сохраняются в директории: `uploads/photos`
+
+### Посты
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/posts` | Получение всех постов |
+| GET | `/api/posts/:id` | Получение поста по ID |
+| GET | `/api/posts/user/:userId` | Получение постов пользователя |
+| POST | `/api/posts` | Создание поста |
+| PUT | `/api/posts/:id` | Обновление поста |
+| DELETE | `/api/posts/:id` | Удаление поста |
+
+#### Структура поста:
+```typescript
+interface Post {
+    id: number;              // ID поста
+    content: string;         // Текст поста
+    authorId: number;        // ID автора
+    author: User;           // Объект автора
+    photos: Photo[];        // Массив прикрепленных фотографий
+    likesCount: number;     // Количество лайков
+    commentsCount: number;  // Количество комментариев
+    sharesCount: number;    // Количество репостов
+    createdAt: Date;       // Дата создания
+    updatedAt: Date;       // Дата обновления
+}
+```
+
+#### Примеры запросов:
+
+1. Получение всех постов:
+```bash
+GET /api/posts
+
+Ответ:
+[
+    {
+        "id": 1,
+        "content": "Привет, мир!",
+        "authorId": 1,
+        "author": {
+            "id": 1,
+            "firstName": "Иван",
+            "lastName": "Иванов"
+        },
+        "photos": [
+            {
+                "id": 1,
+                "filename": "photo1.jpg",
+                "path": "/uploads/photos/photo1.jpg"
+            }
+        ],
+        "likesCount": 5,
+        "commentsCount": 2,
+        "sharesCount": 1,
+        "createdAt": "2024-03-22T10:30:00.000Z",
+        "updatedAt": "2024-03-22T10:30:00.000Z"
+    }
+]
+```
+
+2. Создание нового поста:
+```bash
+POST /api/posts
+Content-Type: application/json
+
+{
+    "content": "Мой новый пост!",
+    "authorId": 1,
+    "photoIds": [1, 2]  // ID прикрепляемых фотографий
+}
+
+Ответ (201 Created):
+{
+    "id": 2,
+    "content": "Мой новый пост!",
+    "authorId": 1,
+    "author": {
+        "id": 1,
+        "firstName": "Иван",
+        "lastName": "Иванов"
+    },
+    "photos": [
+        {
+            "id": 1,
+            "filename": "photo1.jpg",
+            "path": "/uploads/photos/photo1.jpg"
+        },
+        {
+            "id": 2,
+            "filename": "photo2.jpg",
+            "path": "/uploads/photos/photo2.jpg"
+        }
+    ],
+    "likesCount": 0,
+    "commentsCount": 0,
+    "sharesCount": 0,
+    "createdAt": "2024-03-22T11:00:00.000Z",
+    "updatedAt": "2024-03-22T11:00:00.000Z"
+}
+```
+
+3. Обновление поста:
+```bash
+PUT /api/posts/2
+Content-Type: application/json
+
+{
+    "content": "Обновленный текст поста",
+    "photoIds": [3]  // Новый список фотографий
+}
+
+Ответ:
+{
+    "id": 2,
+    "content": "Обновленный текст поста",
+    "authorId": 1,
+    "photos": [
+        {
+            "id": 3,
+            "filename": "photo3.jpg",
+            "path": "/uploads/photos/photo3.jpg"
+        }
+    ],
+    // ... остальные поля
+}
+```
+
+4. Получение постов пользователя:
+```bash
+GET /api/posts/user/1
+
+Ответ:
+[
+    {
+        "id": 1,
+        "content": "Первый пост",
+        "authorId": 1,
+        // ... остальные поля
+    },
+    {
+        "id": 2,
+        "content": "Второй пост",
+        "authorId": 1,
+        // ... остальные поля
+    }
+]
+```
+
+#### Коды ответов:
+
+| Код | Описание |
+|-----|----------|
+| 200 | Успешное выполнение запроса |
+| 201 | Пост успешно создан |
+| 204 | Пост успешно удален |
+| 404 | Пост не найден |
+| 500 | Ошибка сервера |
+
+#### Особенности и ограничения:
+- Посты сортируются по дате создания (сначала новые)
+- При получении постов автоматически подгружаются связанные данные (автор и фотографии)
+- При создании поста можно прикрепить существующие фотографии через массив `photoIds`
+- При обновлении поста список фотографий полностью заменяется на новый
+- При удалении поста связанные фотографии не удаляются
 
 ## WebSocket События
 

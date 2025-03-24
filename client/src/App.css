@@ -1,0 +1,21 @@
+.app {
+    min-height: 100vh;
+    background-color: #edeef0;
+}
+
+.main {
+    min-height: calc(100vh - 56px);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .main {
+        padding: 0 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main {
+        padding: 0 8px;
+    }
+} 
