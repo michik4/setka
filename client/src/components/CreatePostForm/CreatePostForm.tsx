@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { Photo } from '../../types/post.types';
 import { ImageSelector } from '../ImageSelector/ImageSelector';
 import { ImageUploader } from '../ImageUploader/ImageUploader';
+import { PhotoGrid } from '../PhotoGrid/PhotoGrid';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './CreatePostForm.module.css';
-import { API_URL } from '../../config';
+import { api } from '../../utils/api';
 
 interface CreatePostFormProps {
     onSuccess?: () => void;
+    wallOwnerId?: number;
 }
 
-export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess }) => {
+export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallOwnerId }) => {
     const { user } = useAuth();
     const [content, setContent] = useState('');
     const [selectedImages, setSelectedImages] = useState<Photo[]>([]);
@@ -24,6 +26,10 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess }) => 
 
     const handleUploadError = (errorMessage: string) => {
         setError(errorMessage);
+    };
+
+    const handlePhotoDelete = async (photo: Photo) => {
+        setSelectedImages(prev => prev.filter(p => p.id !== photo.id));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -43,35 +49,15 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess }) => 
         setError(null);
 
         try {
-            console.log('Создание поста:', {
+            const endpoint = wallOwnerId ? '/wall' : '/posts';
+            const body = {
                 content: content.trim(),
                 photoIds: selectedImages.map(img => img.id),
-                authorId: user.id
-            });
+                authorId: user.id,
+                ...(wallOwnerId && { wallOwnerId })
+            };
 
-            const response = await fetch(`${API_URL}/posts`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    content: content.trim(),
-                    photoIds: selectedImages.map(img => img.id),
-                    authorId: user.id
-                })
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Ответ сервера при ошибке:', errorText);
-                throw new Error('Не удалось создать пост');
-            }
-
-            const data = await response.json();
-            console.log('Пост успешно создан:', data);
-
+            await api.post(endpoint, body);
             setContent('');
             setSelectedImages([]);
             onSuccess?.();
@@ -97,20 +83,32 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess }) => 
                 className={styles.textarea}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Что у вас нового?"
+                placeholder={wallOwnerId ? "Напишите что-нибудь на стене..." : "Что у вас нового?"}
                 rows={4}
             />
 
-            <ImageUploader
-                onImageUploaded={handleImageUploaded}
-                onError={handleUploadError}
-            />
+            {selectedImages.length > 0 && (
+                <div className={styles.preview}>
+                    <PhotoGrid 
+                        photos={selectedImages}
+                        onPhotoDelete={handlePhotoDelete}
+                        canDelete={true}
+                    />
+                </div>
+            )}
 
-            <ImageSelector
-                userId={user.id}
-                selectedImages={selectedImages}
-                onImagesChange={setSelectedImages}
-            />
+            <div className={styles.mediaSection}>
+                <ImageUploader
+                    onImageUploaded={handleImageUploaded}
+                    onError={handleUploadError}
+                />
+
+                <ImageSelector
+                    userId={user.id}
+                    selectedImages={selectedImages}
+                    onImagesChange={setSelectedImages}
+                />
+            </div>
 
             {error && (
                 <div className={styles.error}>

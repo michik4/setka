@@ -3,6 +3,9 @@ import { Server as HttpServer } from 'http';
 import { UserService } from './user.service';
 import bcrypt from 'bcrypt';
 import { compare } from 'bcrypt';
+import { AppDataSource } from '../db/db_connect';
+import { User } from '../entities/user.entity';
+import { Photo } from '../entities/photo.entity';
 
 export class WebSocketService {
   private io: Server;
@@ -12,12 +15,9 @@ export class WebSocketService {
   constructor(server: HttpServer) {
     this.io = new Server(server, {
       cors: {
-        origin: ['http://localhost:3000', 'http://localhost:3001'],
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        credentials: true,
-        allowedHeaders: ['Content-Type', 'Authorization'],
-        exposedHeaders: ['Content-Length', 'X-Requested-With', 'Access-Control-Allow-Origin'],
-        maxAge: 86400
+        origin: process.env.CLIENT_URL || 'http://localhost:3000',
+        methods: ['GET', 'POST'],
+        credentials: true
       },
       transports: ['websocket'],
       allowUpgrades: false,
@@ -53,7 +53,10 @@ export class WebSocketService {
       console.log('Метод запроса:', req.method);
     });
 
-    this.userService = new UserService();
+    this.userService = new UserService(
+      AppDataSource.getRepository(User),
+      AppDataSource.getRepository(Photo)
+    );
     this.setupSocketHandlers();
   }
 
@@ -330,5 +333,10 @@ export class WebSocketService {
     if (socketId) {
       this.io.to(socketId).emit('notification', notification);
     }
+  }
+
+  // Метод для отправки обновления всем подключенным клиентам
+  public broadcastUpdate(update: any) {
+    this.io.emit('update', update);
   }
 } 

@@ -1,22 +1,19 @@
 .photoGrid {
     display: grid;
     gap: 2px;
-    margin: 8px 0;
+    margin: 10px 0;
     border-radius: 8px;
     overflow: hidden;
+    max-height: 80vh;
+    max-width: 100%; /* Используем всю доступную ширину поста */
 }
 
 .photoWrapper {
     position: relative;
-    cursor: pointer;
     overflow: hidden;
+    cursor: pointer;
     background-color: #f0f2f5;
-}
-
-.photoWrapper::before {
-    content: '';
-    display: block;
-    padding-top: 100%; /* Соотношение сторон 1:1 по умолчанию */
+    padding-bottom: 75%; /* Соотношение 4:3 */
 }
 
 .photo {
@@ -26,7 +23,18 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
+    transition: transform 0.2s ease;
+}
+
+.photoWrapper:hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s ease;
 }
 
 .photoWrapper:hover .photo {
@@ -38,8 +46,9 @@
     grid-template-columns: 1fr;
 }
 
-.singlePhoto .photoWrapper::before {
-    padding-top: 56.25%; /* Соотношение сторон 16:9 */
+.singlePhoto .photoWrapper {
+    padding-bottom: 56.25%; /* Соотношение 16:9 */
+    max-height: 450px;
 }
 
 /* Две фотографии */
@@ -47,56 +56,99 @@
     grid-template-columns: 1fr 1fr;
 }
 
-.twoPhotos .photoWrapper::before {
-    padding-top: 100%; /* Квадратные фото */
-}
-
 /* Три фотографии */
 .threePhotos {
     grid-template-columns: 2fr 1fr;
-    grid-template-rows: repeat(2, 1fr);
+    grid-template-rows: 1fr 1fr;
+    max-height: 500px;
 }
 
 .threePhotos .firstPhoto {
-    grid-row: span 2;
-}
-
-.threePhotos .firstPhoto::before {
-    padding-top: calc(200% + 2px); /* Учитываем gap */
+    grid-row: 1 / span 2;
 }
 
 /* Четыре фотографии */
 .fourPhotos {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(2, 1fr);
+    max-height: 550px;
 }
 
 /* Пять и более фотографий */
 .manyPhotos {
     grid-template-columns: repeat(3, 1fr);
-    grid-auto-rows: 1fr;
+    grid-template-rows: repeat(2, 1fr);
+    max-height: 600px;
+}
+
+.manyPhotos .firstPhoto {
+    grid-column: 1 / span 2;
+    grid-row: 1 / span 2;
+}
+
+.manyPhotos .photoWrapper {
+    aspect-ratio: 1;
 }
 
 .manyPhotos .photoWrapper:nth-child(n+7) {
     display: none; /* Скрываем фотографии после шестой */
 }
 
+/* Меню фотографии */
+.photoMenu {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: none;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.photoWrapper:hover .photoMenu {
+    display: block;
+}
+
+.menuButton {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background-color 0.2s;
+}
+
+.menuButton:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.deleteButton {
+    color: #ff5c5c;
+}
+
 /* Адаптивность для мобильных устройств */
 @media (max-width: 768px) {
     .photoGrid {
+        max-width: 100%;
         gap: 1px;
     }
 
+    .photoWrapper {
+        max-height: 350px;
+    }
+
+    .singlePhoto .photoWrapper {
+        max-height: 300px;
+    }
+
     .threePhotos,
+    .fourPhotos,
     .manyPhotos {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .threePhotos .firstPhoto {
-        grid-row: auto;
-    }
-
-    .threePhotos .firstPhoto::before {
-        padding-top: 100%;
+        max-height: 400px;
     }
 } 

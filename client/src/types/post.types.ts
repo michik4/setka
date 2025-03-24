@@ -16,15 +16,26 @@ export interface Photo {
     description?: string;
 }
 
+export interface Author {
+    id: number;
+    firstName: string;
+    lastName: string;
+    nickname?: string;
+    email: string;
+    avatar?: Photo;
+}
+
 export interface Post {
     id: number;
     content: string;
+    author: Author;
     authorId: number;
-    author: User;
+    wallOwnerId?: number;
     photos: Photo[];
     likesCount: number;
     commentsCount: number;
     sharesCount: number;
     createdAt: string;
     updatedAt: string;
+    viewsCount: number;
 } 

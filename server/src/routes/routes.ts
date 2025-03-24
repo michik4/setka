@@ -5,6 +5,7 @@ import userRoutes from './user.routes';
 import chatRoutes from './chat.routes';
 import authRoutes from './auth.routes';
 import photoRoutes from './photo.routes';
+import wallRoutes from './wall.routes';
 
 export const initializeRoutes = (app: Express) => {
     const router = Router();
@@ -32,6 +33,9 @@ export const initializeRoutes = (app: Express) => {
     
     router.use('/photos', photoRoutes);
     console.log('Подключены маршруты фотографий');
+
+    router.use('/wall', wallRoutes);
+    console.log('Подключены маршруты стены');
 
     // Подключаем все маршруты под префиксом /api
     app.use('/api', router);

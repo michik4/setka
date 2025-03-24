@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, ManyToMany, JoinTable } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, ManyToMany, JoinTable, OneToMany } from "typeorm";
 import { User } from "./user.entity";
 import { Photo } from "./photo.entity";
+import { WallPost } from "./wall.entity";
 
 @Entity("posts")
 export class Post {
@@ -15,6 +16,9 @@ export class Post {
 
     @Column()
     authorId: number;
+
+    @OneToMany(() => WallPost, wallPost => wallPost.author)
+    wallPosts: WallPost[];
 
     @ManyToMany(() => Photo)
     @JoinTable({

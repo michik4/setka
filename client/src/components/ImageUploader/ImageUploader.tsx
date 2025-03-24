@@ -14,6 +14,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, o
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const createPreview = (file: File) => {
@@ -24,25 +25,19 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, o
         reader.readAsDataURL(file);
     };
 
-    const handleUpload = async (file: File) => {
-        if (!user) {
-            onError('Необходимо войти в систему');
+    const handleUpload = async () => {
+        if (!user || !selectedFile) {
+            onError('Необходимо войти в систему и выбрать файл');
             return;
         }
-
-        if (!file.type.startsWith('image/')) {
-            onError('Можно загружать только изображения');
-            return;
-        }
-
-        createPreview(file);
-        const formData = new FormData();
-        formData.append('photo', file);
-        formData.append('userId', user.id.toString());
 
         setIsUploading(true);
 
         try {
+            const formData = new FormData();
+            formData.append('photo', selectedFile);
+            formData.append('userId', user.id.toString());
+
             const response = await fetch(`${API_URL}/photos`, {
                 method: 'POST',
                 credentials: 'include',
@@ -58,13 +53,23 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, o
             const photo = await response.json();
             console.log('Изображение успешно загружено:', photo);
             onImageUploaded(photo);
-            setPreviewUrl(null); // Очищаем превью после успешной загрузки
+            handleRemovePreview();
         } catch (err) {
             console.error('Ошибка загрузки:', err);
             onError(err instanceof Error ? err.message : 'Ошибка при загрузке изображения');
         } finally {
             setIsUploading(false);
         }
+    };
+
+    const handleFileSelect = (file: File) => {
+        if (!file.type.startsWith('image/')) {
+            onError('Можно загружать только изображения');
+            return;
+        }
+
+        setSelectedFile(file);
+        createPreview(file);
     };
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -77,20 +82,20 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, o
         setIsDragging(false);
     };
 
-    const handleDrop = async (e: React.DragEvent) => {
+    const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
 
         const file = e.dataTransfer.files[0];
         if (file) {
-            await handleUpload(file);
+            handleFileSelect(file);
         }
     };
 
-    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            await handleUpload(file);
+            handleFileSelect(file);
         }
     };
 
@@ -100,6 +105,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, o
 
     const handleRemovePreview = () => {
         setPreviewUrl(null);
+        setSelectedFile(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -110,18 +116,28 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, o
             {previewUrl ? (
                 <div className={styles.previewContainer}>
                     <img src={previewUrl} alt="Предпросмотр" className={styles.preview} />
-                    <button 
-                        type="button" 
-                        className={styles.removeButton}
-                        onClick={handleRemovePreview}
-                        disabled={isUploading}
-                    >
-                        ✕
-                    </button>
+                    <div className={styles.previewActions}>
+                        <button 
+                            type="button" 
+                            className={`${styles.actionButton} ${styles.uploadButton}`}
+                            onClick={handleUpload}
+                            disabled={isUploading}
+                        >
+                            {isUploading ? 'Загрузка...' : 'Загрузить'}
+                        </button>
+                        <button 
+                            type="button" 
+                            className={`${styles.actionButton} ${styles.cancelButton}`}
+                            onClick={handleRemovePreview}
+                            disabled={isUploading}
+                        >
+                            Отмена
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <div
-                    className={`${styles.dropzone} ${isDragging ? styles.dragging : ''} ${isUploading ? styles.uploading : ''}`}
+                    className={`${styles.dropzone} ${isDragging ? styles.dragging : ''}`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
@@ -131,20 +147,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUploaded, o
                         ref={fileInputRef}
                         type="file"
                         accept="image/*"
-                        onChange={handleFileSelect}
+                        onChange={handleInputChange}
                         className={styles.fileInput}
                     />
-                    {isUploading ? (
-                        <div className={styles.uploadingMessage}>
-                            <div className={styles.spinner} />
-                            <span>Загрузка...</span>
-                        </div>
-                    ) : (
-                        <div className={styles.uploadMessage}>
-                            <span className={styles.icon}>📸</span>
-                            <span>Перетащите изображение сюда или кликните для выбора</span>
-                        </div>
-                    )}
+                    <div className={styles.uploadMessage}>
+                        <span className={styles.icon}>📸</span>
+                        <span>Перетащите изображение сюда или кликните для выбора</span>
+                    </div>
                 </div>
             )}
         </div>

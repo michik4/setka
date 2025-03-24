@@ -1,21 +1,45 @@
 .post {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
     border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+    max-width: 680px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 15px;
+}
+
+.authorInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.authorAvatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    border-radius: 50%;
+    background-color: #f0f2f5;
+    overflow: hidden;
 }
 
 .author {
-    font-weight: 500;
     color: #2a5885;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.author:hover {
+    text-decoration: underline;
 }
 
 .date {
@@ -24,37 +48,149 @@
 }
 
 .content {
-    margin-bottom: 12px;
+    margin-bottom: 15px;
     font-size: 15px;
     line-height: 1.5;
     white-space: pre-wrap;
-    word-wrap: break-word;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.actionButton {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.editButton {
+    background: #5181b8;
+    color: white;
+}
+
+.editButton:hover:not(:disabled) {
+    background: #4a76a8;
+}
+
+.editButton:disabled {
+    background: #a0a0a0;
+    cursor: not-allowed;
+}
+
+.deleteButton {
+    background: #e64646;
+    color: white;
+}
+
+.deleteButton:hover {
+    background: #d43939;
+}
+
+.error {
+    color: #e64646;
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #fff5f5;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.editContainer {
+    margin-top: 15px;
+}
+
+.editTextarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    resize: vertical;
+    min-height: 100px;
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.editTextarea:focus {
+    outline: none;
+    border-color: #4a76a8;
+}
+
+.editPhotos {
+    margin: 15px 0;
 }
 
 .footer {
     display: flex;
-    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid #e7e8ec;
 }
 
-.actionButton {
-    background: none;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    color: #626d7a;
-    font-size: 14px;
+.modifyButtons {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background-color 0.2s ease;
+    gap: 8px;
 }
 
-.actionButton:hover {
+.editContainer {
+    margin-bottom: 12px;
+}
+
+.editTextarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 14px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s ease;
+}
+
+.editTextarea:focus {
+    border-color: #2a5885;
+    outline: none;
+}
+
+.editPhotos {
+    margin: 16px 0;
+    padding: 16px;
+    background: #f5f6f8;
+    border-radius: 8px;
+}
+
+.editButtons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.saveButton {
+    background-color: #2a5885 !important;
+    color: white !important;
+}
+
+.saveButton:hover {
+    background-color: #224b73 !important;
+}
+
+.cancelButton {
     background-color: #f5f6f8;
+}
+
+.cancelButton:hover {
+    background-color: #e7e8ec;
 }
 
 @media (max-width: 768px) {
@@ -69,7 +205,18 @@
     }
 
     .footer {
+        flex-direction: column;
         gap: 8px;
+    }
+
+    .actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .modifyButtons {
+        width: 100%;
+        justify-content: flex-end;
     }
 
     .actionButton {

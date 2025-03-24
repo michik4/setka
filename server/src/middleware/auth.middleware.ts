@@ -1,42 +1,58 @@
 import { Request, Response, NextFunction } from 'express';
-import { SessionService } from '../services/session.service';
 import { UserService } from '../services/user.service';
+import { SessionService } from '../services/session.service';
+import { AppDataSource } from '../db/db_connect';
+import { User } from '../entities/user.entity';
+import { Photo } from '../entities/photo.entity';
+import { AuthenticatedRequest } from '../types/express';
 
+const userService = new UserService(
+    AppDataSource.getRepository(User),
+    AppDataSource.getRepository(Photo)
+);
 const sessionService = new SessionService();
-const userService = new UserService();
 
-export interface AuthRequest extends Request {
-    user?: any;
-    session?: any;
-}
+export async function authenticateSession(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    console.log(`[Auth] ${req.method} ${req.path}`);
+    console.log('[Auth] Cookies:', req.cookies);
 
-export const authenticateSession = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const sessionId = req.cookies?.session_id;
+    if (!sessionId) {
+        console.log('[Auth] Сессия не найдена в cookies');
+        return res.status(401).json({ message: 'Требуется аутентификация' });
+    }
+
     try {
-        const sessionId = req.cookies['session_id'];
-        
-        if (!sessionId) {
-            return res.status(401).json({ message: 'Не авторизован' });
-        }
-
+        console.log('[Auth] Проверка сессии:', sessionId);
         const session = await sessionService.validateSession(sessionId);
         
-        if (!session) {
-            res.clearCookie('session_id');
-            return res.status(401).json({ message: 'Сессия недействительна' });
+        if (!session || !session.isActive) {
+            console.log('[Auth] Сессия неактивна или не найдена');
+            return res.status(401).json({ message: 'Недействительная сессия' });
         }
 
+        console.log('[Auth] Получение пользователя:', session.userId);
         const user = await userService.getUserById(session.userId);
         
         if (!user) {
-            res.clearCookie('session_id');
+            console.log('[Auth] Пользователь не найден');
             return res.status(401).json({ message: 'Пользователь не найден' });
         }
 
-        req.user = user;
-        req.session = session;
+        console.log('[Auth] Пользователь аутентифицирован:', user.id);
+        (req as AuthenticatedRequest).user = {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName
+        };
         next();
     } catch (error) {
-        console.error('Ошибка аутентификации:', error);
-        res.status(500).json({ message: 'Ошибка сервера при аутентификации' });
+        console.error('[Auth] Ошибка при аутентификации:', error);
+        res.status(500).json({ message: 'Ошибка при аутентификации' });
     }
-}; 
+} 

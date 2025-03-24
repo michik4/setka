@@ -13,6 +13,7 @@ export const FeedPage: React.FC = () => {
 
     return (
         <div className={styles.container}>
+            <h2>Новости</h2>
             <CreatePostForm onSuccess={handlePostCreated} />
             <PostFeed key={key} />
         </div>

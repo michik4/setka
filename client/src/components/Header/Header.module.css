@@ -1,7 +1,7 @@
 .header {
-    background: #4a76a8;
-    padding: 12px 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #4a76a8;
+    padding: 10px 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -17,37 +17,47 @@
 }
 
 .logo {
-    color: #ffffff;
+    color: #fff;
     font-size: 24px;
     font-weight: bold;
     text-decoration: none;
-    margin: 0;
+    transition: opacity 0.2s;
+}
+
+.logo:hover {
+    opacity: 0.9;
 }
 
 .userInfo {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 15px;
 }
 
 .userName {
-    color: #ffffff;
-    font-size: 16px;
+    color: #fff;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.userName:hover {
+    opacity: 0.9;
 }
 
 .logoutButton {
-    background: transparent;
-    border: 1px solid #ffffff;
-    color: #ffffff;
-    padding: 8px 16px;
+    background-color: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    padding: 6px 12px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
 }
 
 .logoutButton:hover {
-    background: #ffffff;
+    background-color: #fff;
     color: #4a76a8;
 }
 

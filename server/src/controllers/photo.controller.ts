@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../db/db_connect';
 import { Photo } from '../entities/photo.entity';
+import { Post } from '../entities/post.entity';
 import * as path from 'path';
 import * as fs from 'fs';
 import multer from 'multer';
@@ -37,6 +38,7 @@ export const upload = multer({
 
 export class PhotoController {
     private photoRepository = AppDataSource.getRepository(Photo);
+    private postRepository = AppDataSource.getRepository(Post);
 
     async uploadPhoto(req: Request, res: Response) {
         try {
@@ -51,7 +53,7 @@ export class PhotoController {
                 originalName: req.file.originalname,
                 mimetype: req.file.mimetype,
                 size: req.file.size,
-                path: req.file.path,
+                path: req.file.filename,
                 userId: parseInt(userId),
                 description
             });
@@ -94,8 +96,9 @@ export class PhotoController {
 
             // Если запрашивается файл изображения
             if (req.query.file === 'true') {
-                const filePath = path.join(process.cwd(), photo.path);
+                const filePath = path.join(process.cwd(), 'uploads/photos', photo.path);
                 if (!fs.existsSync(filePath)) {
+                    console.error('Файл не найден:', filePath);
                     return res.status(404).json({ message: 'Image file not found' });
                 }
                 return res.sendFile(filePath);
@@ -120,8 +123,9 @@ export class PhotoController {
             }
 
             // Удаляем файл
-            if (fs.existsSync(photo.path)) {
-                fs.unlinkSync(photo.path);
+            const filePath = path.join(process.cwd(), 'uploads/photos', photo.path);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
             }
 
             // Удаляем запись из базы данных
@@ -145,6 +149,50 @@ export class PhotoController {
         } catch (error) {
             console.error('Error getting all photos:', error);
             res.status(500).json({ message: 'Ошибка при получении фотографий' });
+        }
+    }
+
+    async getPhotoFile(req: Request, res: Response) {
+        try {
+            const { filename } = req.params;
+            const filePath = path.join(process.cwd(), 'uploads/photos', filename);
+            
+            console.log('Запрошен файл:', filePath);
+            
+            if (!fs.existsSync(filePath)) {
+                console.error('Файл не найден:', filePath);
+                return res.status(404).json({ message: 'Файл изображения не найден' });
+            }
+            
+            return res.sendFile(filePath);
+        } catch (error) {
+            console.error('Ошибка при получении файла изображения:', error);
+            return res.status(500).json({ message: 'Ошибка при получении файла изображения' });
+        }
+    }
+
+    // Новый метод для отвязки фотографии от поста
+    async unlinkPhotoFromPost(req: Request, res: Response) {
+        try {
+            const { photoId, postId } = req.params;
+            
+            const post = await this.postRepository.findOne({
+                where: { id: parseInt(postId) },
+                relations: ['photos']
+            });
+
+            if (!post) {
+                return res.status(404).json({ message: 'Post not found' });
+            }
+
+            // Отвязываем фотографию от поста
+            post.photos = post.photos.filter(photo => photo.id !== parseInt(photoId));
+            await this.postRepository.save(post);
+
+            return res.status(200).json({ message: 'Photo unlinked from post successfully' });
+        } catch (error) {
+            console.error('Error unlinking photo from post:', error);
+            return res.status(500).json({ message: 'Error unlinking photo from post' });
         }
     }
 } 

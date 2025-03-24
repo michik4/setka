@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PostController } from '../controllers/post.controller';
+import { authenticateSession } from '../middleware/auth.middleware';
 
 const router = Router();
 let postController: PostController | null = null;
@@ -21,25 +22,25 @@ router.use((req: Request, res: Response, next) => {
 });
 
 // Получение всех постов
-router.get('/', (req: Request, res: Response) => {
+router.get('/', authenticateSession, (req: Request, res: Response) => {
     console.log('[Posts] Запрос на получение всех постов');
     initializeController().getAllPosts(req, res);
 });
 
 // Получение постов пользователя (должен быть перед /:id)
-router.get('/user/:userId', (req: Request, res: Response) => {
+router.get('/user/:userId', authenticateSession, (req: Request, res: Response) => {
     console.log('[Posts] Запрос на получение постов пользователя:', req.params.userId);
     initializeController().getUserPosts(req, res);
 });
 
 // Получение поста по ID (должен быть последним)
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', authenticateSession, (req: Request, res: Response) => {
     console.log('[Posts] Запрос на получение поста по ID:', req.params.id);
     initializeController().getPostById(req, res);
 });
 
 // Создание нового поста
-router.post('/', (req: Request, res: Response) => {
+router.post('/', authenticateSession, (req: Request, res: Response) => {
     initializeController().createPost(req, res);
 });
 

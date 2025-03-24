@@ -11,10 +11,32 @@ export class PostController {
     public getAllPosts = async (req: Request, res: Response): Promise<void> => {
         try {
             console.log('[PostController] Запрос на получение всех постов');
-            const posts = await this.postRepository.find({
-                relations: ['author', 'photos'],
-                order: { createdAt: 'DESC' }
-            });
+            const posts = await this.postRepository
+                .createQueryBuilder('post')
+                .leftJoinAndSelect('post.author', 'author')
+                .leftJoinAndSelect('post.photos', 'photos')
+                .select([
+                    'post.id',
+                    'post.content',
+                    'post.authorId',
+                    'post.likesCount',
+                    'post.commentsCount',
+                    'post.sharesCount',
+                    'post.viewsCount',
+                    'post.createdAt',
+                    'post.updatedAt',
+                    'author.id',
+                    'author.firstName',
+                    'author.lastName',
+                    'author.nickname',
+                    'author.email',
+                    'photos.id',
+                    'photos.filename',
+                    'photos.path'
+                ])
+                .orderBy('post.createdAt', 'DESC')
+                .getMany();
+
             console.log(`[PostController] Найдено ${posts.length} постов`);
             console.log('[PostController] Структура первого поста:', posts.length > 0 ? JSON.stringify(posts[0], null, 2) : 'нет постов');
             console.log('[PostController] Отправка ответа клиенту');
@@ -31,10 +53,31 @@ export class PostController {
             const id = Number(req.params.id);
             console.log(`[PostController] Запрос на получение поста по ID: ${id}`);
             
-            const post = await this.postRepository.findOne({
-                where: { id },
-                relations: ['author', 'photos']
-            });
+            const post = await this.postRepository
+                .createQueryBuilder('post')
+                .leftJoinAndSelect('post.author', 'author')
+                .leftJoinAndSelect('post.photos', 'photos')
+                .select([
+                    'post.id',
+                    'post.content',
+                    'post.authorId',
+                    'post.likesCount',
+                    'post.commentsCount',
+                    'post.sharesCount',
+                    'post.viewsCount',
+                    'post.createdAt',
+                    'post.updatedAt',
+                    'author.id',
+                    'author.firstName',
+                    'author.lastName',
+                    'author.nickname',
+                    'author.email',
+                    'photos.id',
+                    'photos.filename',
+                    'photos.path'
+                ])
+                .where('post.id = :id', { id })
+                .getOne();
             
             if (!post) {
                 console.log(`[PostController] Пост с ID ${id} не найден`);
@@ -132,11 +175,32 @@ export class PostController {
             const userId = Number(req.params.userId);
             console.log(`[PostController] Запрос на получение постов пользователя: ${userId}`);
             
-            const posts = await this.postRepository.find({
-                where: { authorId: userId },
-                relations: ['author', 'photos'],
-                order: { createdAt: 'DESC' }
-            });
+            const posts = await this.postRepository
+                .createQueryBuilder('post')
+                .leftJoinAndSelect('post.author', 'author')
+                .leftJoinAndSelect('post.photos', 'photos')
+                .select([
+                    'post.id',
+                    'post.content',
+                    'post.authorId',
+                    'post.likesCount',
+                    'post.commentsCount',
+                    'post.sharesCount',
+                    'post.viewsCount',
+                    'post.createdAt',
+                    'post.updatedAt',
+                    'author.id',
+                    'author.firstName',
+                    'author.lastName',
+                    'author.nickname',
+                    'author.email',
+                    'photos.id',
+                    'photos.filename',
+                    'photos.path'
+                ])
+                .where('post.authorId = :userId', { userId })
+                .orderBy('post.createdAt', 'DESC')
+                .getMany();
             
             console.log(`[PostController] Найдено ${posts.length} постов пользователя ${userId}`);
             res.json(posts);

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from "typeorm"
 import { Photo } from "./photo.entity"
 import { Post } from "./post.entity"
 
@@ -21,6 +21,16 @@ export class User {
 
     @Column({ select: false }) // Пароль не будет выбираться по умолчанию
     password: string
+
+    @Column({ nullable: true })
+    status: string
+
+    @ManyToOne(() => Photo, { nullable: true })
+    @JoinColumn({ name: 'avatarId' })
+    avatar: Photo
+
+    @Column({ nullable: true })
+    avatarId: number
 
     @CreateDateColumn()
     createdAt: Date

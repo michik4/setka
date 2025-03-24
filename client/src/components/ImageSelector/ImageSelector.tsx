@@ -3,6 +3,8 @@ import { Photo } from '../../types/post.types';
 import styles from './ImageSelector.module.css';
 import { API_URL } from '../../config';
 import { ServerImage } from '../ServerImage/ServerImage';
+import { PhotoViewer } from '../PhotoViewer/PhotoViewer';
+import { api } from '../../utils/api';
 
 interface ImageSelectorProps {
     userId: number;
@@ -14,6 +16,8 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({ userId, selectedIm
     const [images, setImages] = useState<Photo[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
 
     const fetchUserImages = async () => {
         if (typeof userId !== 'number') {
@@ -28,8 +32,6 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({ userId, selectedIm
             console.log(`Fetching images for user ${userId}`);
             const response = await fetch(`${API_URL}/photos/user/${userId}`);
             
-            console.log(`Server response status: ${response.status} ${response.statusText}`);
-            
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('Error response:', errorText);
@@ -37,7 +39,6 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({ userId, selectedIm
             }
 
             const data = await response.json();
-            console.log('Fetched images:', data);
             setImages(data);
         } catch (err) {
             console.error('Error fetching images:', err);
@@ -51,12 +52,35 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({ userId, selectedIm
         fetchUserImages();
     }, [userId]);
 
-    const toggleImage = (image: Photo) => {
+    const handleImageClick = (image: Photo, e: React.MouseEvent) => {
+        e.preventDefault(); // Предотвращаем стандартное поведение
+
+        // Если зажат Ctrl или нажата правая кнопка мыши - открываем просмотр
+        if (e.ctrlKey || e.button === 2) {
+            setSelectedPhoto(image);
+            setIsPreviewMode(true);
+            return;
+        }
+
+        // Иначе переключаем выбор фотографии
         const isSelected = selectedImages.some(selected => selected.id === image.id);
         if (isSelected) {
             onImagesChange(selectedImages.filter(selected => selected.id !== image.id));
         } else {
             onImagesChange([...selectedImages, image]);
+        }
+    };
+
+    const handlePhotoDelete = async (photo: Photo) => {
+        try {
+            await api.delete(`/photos/${photo.id}`);
+            setImages(prevImages => prevImages.filter(img => img.id !== photo.id));
+            onImagesChange(selectedImages.filter(img => img.id !== photo.id));
+            setSelectedPhoto(null);
+            setIsPreviewMode(false);
+        } catch (err) {
+            console.error('Ошибка при удалении фотографии:', err);
+            alert('Не удалось удалить фотографию');
         }
     };
 
@@ -72,39 +96,47 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({ userId, selectedIm
     if (error) {
         return (
             <div className={styles.error}>
-                <div>{error}</div>
-                <button className={styles.retryButton} onClick={fetchUserImages}>
+                <div>Ошибка: {error}</div>
+                <button onClick={fetchUserImages} className={styles.retryButton}>
                     Попробовать снова
                 </button>
             </div>
         );
     }
 
-    if (!images.length) {
-        return (
-            <div className={styles.empty}>
-                У вас пока нет загруженных изображений
-            </div>
-        );
-    }
-
     return (
         <div className={styles.container}>
-            <div className={styles.title}>Выберите изображения из галереи:</div>
-            <div className={styles.grid}>
+            <div className={styles.header}>
+                <h3>Ваши фотографии</h3>
+                <div className={styles.info}>
+                    Выбрано: {selectedImages.length}
+                    {selectedImages.length > 0 && (
+                        <button
+                            className={styles.clearButton}
+                            onClick={() => onImagesChange([])}
+                        >
+                            Очистить
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className={styles.grid} onContextMenu={e => e.preventDefault()}>
                 {images.map(image => (
                     <div
                         key={image.id}
                         className={`${styles.imageWrapper} ${
-                            selectedImages.some(selected => selected.id === image.id) ? styles.selected : ''
+                            selectedImages.some(selected => selected.id === image.id)
+                                ? styles.selected
+                                : ''
                         }`}
-                        onClick={() => toggleImage(image)}
+                        onClick={(e) => handleImageClick(image, e)}
+                        onContextMenu={(e) => handleImageClick(image, e)}
                     >
                         <ServerImage
-                            imageId={image.id}
                             path={image.path}
+                            alt={image.description || 'Фотография'}
                             className={styles.image}
-                            alt={image.description || 'User image'}
                         />
                         <div className={styles.overlay}>
                             <span className={styles.checkmark}>✓</span>
@@ -112,6 +144,18 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({ userId, selectedIm
                     </div>
                 ))}
             </div>
+
+            {selectedPhoto && isPreviewMode && (
+                <PhotoViewer
+                    photo={selectedPhoto}
+                    onClose={() => {
+                        setSelectedPhoto(null);
+                        setIsPreviewMode(false);
+                    }}
+                    onDelete={() => handlePhotoDelete(selectedPhoto)}
+                    canDelete={true}
+                />
+            )}
         </div>
     );
 }; 

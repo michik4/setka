@@ -25,6 +25,19 @@
     border-color: #4a76a8;
 }
 
+.preview {
+    margin: 16px 0;
+    background: #f5f6f8;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.mediaSection {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e5e5;
+}
+
 .error {
     color: #e64646;
     margin: 10px 0;

@@ -1,21 +1,83 @@
 import { Request, Response } from 'express';
 import { SessionService } from '../services/session.service';
 import { UserService } from '../services/user.service';
-import { AuthRequest } from '../middleware/auth.middleware';
+import { AuthRequest } from '../types/auth.types';
 import bcrypt from 'bcrypt';
+import { AppDataSource } from '../db/db_connect';
+import { User } from '../entities/user.entity';
+import { Photo } from '../entities/photo.entity';
 
 export class AuthController {
-    private sessionService: SessionService;
     private userService: UserService;
+    private sessionService: SessionService;
 
     constructor() {
+        this.userService = new UserService(
+            AppDataSource.getRepository(User),
+            AppDataSource.getRepository(Photo)
+        );
         this.sessionService = new SessionService();
-        this.userService = new UserService();
     }
+
+    register = async (req: Request, res: Response) => {
+        try {
+            const { email, password, firstName, lastName } = req.body;
+
+            // Проверяем, существует ли пользователь с таким email
+            const existingUser = await this.userService.getUserByEmail(email);
+            if (existingUser) {
+                return res.status(400).json({ message: 'Пользователь с таким email уже существует' });
+            }
+
+            // Создаем нового пользователя
+            const user = await this.userService.createUser({
+                email,
+                password,
+                firstName,
+                lastName,
+                nickname: email.split('@')[0], // Временный никнейм из email
+                photos: [],
+                posts: []
+            });
+
+            // Создаем сессию для нового пользователя
+            const session = await this.sessionService.createSession(
+                user,
+                req.ip ?? 'unknown',
+                req.headers['user-agent'] ?? 'unknown'
+            );
+
+            // Устанавливаем cookie с идентификатором сессии
+            res.cookie('session_id', session.sessionId, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
+                path: '/'
+            });
+
+            return res.status(201).json({
+                message: 'Регистрация успешна',
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка при регистрации:', error);
+            return res.status(500).json({ message: 'Ошибка сервера при регистрации' });
+        }
+    };
 
     login = async (req: Request, res: Response) => {
         try {
             const { email, password } = req.body;
+
+            if (!email || !password) {
+                return res.status(400).json({ message: 'Email и пароль обязательны' });
+            }
 
             const user = await this.userService.getUserByEmail(email);
             if (!user) {
@@ -35,17 +97,18 @@ export class AuthController {
 
             res.cookie('session_id', session.sessionId, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                maxAge: 30 * 24 * 60 * 60 * 1000 // 30 дней
+                secure: true,
+                sameSite: 'none',
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
+                path: '/'
             });
 
             return res.json({
-                message: 'Успешная авторизация',
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    firstName: user.firstName
-                }
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                nickname: user.nickname
             });
         } catch (error) {
             console.error('Ошибка при авторизации:', error);
@@ -55,10 +118,15 @@ export class AuthController {
 
     logout = async (req: AuthRequest, res: Response) => {
         try {
-            const sessionId = req.cookies['session_id'];
+            const sessionId = req.cookies?.session_id;
             if (sessionId) {
                 await this.sessionService.deactivateSession(sessionId);
-                res.clearCookie('session_id');
+                res.clearCookie('session_id', {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'none',
+                    path: '/'
+                });
             }
             return res.json({ message: 'Успешный выход' });
         } catch (error) {
@@ -69,9 +137,17 @@ export class AuthController {
 
     logoutAll = async (req: AuthRequest, res: Response) => {
         try {
+            if (!req.user) {
+                return res.status(401).json({ message: 'Не авторизован' });
+            }
             const userId = req.user.id;
             await this.sessionService.deactivateAllUserSessions(userId);
-            res.clearCookie('session_id');
+            res.clearCookie('session_id', {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                path: '/'
+            });
             return res.json({ message: 'Успешный выход со всех устройств' });
         } catch (error) {
             console.error('Ошибка при выходе со всех устройств:', error);
@@ -81,12 +157,39 @@ export class AuthController {
 
     getSessions = async (req: AuthRequest, res: Response) => {
         try {
+            if (!req.user) {
+                return res.status(401).json({ message: 'Не авторизован' });
+            }
             const userId = req.user.id;
             const sessions = await this.sessionService.getActiveSessionsByUserId(userId);
             return res.json(sessions);
         } catch (error) {
             console.error('Ошибка при получении сессий:', error);
             return res.status(500).json({ message: 'Ошибка сервера при получении сессий' });
+        }
+    };
+
+    getCurrentUser = async (req: AuthRequest, res: Response) => {
+        try {
+            if (!req.user) {
+                return res.status(401).json({ message: 'Пользователь не аутентифицирован' });
+            }
+
+            const user = await this.userService.getUserById(req.user.id);
+            if (!user) {
+                return res.status(404).json({ message: 'Пользователь не найден' });
+            }
+
+            res.json({
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                nickname: user.nickname
+            });
+        } catch (error) {
+            console.error('Ошибка при получении текущего пользователя:', error);
+            res.status(500).json({ message: 'Ошибка сервера' });
         }
     };
 } 

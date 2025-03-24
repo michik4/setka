@@ -21,16 +21,16 @@ export class Photo {
     @Column()
     path: string;
 
+    @Column({ nullable: true })
+    description?: string;
+
     @Column()
     userId: number;
 
-    @ManyToOne(() => User, user => user.photos)
+    @ManyToOne(() => User)
     @JoinColumn({ name: "userId" })
     user: User;
 
     @CreateDateColumn()
     createdAt: Date;
-
-    @Column({ nullable: true })
-    description: string;
 } 

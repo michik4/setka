@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import styles from './Header.module.css';
 
 export const Header: React.FC = () => {
@@ -19,12 +19,15 @@ export const Header: React.FC = () => {
     return (
         <header className={styles.header}>
             <div className={styles.container}>
-                <h1 className={styles.logo}>Сетка</h1>
+                <Link to="/" className={styles.logo}>Сетка</Link>
                 {user && (
                     <div className={styles.userInfo}>
-                        <span className={styles.userName}>
+                        <Link 
+                            to={`/users/${user.id}`} 
+                            className={styles.userName}
+                        >
                             {user.firstName} {user.lastName}
-                        </span>
+                        </Link>
                         <button 
                             onClick={handleLogout}
                             className={styles.logoutButton}

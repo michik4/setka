@@ -1,74 +1,59 @@
 import React, { useState } from 'react';
-import styles from './ServerImage.module.css';
-import { Photo } from '../../types/post.types';
 import { API_URL } from '../../config';
+import styles from './ServerImage.module.css';
 
 interface ServerImageProps {
-    imageId: number;
+    imageId?: number;
     path?: string;
-    alt?: string;
+    src?: string;
+    alt: string;
     className?: string;
-    width?: number | string;
-    height?: number | string;
-    onLoad?: () => void;
-    onError?: (error: Error) => void;
 }
 
-export const ServerImage: React.FC<ServerImageProps> = ({
-    imageId,
-    path,
-    alt = '',
-    className,
-    width,
-    height,
-    onLoad,
-    onError
-}) => {
-    const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    const handleLoad = () => {
-        setIsLoading(false);
-        onLoad?.();
-    };
-
-    const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-        setIsLoading(false);
-        const error = new Error('Не удалось загрузить изображение');
-        setError(error.message);
-        onError?.(error);
-    };
+export const ServerImage: React.FC<ServerImageProps> = ({ imageId, path, src, alt, className }) => {
+    const [hasError, setHasError] = useState(false);
 
     // Формируем URL изображения
-    const imageUrl = path 
-        ? `${API_URL}/${path.replace(/\\/g, '/')}` // Заменяем обратные слеши на прямые
-        : `${API_URL}/photos/${imageId}?file=true`;
+    let imageSrc = '';
+    if (src) {
+        imageSrc = src;
+    } else if (imageId) {
+        imageSrc = `${API_URL}/photos/${imageId}?file=true`;
+    } else if (path) {
+        if (path.startsWith('http')) {
+            imageSrc = path;
+        } else if (path.startsWith('/uploads/')) {
+            // Если путь уже содержит /uploads/, используем его как есть
+            imageSrc = `${API_URL}${path}`;
+        } else {
+            // В противном случае добавляем /uploads/photos/
+            imageSrc = `${API_URL}/uploads/photos/${path}`;
+        }
+    }
 
-    console.log('Загрузка изображения:', imageUrl); // Добавляем логирование
+    console.log('ServerImage props:', { imageId, path, src, alt });
+    console.log('Constructed image URL:', imageSrc);
 
-    if (error) {
+    if (hasError || !imageSrc) {
         return (
-            <div className={`${styles.error} ${className || ''}`}>
-                <span role="img" aria-label="error">❌</span>
+            <div className={`${styles.defaultImage} ${className || ''}`}>
+                <span>{alt.split(' ').map(word => word[0]).join('').toUpperCase()}</span>
             </div>
         );
     }
 
     return (
-        <div className={`${styles.container} ${className || ''}`}>
-            {isLoading && (
-                <div className={styles.loader}>
-                    <div className={styles.spinner}></div>
-                </div>
-            )}
-            <img
-                src={imageUrl}
-                alt={alt}
-                className={`${styles.image} ${isLoading ? styles.loading : ''}`}
-                style={{ width, height }}
-                onLoad={handleLoad}
-                onError={handleError}
-            />
-        </div>
+        <img 
+            src={imageSrc} 
+            alt={alt}
+            className={`${styles.image} ${className || ''}`}
+            onError={(e) => {
+                console.error('Ошибка загрузки изображения:', {
+                    src: imageSrc,
+                    originalProps: { imageId, path, src }
+                });
+                setHasError(true);
+            }}
+        />
     );
 }; 

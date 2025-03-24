@@ -9,6 +9,7 @@ import {
 import './App.css';
 import { AuthPage } from './pages/AuthPage';
 import { FeedPage } from './pages/FeedPage';
+import { UserPage } from './pages/UserPage/UserPage';
 import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/Header/Header';
 
@@ -39,11 +40,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 };
 
 const App: React.FC = () => {
-  const { user, loading, checkAuth } = useAuth();
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  const { user, loading } = useAuth();
 
   return (
     <BrowserRouter>
@@ -60,6 +57,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <FeedPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/:userId"
+              element={
+                <ProtectedRoute>
+                  <UserPage />
                 </ProtectedRoute>
               }
             />

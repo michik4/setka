@@ -6,11 +6,10 @@ const router = Router();
 const authController = new AuthController();
 
 // Публичные маршруты
-router.post('/login', authController.login);
+router.post('/login', authController.login.bind(authController));
 
-// Защищенные маршруты (требуют аутентификации)
-router.post('/logout', authenticateSession, authController.logout);
-router.post('/logout/all', authenticateSession, authController.logoutAll);
-router.get('/sessions', authenticateSession, authController.getSessions);
+// Защищенные маршруты
+router.post('/logout', authenticateSession, authController.logout.bind(authController));
+router.get('/me', authenticateSession, authController.getCurrentUser.bind(authController));
 
 export default router; 

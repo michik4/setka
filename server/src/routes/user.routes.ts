@@ -1,28 +1,60 @@
-import { Router } from 'express'
+import { Router, Request, Response, NextFunction } from 'express'
+import { UserService } from '../services/user.service'
 import { UserController } from '../controllers/user.controller'
+import { AppDataSource } from '../db/db_connect'
+import { authenticateSession } from '../middleware/auth.middleware'
+import { upload } from '../utils/upload'
+import { User } from '../entities/user.entity'
+import { Photo } from '../entities/photo.entity'
+import { AuthenticatedRequest } from '../types/express'
+import multer from 'multer'
 
 const router = Router()
-const userController = new UserController()
+const userService = new UserService(
+    AppDataSource.getRepository(User),
+    AppDataSource.getRepository(Photo)
+)
+const userController = new UserController(userService)
 
-// Создание пользователя
-router.post('/', (req, res) => userController.createUser(req, res))
+// Публичные маршруты
+router.post('/', userController.createUser.bind(userController))
+router.post('/random', userController.createRandomUser.bind(userController))
 
-// Получение всех пользователей
-router.get('/', (req, res) => userController.getUsers(req, res))
+// Защищенные маршруты
+router.get('/', authenticateSession, userController.getUsers.bind(userController))
+router.get('/email/:email', authenticateSession, userController.getUserByEmail.bind(userController))
+router.get('/nickname/:nickname', authenticateSession, userController.getUserByNickname.bind(userController))
+router.get('/:id', authenticateSession, userController.getUser.bind(userController))
+router.put('/:id', authenticateSession, userController.updateUser.bind(userController))
+router.delete('/:id', authenticateSession, userController.deleteUser.bind(userController))
+router.put('/:id/status', authenticateSession, userController.updateStatus.bind(userController))
 
-// Создание случайного пользователя
-router.post('/random', (req, res) => userController.createRandomUser(req, res))
+// Обработчик ошибок multer
+const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ message: 'Файл слишком большой. Максимальный размер 5MB' });
+        }
+        return res.status(400).json({ message: 'Ошибка при загрузке файла' });
+    } else if (err) {
+        return res.status(400).json({ message: err.message });
+    }
+    next();
+};
 
-// Получение пользователя по email
-router.get('/email/:email', (req, res) => userController.getUserByEmail(req, res))
-
-// Получение пользователя по nickname
-router.get('/nickname/:nickname', (req, res) => userController.getUserByNickname(req, res))
-
-// Обновление пользователя
-router.put('/:id', (req, res) => userController.updateUser(req, res))
-
-// Удаление пользователя
-router.delete('/:id', (req, res) => userController.deleteUser(req, res))
+// Обработчик для загрузки аватара с правильной типизацией
+router.post(
+    '/:id/avatar',
+    authenticateSession,
+    (req: Request, res: Response, next: NextFunction) => {
+        upload.single('avatar')(req, res, (err) => {
+            if (err) {
+                return handleMulterError(err, req, res, next);
+            }
+            const authenticatedReq = req as AuthenticatedRequest;
+            return userController.uploadAvatar(authenticatedReq, res);
+        });
+    }
+);
 
 export default router 

@@ -36,6 +36,8 @@ export class SessionService {
     }
 
     async validateSession(sessionId: string): Promise<Session | null> {
+        console.log('Проверка сессии:', sessionId);
+        
         const session = await this.sessionRepository.findOne({
             where: {
                 sessionId,
@@ -44,9 +46,15 @@ export class SessionService {
             }
         });
 
+        console.log('Найдена сессия:', session);
+
         if (session) {
+            console.log('Обновление времени последней активности для сессии:', sessionId);
             session.lastActivity = new Date();
             await this.sessionRepository.save(session);
+            console.log('Сессия обновлена');
+        } else {
+            console.log('Сессия не найдена или неактивна');
         }
 
         return session;

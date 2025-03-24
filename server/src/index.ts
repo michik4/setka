@@ -7,6 +7,7 @@ import { AppDataSource } from './db/db_connect'
 import { initializeRoutes } from './routes/routes'
 import { WebSocketService } from './services/WebSocket.service'
 import path from 'path'
+import { config } from './config'
 
 dotenv.config()
 console.log('Загружены переменные окружения');
@@ -16,8 +17,11 @@ const server = createServer(app)
 
 // Middleware
 app.use(cors({
+  origin: config.CLIENT_URL,
   credentials: true,
-  origin: process.env.CLIENT_URL || 'http://localhost:3001'
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Cookie', 'Set-Cookie'],
+  exposedHeaders: ['Set-Cookie']
 }))
 app.use(express.json())
 app.use(cookieParser())
@@ -34,9 +38,9 @@ app.use((req, res, next) => {
 console.log('Настроены middleware');
 
 // Обработка ошибок
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack)
-  res.status(500).send('Что-то пошло не так!')
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Ошибка:', err);
+  res.status(500).json({ message: 'Внутренняя ошибка сервера' });
 })
 
 const startServer = async () => {
@@ -48,13 +52,14 @@ const startServer = async () => {
 
     console.log('Инициализируем WebSocket...');
     // Инициализация WebSocket
-    const wsService = new WebSocketService(server)
+    const wsService = new WebSocketService(server);
     console.log('WebSocket инициализирован')
 
     // Настройка статических файлов
     const uploadsPath = path.join(__dirname, '..', 'uploads')
     app.use('/api/uploads', express.static(uploadsPath))
     app.use('/uploads', express.static(uploadsPath)) // оставляем для обратной совместимости
+    app.use('/api/photos', express.static(path.join(uploadsPath, 'photos')))
     console.log('Настроена раздача статических файлов из:', uploadsPath)
 
     // Инициализация маршрутов
@@ -65,6 +70,9 @@ const startServer = async () => {
     const PORT = process.env.PORT || 3000
     server.listen(PORT, () => {
       console.log(`Сервер запущен на порту ${PORT}`)
+      console.log(`WebSocket сервер доступен на ws://localhost:${PORT}`)
+      console.log(`REST API доступен на http://localhost:${PORT}`)
+      console.log(`CORS разрешен для ${config.CLIENT_URL}`)
     })
   } catch (error) {
     console.error('Ошибка при запуске сервера:', error)
