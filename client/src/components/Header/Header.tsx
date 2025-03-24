@@ -19,7 +19,7 @@ export const Header: React.FC = () => {
     return (
         <header className={styles.header}>
             <div className={styles.container}>
-                <h1 className={styles.logo}>ВСети</h1>
+                <h1 className={styles.logo}>Сетка</h1>
                 {user && (
                     <div className={styles.userInfo}>
                         <span className={styles.userName}>

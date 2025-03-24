@@ -17,7 +17,7 @@ const server = createServer(app)
 // Middleware
 app.use(cors({
   credentials: true,
-  origin: process.env.CLIENT_URL
+  origin: process.env.CLIENT_URL || 'http://localhost:3001'
 }))
 app.use(express.json())
 app.use(cookieParser())
@@ -49,61 +49,18 @@ const startServer = async () => {
     console.log('Инициализируем WebSocket...');
     // Инициализация WebSocket
     const wsService = new WebSocketService(server)
-    console.log('WebSocket инициализирован');
+    console.log('WebSocket инициализирован')
 
-    // Подключаем все маршруты под /api после инициализации базы данных
-    console.log('Инициализация маршрутов API...');
-    const routes = await initializeRoutes()
+    // Настройка статических файлов
+    const uploadsPath = path.join(__dirname, '..', 'uploads')
+    app.use('/api/uploads', express.static(uploadsPath))
+    app.use('/uploads', express.static(uploadsPath)) // оставляем для обратной совместимости
+    console.log('Настроена раздача статических файлов из:', uploadsPath)
 
-    // Промежуточное ПО для обработки API запросов
-    const apiMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-      console.log(`[API Middleware] Processing ${req.method} ${req.originalUrl}`);
-      
-      // Если это базовый маршрут API
-      if (req.path === '/api' || req.path === '/api/') {
-        return res.json({
-          message: "API ВСети",
-          version: "1.0.0",
-          status: "OK"
-        });
-      }
-
-      // Если запрос начинается с /posts, перенаправляем его на /api/posts
-      if (req.path.startsWith('/posts')) {
-        const newPath = `/api${req.url}`;
-        console.log(`[API Middleware] Rewriting path from ${req.url} to ${newPath}`);
-        req.url = newPath;
-      }
-
-      // Удаляем префикс /api для правильной обработки маршрутов
-      if (req.url.startsWith('/api/')) {
-        const newPath = req.url.replace('/api', '');
-        console.log(`[API Middleware] Removing /api prefix: ${req.url} -> ${newPath}`);
-        req.url = newPath;
-      }
-
-      routes(req, res, next);
-    };
-
-    // Статическая раздача файлов из папки uploads
-    app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')))
-    console.log('Статические файлы подключены');
-
-    // Подключаем маршруты API
-    app.use('/api', apiMiddleware);
-    app.use('/posts', apiMiddleware);
-
-    // Обработчик для несуществующих маршрутов
-    app.use((req, res) => {
-      console.log(`[404] Маршрут не найден: ${req.method} ${req.originalUrl}`);
-      res.status(404).json({ 
-        error: 'Маршрут не найден',
-        method: req.method,
-        url: req.url,
-        baseUrl: req.baseUrl,
-        originalUrl: req.originalUrl
-      });
-    });
+    // Инициализация маршрутов
+    console.log('Инициализируем маршруты...');
+    initializeRoutes(app)
+    console.log('Маршруты инициализированы')
 
     const PORT = process.env.PORT || 3000
     server.listen(PORT, () => {

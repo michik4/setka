@@ -92,6 +92,15 @@ export class PhotoController {
                 return res.status(404).json({ message: 'Photo not found' });
             }
 
+            // Если запрашивается файл изображения
+            if (req.query.file === 'true') {
+                const filePath = path.join(process.cwd(), photo.path);
+                if (!fs.existsSync(filePath)) {
+                    return res.status(404).json({ message: 'Image file not found' });
+                }
+                return res.sendFile(filePath);
+            }
+
             return res.json(photo);
         } catch (error) {
             console.error('Error getting photo:', error);
@@ -122,6 +131,20 @@ export class PhotoController {
         } catch (error) {
             console.error('Error deleting photo:', error);
             return res.status(500).json({ message: 'Error deleting photo' });
+        }
+    }
+
+    async getAllPhotos(req: Request, res: Response) {
+        try {
+            const photos = await this.photoRepository.find({
+                relations: ['user'],
+                order: { createdAt: 'DESC' }
+            });
+            
+            res.json(photos);
+        } catch (error) {
+            console.error('Error getting all photos:', error);
+            res.status(500).json({ message: 'Ошибка при получении фотографий' });
         }
     }
 } 

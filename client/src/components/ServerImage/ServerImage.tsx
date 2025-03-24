@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import styles from './ServerImage.module.css';
 import { Photo } from '../../types/post.types';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+import { API_URL } from '../../config';
 
 interface ServerImageProps {
     imageId: number;
@@ -43,7 +42,9 @@ export const ServerImage: React.FC<ServerImageProps> = ({
     // Формируем URL изображения
     const imageUrl = path 
         ? `${API_URL}/${path.replace(/\\/g, '/')}` // Заменяем обратные слеши на прямые
-        : `${API_URL}/photos/${imageId}`;
+        : `${API_URL}/photos/${imageId}?file=true`;
+
+    console.log('Загрузка изображения:', imageUrl); // Добавляем логирование
 
     if (error) {
         return (

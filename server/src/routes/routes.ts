@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Express, Router, Request, Response } from 'express';
 import { AppDataSource } from '../db/db_connect';
 import postRoutes from './post.routes';
 import userRoutes from './user.routes';
@@ -6,12 +6,7 @@ import chatRoutes from './chat.routes';
 import authRoutes from './auth.routes';
 import photoRoutes from './photo.routes';
 
-export const initializeRoutes = async () => {
-    // Убеждаемся, что база данных инициализирована
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
-
+export const initializeRoutes = (app: Express) => {
     const router = Router();
 
     // Логирование всех запросов к API
@@ -38,5 +33,6 @@ export const initializeRoutes = async () => {
     router.use('/photos', photoRoutes);
     console.log('Подключены маршруты фотографий');
 
-    return router;
+    // Подключаем все маршруты под префиксом /api
+    app.use('/api', router);
 };

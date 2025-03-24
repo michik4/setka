@@ -2,11 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Post as PostType } from '../../types/post.types';
 import { Post } from '../Post/Post';
 import styles from './PostFeed.module.css';
-
-// Проверяем наличие переменной окружения и используем резервный URL
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
-
-console.log('API URL для PostFeed:', API_URL);
+import { API_URL } from '../../config';
 
 export const PostFeed: React.FC = () => {
     const [posts, setPosts] = useState<PostType[]>([]);
@@ -37,22 +33,14 @@ export const PostFeed: React.FC = () => {
                 credentials: 'include'
             });
 
-            console.log('Получен ответ:', response.status, response.statusText);
-            const responseText = await response.text();
-            console.log('Текст ответа:', responseText);
-
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
                 throw new Error(`Не удалось загрузить посты: ${response.status} ${response.statusText}`);
             }
 
-            let data;
-            try {
-                data = JSON.parse(responseText);
-                console.log('Распарсенные данные:', data);
-            } catch (parseError) {
-                console.error('Ошибка парсинга JSON:', parseError);
-                throw new Error('Получен некорректный JSON от сервера');
-            }
+            const data = await response.json();
+            console.log('Загруженные посты:', data);
             
             if (!Array.isArray(data)) {
                 console.error('Получены данные неверного формата:', data);
@@ -105,28 +93,19 @@ export const PostFeed: React.FC = () => {
         );
     }
 
-    if (!posts || posts.length === 0) {
-        return (
-            <div className={styles.empty}>
-                <p>😔 Постов пока нет</p>
-                <button 
-                    className={styles.retryButton}
-                    onClick={() => fetchPosts()}
-                >
-                    Обновить
-                </button>
-            </div>
-        );
-    }
-
     return (
-        <div className={styles.feed}>
-            {posts.map(post => (
-                <Post
-                    key={post.id}
-                    post={post}
-                />
-            ))}
+        <div className={styles.container}>
+            {posts.length === 0 ? (
+                <div className={styles.empty}>
+                    <p>Пока нет постов 😔</p>
+                </div>
+            ) : (
+                <div className={styles.feed}>
+                    {posts.map(post => (
+                        <Post key={post.id} post={post} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
