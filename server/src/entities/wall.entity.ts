@@ -38,6 +38,9 @@ export class WallPost {
     })
     photos: Photo[];
 
+    @Column("int", { default: 0 })
+    likesCount: number;
+
     @CreateDateColumn()
     createdAt: Date;
 

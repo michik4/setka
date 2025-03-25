@@ -22,12 +22,9 @@ export const ServerImage: React.FC<ServerImageProps> = ({ imageId, path, src, al
     } else if (path) {
         if (path.startsWith('http')) {
             imageSrc = path;
-        } else if (path.startsWith('/uploads/')) {
-            // Если путь уже содержит /uploads/, используем его как есть
-            imageSrc = `${API_URL}${path}`;
         } else {
-            // В противном случае добавляем /uploads/photos/
-            imageSrc = `${API_URL}/uploads/photos/${path}`;
+            // Путь к файлу через эндпоинт /photos/file/
+            imageSrc = `${API_URL}/photos/file/${path}`;
         }
     }
 
@@ -56,4 +53,4 @@ export const ServerImage: React.FC<ServerImageProps> = ({ imageId, path, src, al
             }}
         />
     );
-}; 
+};

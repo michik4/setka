@@ -8,6 +8,7 @@ import { Session } from "../entities/session.entity"
 import { Chat } from "../entities/chat.entity"
 import { Message } from "../entities/message.entity"
 import { WallPost } from "../entities/wall.entity"
+import { Like } from "../entities/like.entity"
 import { AddUserStatus1710000000000 } from "../migrations/1710000000000-AddUserStatus"
 import { AddUserAvatar1710000000001 } from "../migrations/1710000000001-AddUserAvatar"
 import { AddWallPostIdToPhotos1710000000002 } from "../migrations/1710000000002-AddWallPostIdToPhotos"
@@ -24,10 +25,10 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USERNAME || "postgres",
     password: process.env.DB_PASSWORD || "postgres",
     database: process.env.DB_NAME || "setka",
-    synchronize: false, // Отключаем синхронизацию
+    synchronize: true,
     dropSchema: false,
     logging: process.env.NODE_ENV !== "production",
-    entities: [User, Post, Photo, Session, Chat, Message, WallPost],
+    entities: [User, Post, Photo, Session, Chat, Message, WallPost, Like],
     migrations: [
         AddUserStatus1710000000000,
         AddUserAvatar1710000000001,

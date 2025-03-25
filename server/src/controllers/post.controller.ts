@@ -1,10 +1,18 @@
 import { Request, Response } from 'express';
 import { Post } from '../entities/post.entity';
 import { AppDataSource } from '../db/db_connect';
+import { Photo } from '../entities/photo.entity';
+import { Like } from '../entities/like.entity';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { WallPost } from '../entities/wall.entity';
 
 export class PostController {
     private get postRepository() {
         return AppDataSource.getRepository(Post);
+    }
+
+    private get likeRepository() {
+        return AppDataSource.getRepository(Like);
     }
 
     // Получение всех постов
@@ -14,6 +22,7 @@ export class PostController {
             const posts = await this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.author', 'author')
+                .leftJoinAndSelect('author.avatar', 'authorAvatar')
                 .leftJoinAndSelect('post.photos', 'photos')
                 .select([
                     'post.id',
@@ -30,6 +39,8 @@ export class PostController {
                     'author.lastName',
                     'author.nickname',
                     'author.email',
+                    'authorAvatar.id',
+                    'authorAvatar.path',
                     'photos.id',
                     'photos.filename',
                     'photos.path'
@@ -56,6 +67,7 @@ export class PostController {
             const post = await this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.author', 'author')
+                .leftJoinAndSelect('author.avatar', 'authorAvatar')
                 .leftJoinAndSelect('post.photos', 'photos')
                 .select([
                     'post.id',
@@ -72,6 +84,8 @@ export class PostController {
                     'author.lastName',
                     'author.nickname',
                     'author.email',
+                    'authorAvatar.id',
+                    'authorAvatar.path',
                     'photos.id',
                     'photos.filename',
                     'photos.path'
@@ -124,26 +138,61 @@ export class PostController {
             const { content, photoIds } = req.body;
             
             let post = await this.postRepository.findOne({
-                where: { id: Number(id) }
+                where: { id: Number(id) },
+                relations: ['photos']
             });
             
             if (!post) {
                 res.status(404).json({ message: 'Пост не найден' });
                 return;
             }
+
+            // Обновляем текст
+            post.content = content;
+
+            // Обновляем фотографии
+            if (photoIds && Array.isArray(photoIds)) {
+                const photoRepository = AppDataSource.getRepository(Photo);
+                const photos = await photoRepository.findByIds(photoIds);
+                post.photos = photos;
+            }
+
+            // Сохраняем обновленный пост
+            await this.postRepository.save(post);
             
-            await this.postRepository.update(id, {
-                content,
-                photos: photoIds?.map((id: number) => ({ id }))
-            });
-            
-            post = await this.postRepository.findOne({
-                where: { id: Number(id) },
-                relations: ['author', 'photos']
-            });
+            // Загружаем обновленный пост со всеми связями
+            post = await this.postRepository
+                .createQueryBuilder('post')
+                .leftJoinAndSelect('post.author', 'author')
+                .leftJoinAndSelect('author.avatar', 'authorAvatar')
+                .leftJoinAndSelect('post.photos', 'photos')
+                .select([
+                    'post.id',
+                    'post.content',
+                    'post.authorId',
+                    'post.likesCount',
+                    'post.commentsCount',
+                    'post.sharesCount',
+                    'post.viewsCount',
+                    'post.createdAt',
+                    'post.updatedAt',
+                    'author.id',
+                    'author.firstName',
+                    'author.lastName',
+                    'author.nickname',
+                    'author.email',
+                    'authorAvatar.id',
+                    'authorAvatar.path',
+                    'photos.id',
+                    'photos.filename',
+                    'photos.path'
+                ])
+                .where('post.id = :id', { id: Number(id) })
+                .getOne();
             
             res.json(post);
         } catch (error) {
+            console.error('[PostController] Ошибка при обновлении поста:', error);
             res.status(500).json({ message: 'Ошибка при обновлении поста', error });
         }
     };
@@ -178,6 +227,7 @@ export class PostController {
             const posts = await this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.author', 'author')
+                .leftJoinAndSelect('author.avatar', 'authorAvatar')
                 .leftJoinAndSelect('post.photos', 'photos')
                 .select([
                     'post.id',
@@ -194,6 +244,8 @@ export class PostController {
                     'author.lastName',
                     'author.nickname',
                     'author.email',
+                    'authorAvatar.id',
+                    'authorAvatar.path',
                     'photos.id',
                     'photos.filename',
                     'photos.path'
@@ -207,6 +259,98 @@ export class PostController {
         } catch (error) {
             console.error('[PostController] Ошибка при получении постов пользователя:', error);
             res.status(500).json({ message: 'Ошибка при получении постов пользователя', error });
+        }
+    };
+
+    // Поставить/убрать лайк посту
+    public toggleLike = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+        try {
+            const postId = Number(req.params.id);
+            const userId = req.user.id;
+
+            console.log(`[PostController] Запрос на установку/снятие лайка для поста ${postId} от пользователя ${userId}`);
+
+            // Проверяем существование поста
+            const post = await AppDataSource
+                .getRepository(WallPost)
+                .createQueryBuilder("Post")
+                .where("Post.id = :id", { id: postId })
+                .getOne();
+
+            if (!post) {
+                console.log(`[PostController] Пост с ID ${postId} не найден`);
+                res.status(404).json({ message: 'Пост не найден' });
+                return;
+            }
+
+            console.log(`[PostController] Пост найден, проверяем существующий лайк`);
+
+            // Проверяем, есть ли уже лайк
+            const existingLike = await this.likeRepository.findOne({
+                where: { userId, wallPostId: postId }
+            });
+
+            let response;
+            if (existingLike) {
+                console.log(`[PostController] Лайк найден, удаляем`);
+                // Если лайк есть - удаляем его
+                await this.likeRepository.remove(existingLike);
+                post.likesCount = Math.max(0, post.likesCount - 1);
+                await AppDataSource.getRepository(WallPost).save(post);
+                response = { liked: false, likesCount: post.likesCount };
+            } else {
+                console.log(`[PostController] Лайк не найден, создаем новый`);
+                // Если лайка нет - создаем
+                const newLike = this.likeRepository.create({
+                    userId: userId,
+                    wallPostId: postId
+                });
+                await this.likeRepository.save(newLike);
+                post.likesCount++;
+                await AppDataSource.getRepository(WallPost).save(post);
+                response = { liked: true, likesCount: post.likesCount };
+            }
+
+            console.log(`[PostController] Отправляем ответ:`, response);
+            res.json(response);
+        } catch (error) {
+            console.error('[PostController] Ошибка при обработке лайка:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+            res.status(500).json({ message: 'Ошибка при обработке лайка', error: errorMessage });
+        }
+    };
+
+    // Проверить, лайкнул ли пользователь пост
+    public checkLike = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+        try {
+            console.log('[PostController] Запрос на проверку лайка');
+            const postId = Number(req.params.id);
+            const userId = req.user.id;
+
+            console.log(`[PostController] Проверка лайка для поста ${postId} от пользователя ${userId}`);
+
+            // Проверяем, является ли пост записью на стене
+            const wallPost = await AppDataSource
+                .getRepository(WallPost)
+                .createQueryBuilder("Post")
+                .where("Post.id = :id", { id: postId })
+                .getOne();
+
+            const like = await this.likeRepository.findOne({
+                where: wallPost ? { userId, wallPostId: postId } : { userId, postId }
+            });
+
+            const likesCount = wallPost ? wallPost.likesCount : 0;
+
+            console.log(`[PostController] Результат проверки:`, {
+                liked: Boolean(like),
+                likesCount
+            });
+            
+            res.json({ liked: Boolean(like), likesCount });
+        } catch (error) {
+            console.error('[PostController] Ошибка при проверке лайка:', error);
+            res.status(500).json({ message: 'Ошибка при проверке лайка' });
         }
     };
 } 

@@ -1,35 +1,29 @@
 .post {
-    background: #ffffff;
-    border: 1px solid #e5e5e5;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    max-width: 680px;
-    margin-left: auto;
-    margin-right: auto;
+    background: #fff;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .authorInfo {
     display: flex;
     align-items: center;
-    gap: 10px;
 }
 
 .authorAvatar {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background-color: #f0f2f5;
-    overflow: hidden;
+    margin-right: 10px;
+    object-fit: cover;
 }
 
 .author {
@@ -38,159 +32,125 @@
     font-weight: 500;
 }
 
-.author:hover {
-    text-decoration: underline;
-}
-
 .date {
     color: #818c99;
     font-size: 13px;
 }
 
 .content {
-    margin-bottom: 15px;
-    font-size: 15px;
-    line-height: 1.5;
+    margin: 10px 0;
     white-space: pre-wrap;
-}
-
-.actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.actionButton {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
-
-.editButton {
-    background: #5181b8;
-    color: white;
-}
-
-.editButton:hover:not(:disabled) {
-    background: #4a76a8;
-}
-
-.editButton:disabled {
-    background: #a0a0a0;
-    cursor: not-allowed;
-}
-
-.deleteButton {
-    background: #e64646;
-    color: white;
-}
-
-.deleteButton:hover {
-    background: #d43939;
-}
-
-.error {
-    color: #e64646;
-    margin-top: 10px;
-    padding: 10px;
-    background-color: #fff5f5;
-    border-radius: 6px;
-    font-size: 14px;
-}
-
-.editContainer {
-    margin-top: 15px;
-}
-
-.editTextarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #e5e5e5;
-    border-radius: 8px;
-    resize: vertical;
-    min-height: 100px;
-    font-size: 15px;
-    line-height: 1.5;
-    margin-bottom: 15px;
-}
-
-.editTextarea:focus {
-    outline: none;
-    border-color: #4a76a8;
-}
-
-.editPhotos {
-    margin: 15px 0;
+    word-wrap: break-word;
 }
 
 .footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 12px;
-    padding-top: 12px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid #e7e8ec;
 }
 
-.modifyButtons {
+.actions {
     display: flex;
     gap: 8px;
 }
 
+.actionButton {
+    background: none;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #626d7a;
+    font-size: 13px;
+    transition: background-color 0.2s;
+}
+
+.actionButton:hover {
+    background-color: rgba(174, 183, 194, 0.12);
+}
+
+.editButton, .deleteButton, .saveButton, .cancelButton {
+    color: #626d7a;
+    opacity: 0.7;
+}
+
+.editButton:hover, .saveButton:hover {
+    opacity: 1;
+    background-color: rgba(174, 183, 194, 0.12);
+}
+
+.deleteButton:hover {
+    opacity: 1;
+    color: #e64646;
+    background-color: rgba(230, 70, 70, 0.12);
+}
+
+.cancelButton:hover {
+    opacity: 1;
+}
+
 .editContainer {
-    margin-bottom: 12px;
+    margin: 10px 0;
 }
 
 .editTextarea {
     width: 100%;
     min-height: 100px;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    padding: 8px;
+    border: 1px solid #e7e8ec;
+    border-radius: 4px;
     resize: vertical;
-    font-family: inherit;
-    font-size: 14px;
-    margin-bottom: 12px;
-    transition: border-color 0.2s ease;
-}
-
-.editTextarea:focus {
-    border-color: #2a5885;
-    outline: none;
-}
-
-.editPhotos {
-    margin: 16px 0;
-    padding: 16px;
-    background: #f5f6f8;
-    border-radius: 8px;
+    margin-bottom: 10px;
 }
 
 .editButtons {
     display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.editButtonsRight {
+    display: flex;
     gap: 8px;
-    justify-content: flex-end;
-    margin-top: 16px;
 }
 
-.saveButton {
-    background-color: #2a5885 !important;
-    color: white !important;
+.editButtonsLeft {
+    display: flex;
+    gap: 8px;
 }
 
-.saveButton:hover {
-    background-color: #224b73 !important;
+.error {
+    color: #e64646;
+    margin: 10px 0;
+    font-size: 13px;
 }
 
-.cancelButton {
-    background-color: #f5f6f8;
+.editPhotos {
+    margin: 10px 0;
 }
 
-.cancelButton:hover {
-    background-color: #e7e8ec;
+.likeButton {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.likeButton:hover {
+    color: #e74c3c;
+}
+
+.likeButton.liked {
+    color: #e74c3c;
+}
+
+.likeButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
@@ -212,11 +172,6 @@
     .actions {
         width: 100%;
         justify-content: space-between;
-    }
-
-    .modifyButtons {
-        width: 100%;
-        justify-content: flex-end;
     }
 
     .actionButton {

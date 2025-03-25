@@ -49,7 +49,9 @@ export const api = {
                 return null;
             }
 
-            return response.json();
+            const responseData = await response.json();
+            console.log('API Response Data:', responseData);
+            return responseData;
         } catch (error) {
             console.error('API Error:', error);
             throw error;

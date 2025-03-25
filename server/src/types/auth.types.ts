@@ -5,4 +5,8 @@ import { Session } from '../entities/session.entity'
 export interface AuthRequest extends Request {
     user?: User
     session?: Session
+}
+
+export interface AuthenticatedRequest extends Request {
+    user: User
 } 

@@ -12,6 +12,7 @@ import { FeedPage } from './pages/FeedPage';
 import { UserPage } from './pages/UserPage/UserPage';
 import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/Header/Header';
+import Sidebar from './components/Sidebar/Sidebar';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -46,6 +47,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <div className="app">
         <Header />
+        {user && <Sidebar />}
         <main className="main">
           <Routes>
             <Route 

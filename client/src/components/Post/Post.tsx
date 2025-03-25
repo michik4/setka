@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Post as PostType } from '../../types/post.types';
 import { Photo } from '../../types/post.types';
@@ -13,15 +13,74 @@ import { ServerImage } from '../ServerImage/ServerImage';
 interface PostProps {
     post: PostType;
     onDelete?: () => void;
+    onUpdate?: (updatedPost: PostType) => void;
 }
 
-export const Post: React.FC<PostProps> = ({ post, onDelete }) => {
+export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     const { user } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(post.content);
     const [editedPhotos, setEditedPhotos] = useState<Photo[]>(post.photos || []);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [liked, setLiked] = useState(false);
+    const [likesCount, setLikesCount] = useState(post.likesCount);
+    const [isLikeLoading, setIsLikeLoading] = useState(false);
+
+    useEffect(() => {
+        // Проверяем, лайкнул ли пользователь этот пост
+        const checkLike = async () => {
+            try {
+                const endpoint = post.wallOwnerId ? `/wall/${post.id}/like` : `/posts/${post.id}/like`;
+                console.log('[Post] Проверка лайка:', endpoint);
+                const response = await api.get(endpoint);
+                console.log('[Post] Результат проверки лайка:', response);
+                
+                if (response && typeof response.liked === 'boolean') {
+                    setLiked(response.liked);
+                    if (typeof response.likesCount === 'number') {
+                        setLikesCount(response.likesCount);
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка при проверке лайка:', error);
+            }
+        };
+
+        checkLike();
+    }, [post.id, post.wallOwnerId]);
+
+    const handleLike = async () => {
+        if (isLikeLoading) return;
+
+        setIsLikeLoading(true);
+        try {
+            const endpoint = post.wallOwnerId ? `/wall/${post.id}/like` : `/posts/${post.id}/like`;
+            console.log('[Post] Отправка запроса на лайк:', endpoint);
+            
+            const response = await api.post(endpoint, {});
+            console.log('[Post] Получен ответ от сервера:', response);
+            
+            // Проверяем, что response не null и не undefined
+            if (!response) {
+                throw new Error('Нет ответа от сервера');
+            }
+            
+            // Проверяем наличие данных в ответе
+            if (typeof response.liked === 'boolean' && typeof response.likesCount === 'number') {
+                setLiked(response.liked);
+                setLikesCount(response.likesCount);
+            } else {
+                console.error('Некорректный формат ответа:', response);
+                throw new Error('Некорректный формат ответа от сервера');
+            }
+        } catch (error) {
+            console.error('Ошибка при обработке лайка:', error);
+            setError('Не удалось обработать лайк. Попробуйте позже.');
+        } finally {
+            setIsLikeLoading(false);
+        }
+    };
 
     // Автор может редактировать свой пост
     const canEdit = user && user.id === post.authorId;
@@ -59,12 +118,24 @@ export const Post: React.FC<PostProps> = ({ post, onDelete }) => {
 
         try {
             const endpoint = post.wallOwnerId ? `/wall/${post.id}` : `/posts/${post.id}`;
-            await api.put(endpoint, { 
+            const response = await api.put(endpoint, { 
                 content: editedContent.trim(),
                 photoIds: editedPhotos.map(photo => photo.id)
             });
+            
             setIsEditing(false);
+            
             // Обновляем пост локально
+            const updatedPost = {
+                ...post,
+                content: editedContent.trim(),
+                photos: editedPhotos
+            };
+            
+            // Вызываем колбэк обновления
+            onUpdate?.(updatedPost);
+            
+            // Обновляем локальное состояние
             post.content = editedContent.trim();
             post.photos = editedPhotos;
         } catch (err) {
@@ -145,25 +216,37 @@ export const Post: React.FC<PostProps> = ({ post, onDelete }) => {
 
                     {error && <div className={styles.error}>{error}</div>}
                     <div className={styles.editButtons}>
-                        <button
-                            className={`${styles.actionButton} ${styles.cancelButton}`}
-                            onClick={() => {
-                                setIsEditing(false);
-                                setEditedContent(post.content);
-                                setEditedPhotos(post.photos || []);
-                                setError(null);
-                            }}
-                            disabled={isSubmitting}
-                        >
-                            Отмена
-                        </button>
-                        <button
-                            className={`${styles.actionButton} ${styles.saveButton}`}
-                            onClick={handleEdit}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? 'Сохранение...' : 'Сохранить'}
-                        </button>
+                        <div className={styles.editButtonsLeft}>
+                            {canDelete && (
+                                <button
+                                    className={`${styles.actionButton} ${styles.deleteButton}`}
+                                    onClick={handleDelete}
+                                >
+                                    Удалить
+                                </button>
+                            )}
+                        </div>
+                        <div className={styles.editButtonsRight}>
+                            <button
+                                className={`${styles.actionButton} ${styles.cancelButton}`}
+                                onClick={() => {
+                                    setIsEditing(false);
+                                    setEditedContent(post.content);
+                                    setEditedPhotos(post.photos || []);
+                                    setError(null);
+                                }}
+                                disabled={isSubmitting}
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                className={`${styles.actionButton} ${styles.saveButton}`}
+                                onClick={handleEdit}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? 'Сохранение...' : 'Сохранить'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -185,10 +268,15 @@ export const Post: React.FC<PostProps> = ({ post, onDelete }) => {
             )}
 
             <div className={styles.footer}>
+                <button 
+                    className={`${styles.actionButton} ${styles.likeButton} ${liked ? styles.liked : ''}`}
+                    onClick={handleLike}
+                    disabled={isLikeLoading}
+                >
+                    {isLikeLoading ? '...' : liked ? 'Нравится' : 'Нравится'} • {likesCount}
+                </button>
+                
                 <div className={styles.actions}>
-                    <button className={styles.actionButton}>
-                        ❤️ {post.likesCount || 0}
-                    </button>
                     <button className={styles.actionButton}>
                         💬 {post.commentsCount || 0}
                     </button>
@@ -198,21 +286,12 @@ export const Post: React.FC<PostProps> = ({ post, onDelete }) => {
                 </div>
 
                 <div className={styles.modifyButtons}>
-                    {canEdit && (
+                    {canEdit && !isEditing && (
                         <button
                             className={`${styles.actionButton} ${styles.editButton}`}
-                            onClick={handleEdit}
-                            disabled={isSubmitting}
+                            onClick={() => setIsEditing(true)}
                         >
-                            {isEditing ? (isSubmitting ? 'Сохранение...' : 'Сохранить') : 'Редактировать'}
-                        </button>
-                    )}
-                    {canDelete && (
-                        <button
-                            className={`${styles.actionButton} ${styles.deleteButton}`}
-                            onClick={handleDelete}
-                        >
-                            Удалить
+                            Редактировать
                         </button>
                     )}
                 </div>

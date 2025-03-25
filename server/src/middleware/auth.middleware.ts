@@ -4,13 +4,15 @@ import { SessionService } from '../services/session.service';
 import { AppDataSource } from '../db/db_connect';
 import { User } from '../entities/user.entity';
 import { Photo } from '../entities/photo.entity';
-import { AuthenticatedRequest } from '../types/express';
+import { AuthenticatedRequest } from '../types/auth.types';
 
 const userService = new UserService(
     AppDataSource.getRepository(User),
     AppDataSource.getRepository(Photo)
 );
 const sessionService = new SessionService();
+
+export { AuthenticatedRequest };
 
 export async function authenticateSession(
     req: Request,
@@ -44,12 +46,7 @@ export async function authenticateSession(
         }
 
         console.log('[Auth] Пользователь аутентифицирован:', user.id);
-        (req as AuthenticatedRequest).user = {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName
-        };
+        (req as AuthenticatedRequest).user = user;
         next();
     } catch (error) {
         console.error('[Auth] Ошибка при аутентификации:', error);
