@@ -1,46 +1,116 @@
-# Getting Started with Create React App
+# Сетка - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Frontend часть социальной сети Сетка, построенная на React и TypeScript.
 
-## Available Scripts
+## Структура проекта
 
-In the project directory, you can run:
+```
+src/
+├── components/     # React компоненты
+├── contexts/       # React контексты (авторизация и т.д.)
+├── hooks/         # Пользовательские хуки
+├── pages/         # Компоненты страниц
+├── types/         # TypeScript типы и интерфейсы
+├── utils/         # Вспомогательные функции
+└── config.ts      # Конфигурация приложения
+```
 
-### `npm start`
+## Основные компоненты
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Аутентификация
+- `LoginForm` - форма входа
+- `RegisterForm` - форма регистрации
+- `AuthContext` - контекст авторизации
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Посты
+- `Post` - компонент поста
+- `CreatePostForm` - форма создания поста
+- `PostFeed` - лента постов
+- `PhotoGrid` - сетка фотографий в посте
 
-### `npm test`
+### Профиль
+- `UserPage` - страница профиля
+- `ServerImage` - компонент для отображения изображений
+- `ImageUploader` - загрузка изображений
+- `ImageSelector` - выбор изображений из галереи
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## API
 
-### `npm run build`
+Взаимодействие с сервером осуществляется через `api.ts`:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```typescript
+const api = {
+  get: (endpoint: string) => {...},
+  post: (endpoint: string, data?: any) => {...},
+  put: (endpoint: string, data?: any) => {...},
+  delete: (endpoint: string) => {...}
+};
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Стили
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Используются CSS Modules для изоляции стилей
+- Каждый компонент имеет свой `.module.css` файл
+- Адаптивный дизайн с брейкпоинтами:
+  - Mobile: < 768px
+  - Tablet: 768px - 1024px
+  - Desktop: > 1024px
 
-### `npm run eject`
+## Маршрутизация
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+Основные маршруты:
+- `/` - главная страница (лента)
+- `/login` - страница входа
+- `/register` - страница регистрации
+- `/users/:id` - профиль пользователя
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Разработка
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### Запуск
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```bash
+# Установка зависимостей
+npm install
 
-## Learn More
+# Запуск в режиме разработки
+npm start
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+# Сборка для продакшена
+npm run build
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Тестирование
+
+```bash
+# Запуск тестов
+npm test
+
+# Запуск тестов с покрытием
+npm run test:coverage
+```
+
+### Линтинг
+
+```bash
+# Проверка кода
+npm run lint
+
+# Автоматическое исправление
+npm run lint:fix
+```
+
+## Зависимости
+
+Основные:
+- react
+- react-dom
+- react-router-dom
+- typescript
+- @types/react
+- @types/react-dom
+
+Разработка:
+- @typescript-eslint/eslint-plugin
+- @typescript-eslint/parser
+- eslint
+- prettier
