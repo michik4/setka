@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../utils/api';
 import styles from './Post.module.css';
 import { ServerImage } from '../ServerImage/ServerImage';
+import { PhotoViewer } from '../PhotoViewer/PhotoViewer';
 
 interface PostProps {
     post: PostType;
@@ -26,6 +27,8 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     const [liked, setLiked] = useState(false);
     const [likesCount, setLikesCount] = useState(post.likesCount);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
+    const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+    const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
 
     useEffect(() => {
         // Проверяем, лайкнул ли пользователь этот пост
@@ -61,12 +64,10 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
             const response = await api.post(endpoint, {});
             console.log('[Post] Получен ответ от сервера:', response);
             
-            // Проверяем, что response не null и не undefined
             if (!response) {
                 throw new Error('Нет ответа от сервера');
             }
             
-            // Проверяем наличие данных в ответе
             if (typeof response.liked === 'boolean' && typeof response.likesCount === 'number') {
                 setLiked(response.liked);
                 setLikesCount(response.likesCount);
@@ -85,7 +86,7 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     // Автор может редактировать свой пост
     const canEdit = user && user.id === post.authorId;
     // Автор и владелец стены могут удалять посты
-    const canDelete = user && (user.id === post.authorId || (post.wallOwnerId && user.id === post.wallOwnerId));
+    const canDelete = Boolean(user && (user.id === post.authorId || (post.wallOwnerId && user.id === post.wallOwnerId)));
 
     const handleDelete = async () => {
         if (!window.confirm('Вы уверены, что хотите удалить этот пост?')) {
@@ -93,12 +94,25 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         }
 
         try {
+            setIsSubmitting(true);
             const endpoint = post.wallOwnerId ? `/wall/${post.id}` : `/posts/${post.id}`;
+            
+            // Сначала удаляем пост
             await api.delete(endpoint);
+            
+            // Затем удаляем все фотографии поста
+            for (const photo of post.photos) {
+                await api.delete(`/photos/${photo.id}`);
+            }
+            
+            // Закрываем режим редактирования и вызываем колбэк
+            setIsEditing(false);
             onDelete?.();
         } catch (err) {
             console.error('Ошибка при удалении поста:', err);
             setError('Не удалось удалить пост');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -113,11 +127,33 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
             return;
         }
 
+        // Проверяем, были ли изменения
+        const contentChanged = editedContent.trim() !== post.content.trim();
+        const photosChanged = editedPhotos.length !== post.photos.length || 
+            editedPhotos.some(photo => !post.photos.some(p => p.id === photo.id));
+
+        // Если нет изменений, просто выходим из режима редактирования
+        if (!contentChanged && !photosChanged) {
+            setIsEditing(false);
+            return;
+        }
+
         setIsSubmitting(true);
         setError(null);
 
         try {
             const endpoint = post.wallOwnerId ? `/wall/${post.id}` : `/posts/${post.id}`;
+            
+            // Сначала отвязываем удаленные фотографии
+            const removedPhotos = post.photos.filter(photo => 
+                !editedPhotos.some(editedPhoto => editedPhoto.id === photo.id)
+            );
+            
+            for (const photo of removedPhotos) {
+                await api.delete(`/photos/${photo.id}/posts/${post.id}`);
+            }
+            
+            // Затем обновляем пост
             const response = await api.put(endpoint, { 
                 content: editedContent.trim(),
                 photoIds: editedPhotos.map(photo => photo.id)
@@ -147,23 +183,47 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     };
 
     const handlePhotoDelete = async (photo: Photo) => {
+        if (!window.confirm('Вы уверены, что хотите удалить эту фотографию?')) {
+            return;
+        }
+
         try {
-            // Отвязываем фотографию от поста вместо её удаления
-            await api.delete(`/photos/${photo.id}/posts/${post.id}`);
-            // Обновляем фотографии локально
-            setEditedPhotos(prev => prev.filter(p => p.id !== photo.id));
-            if (!isEditing) {
-                post.photos = post.photos.filter(p => p.id !== photo.id);
-            }
+            // Удаляем фотографию
+            await api.delete(`/photos/${photo.id}`);
+
+            // Обновляем локальное состояние
+            const updatedPhoto = { ...photo, isDeleted: true };
+            
+            // Обновляем editedPhotos, сохраняя удаленную фотографию
+            setEditedPhotos(prev => prev.map(p => 
+                p.id === photo.id ? updatedPhoto : p
+            ));
+            
+            // Обновляем фотографии в посте, сохраняя удаленную фотографию
+            post.photos = post.photos.map(p => 
+                p.id === photo.id ? updatedPhoto : p
+            );
+            onUpdate?.(post);
         } catch (err) {
-            console.error('Ошибка при удалении фотографии из поста:', err);
-            alert('Не удалось удалить фотографию из поста');
+            console.error('Ошибка при удалении фотографии:', err);
+            setError('Не удалось удалить фотографию');
         }
     };
 
     const handleImageUploaded = (photo: Photo) => {
         setEditedPhotos(prev => [...prev, photo]);
         setError(null);
+    };
+
+    const handlePhotoClick = (photo: Photo, index: number) => {
+        setSelectedPhoto(photo);
+        setSelectedPhotoIndex(index);
+    };
+
+    const handlePhotoChange = (photo: Photo) => {
+        setSelectedPhoto(photo);
+        const index = post.photos.findIndex(p => p.id === photo.id);
+        setSelectedPhotoIndex(index);
     };
 
     return (
@@ -198,15 +258,10 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                             photos={editedPhotos}
                             onPhotoDelete={handlePhotoDelete}
                             canDelete={true}
+                            isEditing={true}
                         />
-                        
-                        <ImageUploader
-                            onImageUploaded={handleImageUploaded}
-                            onError={(err) => setError(err)}
-                        />
-
                         {user && (
-                            <ImageSelector
+                            <ImageSelector 
                                 userId={user.id}
                                 selectedImages={editedPhotos}
                                 onImagesChange={setEditedPhotos}
@@ -215,19 +270,10 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                     </div>
 
                     {error && <div className={styles.error}>{error}</div>}
+
                     <div className={styles.editButtons}>
                         <div className={styles.editButtonsLeft}>
-                            {canDelete && (
-                                <button
-                                    className={`${styles.actionButton} ${styles.deleteButton}`}
-                                    onClick={handleDelete}
-                                >
-                                    Удалить
-                                </button>
-                            )}
-                        </div>
-                        <div className={styles.editButtonsRight}>
-                            <button
+                            <button 
                                 className={`${styles.actionButton} ${styles.cancelButton}`}
                                 onClick={() => {
                                     setIsEditing(false);
@@ -239,7 +285,18 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                             >
                                 Отмена
                             </button>
-                            <button
+                            {canDelete && (
+                                <button 
+                                    className={`${styles.actionButton} ${styles.deleteButton}`}
+                                    onClick={handleDelete}
+                                    disabled={isSubmitting}
+                                >
+                                    Удалить пост
+                                </button>
+                            )}
+                        </div>
+                        <div className={styles.editButtonsRight}>
+                            <button 
                                 className={`${styles.actionButton} ${styles.saveButton}`}
                                 onClick={handleEdit}
                                 disabled={isSubmitting}
@@ -251,51 +308,65 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                 </div>
             ) : (
                 <>
-                    {post.content && (
-                        <div className={styles.content}>
-                            {post.content}
-                        </div>
-                    )}
-
+                    <div className={styles.content}>{post.content}</div>
                     {post.photos && post.photos.length > 0 && (
                         <PhotoGrid 
                             photos={post.photos} 
-                            onPhotoDelete={canDelete ? handlePhotoDelete : undefined}
+                            onPhotoDelete={handlePhotoDelete}
                             canDelete={Boolean(canDelete)}
+                            isEditing={isEditing}
+                            isWallPost={Boolean(post.wallOwnerId)}
+                            onPhotoClick={handlePhotoClick}
                         />
                     )}
+
+                    {selectedPhoto && (
+                        <PhotoViewer
+                            photo={selectedPhoto}
+                            onClose={() => {
+                                setSelectedPhoto(null);
+                                setSelectedPhotoIndex(null);
+                            }}
+                            onDelete={canDelete ? () => handlePhotoDelete(selectedPhoto) : undefined}
+                            canDelete={canDelete}
+                            isWallPost={Boolean(post.wallOwnerId)}
+                            allPhotos={post.photos}
+                            currentIndex={selectedPhotoIndex || 0}
+                            onPhotoChange={handlePhotoChange}
+                        />
+                    )}
+
+                    <div className={styles.footer}>
+                        <button 
+                            className={`${styles.actionButton} ${styles.likeButton} ${liked ? styles.liked : ''}`}
+                            onClick={handleLike}
+                            disabled={isLikeLoading}
+                        >
+                            {isLikeLoading ? '...' : liked ? 'Нравится' : 'Нравится'} • {likesCount}
+                        </button>
+                        
+                        <div className={styles.actions}>
+                            <button className={styles.actionButton}>
+                                💬 {post.commentsCount || 0}
+                            </button>
+                            <button className={styles.actionButton}>
+                                🔄 {post.sharesCount || 0}
+                            </button>
+                        </div>
+
+                        <div className={styles.modifyButtons}>
+                            {canEdit && !isEditing && (
+                                <button
+                                    className={`${styles.actionButton} ${styles.editButton}`}
+                                    onClick={() => setIsEditing(true)}
+                                >
+                                    Редактировать
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </>
             )}
-
-            <div className={styles.footer}>
-                <button 
-                    className={`${styles.actionButton} ${styles.likeButton} ${liked ? styles.liked : ''}`}
-                    onClick={handleLike}
-                    disabled={isLikeLoading}
-                >
-                    {isLikeLoading ? '...' : liked ? 'Нравится' : 'Нравится'} • {likesCount}
-                </button>
-                
-                <div className={styles.actions}>
-                    <button className={styles.actionButton}>
-                        💬 {post.commentsCount || 0}
-                    </button>
-                    <button className={styles.actionButton}>
-                        🔄 {post.sharesCount || 0}
-                    </button>
-                </div>
-
-                <div className={styles.modifyButtons}>
-                    {canEdit && !isEditing && (
-                        <button
-                            className={`${styles.actionButton} ${styles.editButton}`}
-                            onClick={() => setIsEditing(true)}
-                        >
-                            Редактировать
-                        </button>
-                    )}
-                </div>
-            </div>
 
             {error && <div className={styles.error}>{error}</div>}
         </div>

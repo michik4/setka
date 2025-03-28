@@ -5,7 +5,9 @@ export interface Photo {
     mimetype: string;
     size: number;
     path: string;
-    userId?: number;
+    extension: string;
+    isDeleted: boolean;
+    userId: number;
     description?: string;
     createdAt: string;
 } 

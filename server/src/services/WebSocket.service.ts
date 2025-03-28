@@ -6,6 +6,7 @@ import { compare } from 'bcrypt';
 import { AppDataSource } from '../db/db_connect';
 import { User } from '../entities/user.entity';
 import { Photo } from '../entities/photo.entity';
+import { PhotoPlaceholder } from '../utils/placeholder';
 
 export class WebSocketService {
   private io: Server;
@@ -310,10 +311,17 @@ export class WebSocketService {
       });
 
       // Отключение
-      socket.on('disconnect', () => {
+      socket.on('disconnect', async () => {
         const userId = this.findUserIdBySocketId(socket.id);
         if (userId) {
           this.userSockets.delete(userId);
+          // Очищаем временные файлы при отключении
+          try {
+            await PhotoPlaceholder.cleanupTempFiles();
+            console.log(`[WebSocket] Очищены временные файлы для пользователя ${userId}`);
+          } catch (error) {
+            console.error('[WebSocket] Ошибка при очистке временных файлов:', error);
+          }
         }
         console.log('Клиент отключился:', socket.id);
       });

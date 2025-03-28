@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Post } from '../../components/Post/Post';
 import { CreatePostForm } from '../../components/CreatePostForm/CreatePostForm';
 import { ServerImage } from '../../components/ServerImage/ServerImage';
+import { Showcase } from '../../components/Showcase/Showcase';
 import styles from './UserPage.module.css';
 import { api } from '../../utils/api';
 import { Post as PostType } from '../../types/post.types';
@@ -215,29 +216,30 @@ export const UserPage: React.FC = () => {
                 </div>
             </div>
 
-            {currentUser && (
-                <>
-                    <h2>Стена</h2>
-                    <div className={styles.createPostSection}>
-                        <CreatePostForm 
-                            onSuccess={handlePostCreated}
-                            wallOwnerId={parseInt(userId || '')}
-                        />
-                    </div>
-                </>
-            )}
+            <Showcase userId={userId || ''} />
 
-            <div className={styles.wallPosts}>
-                {wallPosts && wallPosts.length > 0 ? (
-                    wallPosts.map(post => (
-                        <Post 
-                            key={post.id} 
-                            post={post} 
-                            onDelete={() => handlePostDeleted(post.id)}
-                        />
-                    ))
+            <div className={styles.wallSection}>
+                {isCurrentUser && (
+                    <CreatePostForm 
+                        onSuccess={handlePostCreated}
+                        wallOwnerId={parseInt(userId || '')}
+                    />
+                )}
+                
+                {wallPosts.length > 0 ? (
+                    <div className={styles.posts}>
+                        {wallPosts.map(post => (
+                            <Post
+                                key={post.id}
+                                post={post}
+                                onDelete={() => handlePostDeleted(post.id)}
+                            />
+                        ))}
+                    </div>
                 ) : (
-                    <div className={styles.emptyWall}>Нет записей на стене</div>
+                    <div className={styles.emptyWall}>
+                        Нет записей
+                    </div>
                 )}
             </div>
         </div>

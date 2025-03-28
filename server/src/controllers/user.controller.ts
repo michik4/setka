@@ -6,6 +6,7 @@ import { AuthenticatedRequest } from '../types/express'
 import { upload } from '../utils/upload'
 import { AppDataSource } from '../db/db_connect'
 import { Photo } from '../entities/photo.entity'
+import path from 'path'
 
 export class UserController {
     private photoRepository = AppDataSource.getRepository(Photo);
@@ -161,6 +162,7 @@ export class UserController {
                 mimetype: req.file.mimetype,
                 size: req.file.size,
                 path: req.file.filename, // Сохраняем только имя файла
+                extension: path.extname(req.file.originalname),
                 userId: userId
             });
 

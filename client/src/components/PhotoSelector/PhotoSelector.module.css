@@ -1,0 +1,302 @@
+.container {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--vk-color-border);
+}
+
+.headerControls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #000;
+    margin: 0;
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #818C99;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.closeButton:hover {
+    background-color: #F5F6F8;
+}
+
+.uploadButton {
+    background: #447BBA;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.uploadButton:hover {
+    background: #3d6898;
+}
+
+.uploaderContainer {
+    padding: 20px;
+    border-bottom: 1px solid var(--vk-color-border);
+    background: #F5F6F8;
+}
+
+.selector {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+}
+
+.section {
+    padding: 20px;
+    border-bottom: 1px solid #E7E8EC;
+}
+
+.section:last-child {
+    border-bottom: none;
+}
+
+.sectionTitle {
+    font-size: 14px;
+    color: #626D7A;
+    margin: 0 0 12px 0;
+    font-weight: 500;
+}
+
+.albumsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.albumItem {
+    background: #FFFFFF;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.albumItem:hover {
+    transform: translateY(-2px);
+}
+
+.albumItem.selected {
+    border-color: #447BBA;
+}
+
+.albumPreview {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%;
+    background: #F5F6F8;
+}
+
+.albumPreview img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.albumInfo {
+    padding: 8px;
+}
+
+.albumTitle {
+    font-size: 13px;
+    color: #000;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.albumCount {
+    font-size: 12px;
+    color: #626D7A;
+}
+
+.photosGrid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+}
+
+.photoItem {
+    aspect-ratio: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.photoItem:hover {
+    opacity: 0.9;
+}
+
+.photoItem.selected::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(68, 123, 186, 0.3);
+    z-index: 1;
+}
+
+.photoItem img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.checkbox {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #FFFFFF;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 2;
+}
+
+.selected .checkbox {
+    background: #447BBA;
+    border-color: #FFFFFF;
+}
+
+.checkmark {
+    color: #FFFFFF;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.footer {
+    padding: 16px 20px;
+    border-top: 1px solid #E7E8EC;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    position: sticky;
+    bottom: 0;
+    background: #FFFFFF;
+}
+
+.confirmButton {
+    background: #447BBA;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.confirmButton:hover {
+    background: #3d6898;
+}
+
+.confirmButton:disabled {
+    background: #C4D1DE;
+    cursor: not-allowed;
+}
+
+.cancelButton {
+    background: none;
+    border: none;
+    color: #447BBA;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.cancelButton:hover {
+    color: #3d6898;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #626D7A;
+}
+
+.error {
+    text-align: center;
+    padding: 40px;
+    color: #E64646;
+}
+
+@media (max-width: 768px) {
+    .albumsGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .photosGrid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .selector {
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .albumsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .photosGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .header,
+    .section,
+    .footer {
+        padding: 12px;
+    }
+} 

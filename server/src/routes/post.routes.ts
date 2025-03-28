@@ -64,4 +64,10 @@ router.delete('/:id', authenticateSession, (req: Request, res: Response) => {
     initializeController().deletePost(req, res);
 });
 
+// Получение постов с определенной фотографией
+router.get('/with-photo/:photoId', authenticateSession, (req: Request, res: Response) => {
+    console.log('[Posts] Запрос на получение постов с фотографией:', req.params.photoId);
+    initializeController().getPostsWithPhoto(req, res);
+});
+
 export default router; 

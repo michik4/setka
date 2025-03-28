@@ -1,6 +1,17 @@
+:root {
+    --vk-color-background: #edeef0;
+    --vk-color-header: #4a76a8;
+    --vk-color-text: #2a5885;
+    --vk-color-light-button: #5181b8;
+    --vk-color-hover: #e5ebf1;
+    --vk-color-border: #dce1e6;
+    --border-radius: 8px;
+}
+
 .app {
     min-height: 100vh;
-    background-color: #edeef0;
+    background-color: var(--vk-color-background);
+    font-family: -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', sans-serif;
 }
 
 .main {
@@ -10,7 +21,56 @@
     padding: 0 15px;
     margin-top: 60px;
     min-height: calc(100vh - 60px);
+    display: flex;
+    justify-content: center;
+    gap: 15px;
     position: relative;
+}
+
+.sidebar {
+    width: 165px;
+    position: fixed;
+    left: calc(50% - 480px);
+    top: 48px;
+    height: 100vh;
+    padding-top: 15px;
+    background-color: var(--vk-color-background);
+}
+
+.content {
+    flex-grow: 0;
+    width: 550px;
+}
+
+.post {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 0 0 #d3d9de, 0 0 0 1px #e7e8ec;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.create-post {
+
+}
+
+.nav-item {
+    display: block;
+    padding: 8px 0;
+    color: #285473;
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1.154;
+    cursor: pointer;
+}
+
+.nav-item:hover {
+    background-color: var(--vk-color-hover);
+}
+
+.nav-item.active {
+    color: var(--vk-color-header);
+    font-weight: 500;
 }
 
 /* Адаптивность */
@@ -18,16 +78,39 @@
     .main {
         padding: 0 20px;
     }
+
+    .sidebar {
+        left: 20px;
+    }
 }
 
 @media (max-width: 768px) {
     .main {
         padding: 0 12px;
+        justify-content: flex-start;
+    }
+    
+    .sidebar {
+        width: 130px;
+        left: 12px;
+    }
+
+    .content {
+        width: 100%;
+        margin-left: 145px;
     }
 }
 
 @media (max-width: 480px) {
     .main {
         padding: 0 8px;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .content {
+        margin-left: 0;
     }
 } 

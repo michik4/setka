@@ -13,8 +13,9 @@ export const FeedPage: React.FC = () => {
 
     return (
         <div className={styles.container}>
-            <h2>Новости</h2>
-            <CreatePostForm onSuccess={handlePostCreated} />
+            <div className="create-post">
+                <CreatePostForm onSuccess={handlePostCreated} />
+            </div>
             <PostFeed key={key} />
         </div>
     );

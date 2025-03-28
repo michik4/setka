@@ -27,6 +27,28 @@
     line-height: 1;
 }
 
+.deletedImage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    text-align: center;
+    min-height: 200px;
+}
+
+.extension {
+    font-size: 32px;
+    font-weight: bold;
+    color: #447BBA;
+}
+
+.message {
+    font-size: 16px;
+    color: #626D7A;
+}
+
 .image.loading {
     opacity: 0;
 }

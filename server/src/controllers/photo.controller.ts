@@ -5,6 +5,7 @@ import { Post } from '../entities/post.entity';
 import * as path from 'path';
 import * as fs from 'fs';
 import multer from 'multer';
+import { PhotoPlaceholder } from '../utils/placeholder';
 
 // Конфигурация multer для загрузки файлов
 const storage = multer.diskStorage({
@@ -54,6 +55,7 @@ export class PhotoController {
                 mimetype: req.file.mimetype,
                 size: req.file.size,
                 path: req.file.filename,
+                extension: path.extname(req.file.originalname),
                 userId: parseInt(userId),
                 description
             });
@@ -96,10 +98,18 @@ export class PhotoController {
 
             // Если запрашивается файл изображения
             if (req.query.file === 'true') {
+                // Если фото помечено как удаленное, создаем заглушку
+                if (photo.isDeleted) {
+                    console.log(`[PhotoController] Фото ${id} помечено как удаленное, создаем заглушку`);
+                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                    return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
+                }
+
                 const filePath = path.join(process.cwd(), 'uploads/photos', photo.path);
                 if (!fs.existsSync(filePath)) {
-                    console.error('Файл не найден:', filePath);
-                    return res.status(404).json({ message: 'Image file not found' });
+                    console.log(`[PhotoController] Файл ${filePath} не найден, создаем заглушку`);
+                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                    return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
                 }
                 return res.sendFile(filePath);
             }
@@ -128,8 +138,9 @@ export class PhotoController {
                 fs.unlinkSync(filePath);
             }
 
-            // Удаляем запись из базы данных
-            await this.photoRepository.delete(photo.id);
+            // Помечаем фотографию как удаленную
+            photo.isDeleted = true;
+            await this.photoRepository.save(photo);
 
             return res.status(200).json({ message: 'Photo deleted successfully' });
         } catch (error) {
@@ -155,8 +166,25 @@ export class PhotoController {
     async getPhotoFile(req: Request, res: Response) {
         try {
             const { filename } = req.params;
-            const filePath = path.join(process.cwd(), 'uploads/photos', filename);
             
+            // Находим фото по имени файла
+            const photo = await this.photoRepository.findOne({
+                where: { path: filename }
+            });
+
+            if (!photo) {
+                console.error('Фото не найдено в базе данных:', filename);
+                return res.status(404).json({ message: 'Фото не найдено' });
+            }
+
+            // Если фото помечено как удаленное, создаем заглушку
+            if (photo.isDeleted) {
+                console.log(`[PhotoController] Фото ${filename} помечено как удаленное, создаем заглушку`);
+                const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
+            }
+
+            const filePath = path.join(process.cwd(), 'uploads/photos', filename);
             console.log('Запрошен файл:', filePath);
             
             if (!fs.existsSync(filePath)) {

@@ -1,0 +1,136 @@
+.form {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 0 0 #d3d9de, 0 0 0 1px #e7e8ec;
+    border-top: 4px solid var(--vk-color-header);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #000;
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #818c99;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.closeButton:hover {
+    color: #000;
+}
+
+.field {
+    margin-bottom: 15px;
+}
+
+.input, .textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border: 1px solid var(--vk-color-border);
+    border-radius: 6px;
+    font-size: 13px;
+    background-color: #f5f6f8;
+    transition: all 0.2s ease;
+}
+
+.input:focus, .textarea:focus {
+    outline: none;
+    border-color: var(--vk-color-header);
+    background-color: #ffffff;
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #626d7a;
+    cursor: pointer;
+}
+
+.checkbox input {
+    margin: 0;
+}
+
+.photoSelector {
+    margin-top: 20px;
+}
+
+.sectionTitle {
+    font-size: 13px;
+    color: #626d7a;
+    margin: 0 0 10px;
+}
+
+.error {
+    color: #e64646;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #fff5f5;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.submitButton, .cancelButton {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s ease;
+}
+
+.submitButton {
+    background: var(--vk-color-header);
+    color: white;
+}
+
+.submitButton:hover:not(:disabled) {
+    background: #3d6898;
+}
+
+.submitButton:disabled {
+    background: #a0a0a0;
+    cursor: not-allowed;
+}
+
+.cancelButton {
+    background: #e5ebf1;
+    color: #55677d;
+}
+
+.cancelButton:hover:not(:disabled) {
+    background: #dae2ea;
+}
+
+.cancelButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+} 

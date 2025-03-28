@@ -6,6 +6,7 @@ import bcrypt from 'bcrypt';
 import { AppDataSource } from '../db/db_connect';
 import { User } from '../entities/user.entity';
 import { Photo } from '../entities/photo.entity';
+import { PhotoPlaceholder } from '../utils/placeholder';
 
 export class AuthController {
     private userService: UserService;
@@ -121,6 +122,8 @@ export class AuthController {
             const sessionId = req.cookies?.session_id;
             if (sessionId) {
                 await this.sessionService.deactivateSession(sessionId);
+                // Очищаем временные файлы
+                await PhotoPlaceholder.cleanupTempFiles();
                 res.clearCookie('session_id', {
                     httpOnly: true,
                     secure: true,
@@ -142,6 +145,8 @@ export class AuthController {
             }
             const userId = req.user.id;
             await this.sessionService.deactivateAllUserSessions(userId);
+            // Очищаем временные файлы
+            await PhotoPlaceholder.cleanupTempFiles();
             res.clearCookie('session_id', {
                 httpOnly: true,
                 secure: true,
@@ -190,6 +195,17 @@ export class AuthController {
         } catch (error) {
             console.error('Ошибка при получении текущего пользователя:', error);
             res.status(500).json({ message: 'Ошибка сервера' });
+        }
+    };
+
+    // Новый метод для очистки временных файлов
+    cleanupTemp = async (req: AuthRequest, res: Response) => {
+        try {
+            await PhotoPlaceholder.cleanupTempFiles();
+            return res.json({ message: 'Временные файлы очищены' });
+        } catch (error) {
+            console.error('Ошибка при очистке временных файлов:', error);
+            return res.status(500).json({ message: 'Ошибка при очистке временных файлов' });
         }
     };
 } 

@@ -1,65 +1,64 @@
 .userPage {
-    max-width: 680px;
+    max-width: 900px;
     margin: 0 auto;
     padding: 20px;
 }
 
 .userInfo {
-    background: #fff;
+    background: #FFFFFF;
     border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     padding: 20px;
     margin-bottom: 20px;
-    border: 1px solid #e5e5e5;
 }
 
 .userHeader {
     display: flex;
-    align-items: flex-start;
     gap: 20px;
+    margin-bottom: 20px;
 }
 
 .avatarContainer {
-    position: relative;
     width: 200px;
     height: 200px;
-    border-radius: 50%;
+    position: relative;
+    border-radius: 4px;
     overflow: hidden;
-}
-
-.avatar {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    background: #f0f2f5;
 }
 
 .defaultAvatar {
     width: 100%;
     height: 100%;
-    background: #4a76a8;
-    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 64px;
-    font-weight: bold;
+    color: #99a2ad;
+    background: #f5f6f8;
 }
 
-.uploadButton {
+.userAvatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatarUpload {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.5);
     color: white;
     padding: 8px;
     text-align: center;
     cursor: pointer;
-    font-size: 14px;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.2s;
 }
 
-.avatarContainer:hover .uploadButton {
+.avatarContainer:hover .avatarUpload {
     opacity: 1;
 }
 
@@ -70,6 +69,7 @@
 .userDetails h1 {
     margin: 0 0 10px;
     font-size: 24px;
+    font-weight: 500;
 }
 
 .email {
@@ -84,30 +84,62 @@
 .statusEdit {
     display: flex;
     gap: 10px;
-    align-items: center;
+    margin-top: 10px;
 }
 
-.statusEdit input {
+.statusInput {
     flex: 1;
     padding: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid #d3d9de;
     border-radius: 4px;
+    font-size: 13px;
 }
 
-.statusEdit button {
+.statusInput:focus {
+    outline: none;
+    border-color: #4a76a8;
+}
+
+.statusButton {
     padding: 8px 16px;
+    background: #4a76a8;
+    color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    font-size: 13px;
 }
 
-.statusEdit button:first-of-type {
-    background: #4a76a8;
-    color: white;
+.statusButton:hover {
+    background: #3d6898;
 }
 
-.statusEdit button:last-of-type {
-    background: #f0f2f5;
+.cancelButton {
+    padding: 8px 16px;
+    background: #e5ebf1;
+    color: #55677d;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.cancelButton:hover {
+    background: #dae2ea;
+}
+
+.wallSection {
+    /**/
+}
+
+.posts {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.createPostSection {
+    margin-bottom: 15px;
 }
 
 .statusDisplay {
@@ -169,22 +201,31 @@
     }
 
     .userPage {
-        padding: 12px;
+        padding: 15px;
     }
 
-    .userInfo {
+    .userInfo,
+    .wallSection {
         padding: 15px;
-        border-radius: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .userPage {
+        padding: 10px;
+    }
+
+    .userInfo,
+    .wallSection {
+        padding: 12px;
     }
 }
 
 .emptyWall {
     text-align: center;
-    padding: 20px;
-    color: #666;
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    margin: 20px 0;
+    padding: 40px;
+    color: #626D7A;
+    font-size: 14px;
 }
 
 /* Удаляем старые дублирующие стили */

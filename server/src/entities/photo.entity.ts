@@ -21,6 +21,12 @@ export class Photo {
     @Column()
     path: string;
 
+    @Column()
+    extension: string;
+
+    @Column({ default: false })
+    isDeleted: boolean;
+
     @Column({ nullable: true })
     description?: string;
 

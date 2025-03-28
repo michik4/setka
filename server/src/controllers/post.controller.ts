@@ -15,6 +15,10 @@ export class PostController {
         return AppDataSource.getRepository(Like);
     }
 
+    private get wallPostRepository() {
+        return AppDataSource.getRepository(WallPost);
+    }
+
     // Получение всех постов
     public getAllPosts = async (req: Request, res: Response): Promise<void> => {
         try {
@@ -351,6 +355,35 @@ export class PostController {
         } catch (error) {
             console.error('[PostController] Ошибка при проверке лайка:', error);
             res.status(500).json({ message: 'Ошибка при проверке лайка' });
+        }
+    };
+
+    // Получение постов с определенной фотографией
+    public getPostsWithPhoto = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { photoId } = req.params;
+
+            // Получаем обычные посты с этой фотографией
+            const posts = await this.postRepository
+                .createQueryBuilder('post')
+                .leftJoinAndSelect('post.photos', 'photos')
+                .where('photos.id = :photoId', { photoId })
+                .getMany();
+
+            // Получаем записи на стене с этой фотографией
+            const wallPosts = await this.wallPostRepository
+                .createQueryBuilder('wallPost')
+                .leftJoinAndSelect('wallPost.photos', 'photos')
+                .where('photos.id = :photoId', { photoId })
+                .getMany();
+
+            // Объединяем результаты
+            const allPosts = [...posts, ...wallPosts];
+            
+            res.json(allPosts);
+        } catch (error) {
+            console.error('[PostController] Ошибка при получении постов с фотографией:', error);
+            res.status(500).json({ message: 'Ошибка при получении постов', error });
         }
     };
 } 

@@ -10,6 +10,8 @@ import './App.css';
 import { AuthPage } from './pages/AuthPage';
 import { FeedPage } from './pages/FeedPage';
 import { UserPage } from './pages/UserPage/UserPage';
+import { PhotosPage } from './pages/PhotosPage';
+import { AlbumPage } from './pages/AlbumPage';
 import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/Header/Header';
 import Sidebar from './components/Sidebar/Sidebar';
@@ -26,9 +28,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return (
       <div className="app">
         <Header />
-        <main className="main">
-          <div className="loading">Загрузка...</div>
-        </main>
+        <div className="main">
+          <div className="content">
+            <div className="loading">Загрузка...</div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -43,17 +47,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 const App: React.FC = () => {
   const { user, loading } = useAuth();
 
-  return (
-    <BrowserRouter>
-      <div className="app">
-        <Header />
-        {user && <Sidebar />}
-        <main className="main">
+  const renderContent = () => {
+    if (!user) {
+      return <AuthPage />;
+    }
+
+    return (
+      <div className="main">
+        <Sidebar />
+        <div className="content">
           <Routes>
-            <Route 
-              path="/" 
-              element={user ? <Navigate to="/feed" replace /> : <AuthPage />} 
-            />
+            <Route path="/" element={<Navigate to="/feed" replace />} />
             <Route
               path="/feed"
               element={
@@ -70,8 +74,33 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/users/:userId/photos"
+              element={
+                <ProtectedRoute>
+                  <PhotosPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/albums/:albumId"
+              element={
+                <ProtectedRoute>
+                  <AlbumPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
-        </main>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <BrowserRouter>
+      <div className="app">
+        <Header />
+        {renderContent()}
       </div>
     </BrowserRouter>
   );

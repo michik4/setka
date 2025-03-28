@@ -1,0 +1,233 @@
+.showcase {
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.tabs {
+    display: flex;
+    margin: -20px -20px 20px -20px;
+    border-bottom: 1px solid #E7E8EC;
+    background: #FAFBFC;
+    border-radius: 12px 12px 0 0;
+    padding: 0 20px;
+}
+
+.tab {
+    padding: 15px 0;
+    font-size: 13px;
+    color: #626D7A;
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    margin-right: 20px;
+    transition: color 0.2s ease;
+}
+
+.tab:hover {
+    color: #447BBA;
+}
+
+.activeTab {
+    color: #447BBA;
+    font-weight: 500;
+}
+
+.activeTab::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #447BBA;
+    border-radius: 2px 2px 0 0;
+}
+
+.section {
+    margin-bottom: 20px;
+}
+
+.section:last-child {
+    margin-bottom: 0;
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.sectionTitle {
+    font-size: 14px;
+    color: #626D7A;
+    margin: 0;
+    font-weight: 500;
+}
+
+.showAllButton {
+    font-size: 13px;
+    color: #447BBA;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.showAllButton:hover {
+    color: #3d6898;
+}
+
+.albumsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.albumItem {
+    background: #FFFFFF;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.albumItem:hover {
+    transform: translateY(-2px);
+}
+
+.albumPreview {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%;
+    background: #F5F6F8;
+}
+
+.albumPreview img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.albumInfo {
+    padding: 8px;
+}
+
+.albumTitle {
+    font-size: 13px;
+    color: #000;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.albumCount {
+    font-size: 12px;
+    color: #626D7A;
+}
+
+.photosGrid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+}
+
+.photoItem {
+    aspect-ratio: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.photoItem:hover {
+    opacity: 0.9;
+}
+
+.photoItem img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.lockIcon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    z-index: 1;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #626D7A;
+}
+
+.error {
+    text-align: center;
+    padding: 20px;
+    color: #E64646;
+}
+
+@media (max-width: 768px) {
+    .tabs {
+        padding: 0 15px;
+        margin: -15px -15px 15px -15px;
+    }
+
+    .tab {
+        padding: 12px 0;
+        font-size: 12px;
+    }
+
+    .albumsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .photosGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .tabs {
+        padding: 0 12px;
+        margin: -12px -12px 12px -12px;
+    }
+
+    .tab {
+        padding: 10px 0;
+    }
+
+    .showcase {
+        padding: 12px;
+    }
+
+    .albumsGrid {
+        grid-template-columns: repeat(1, 1fr);
+    }
+
+    .photosGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+} 

@@ -60,6 +60,7 @@ const startServer = async () => {
     app.use('/api/uploads', express.static(uploadsPath))
     app.use('/uploads', express.static(uploadsPath)) // оставляем для обратной совместимости
     app.use('/api/photos', express.static(path.join(uploadsPath, 'photos')))
+    app.use('/api/temp', express.static(path.join(uploadsPath, 'temp'))) // добавляем роутинг для временных файлов
     console.log('Настроена раздача статических файлов из:', uploadsPath)
 
     // Инициализация маршрутов
