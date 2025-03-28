@@ -4,6 +4,9 @@ node_modules/
 # выводы
 coverage/
 
+# хранения файлов
+uploads/
+
 # Переменные окружения
 .env
 .env.local
