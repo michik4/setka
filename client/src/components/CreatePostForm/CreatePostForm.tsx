@@ -116,10 +116,24 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         };
     }, [user]);
 
+    // Эффект для проверки наличия прикреплений и автоматического развертывания формы
+    useEffect(() => {
+        if (attachments.length > 0) {
+            setIsExpanded(true);
+        }
+    }, [attachments.length]);
+
     const handleImageUploaded = async (photo: Photo) => {
         try {
             if (!uploadAlbumId) {
                 console.error('ID альбома не найден');
+                return;
+            }
+
+            // Проверяем количество уже прикрепленных фотографий
+            const currentPhotoCount = attachments.filter(a => a.type === 'photo').length;
+            if (currentPhotoCount >= 4) {
+                handleUploadError('Нельзя прикрепить больше 4 фотографий к посту');
                 return;
             }
 
@@ -143,11 +157,17 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
             console.log('Фото успешно добавлено в альбом. Обновляем UI...');
 
             const newAttachment: PhotoAttachment = { type: 'photo', id: photo.id, data: photo };
-            setAttachments(prev => {
-                const newAttachments = [...prev, newAttachment];
-                console.log('Обновленные вложения:', newAttachments);
-                return newAttachments;
-            });
+            
+            // Обновляем состояние с новым вложением и сохраняем обновленный массив
+            const updatedAttachments = [...attachments, newAttachment];
+            setAttachments(updatedAttachments);
+            
+            // Устанавливаем состояние expanded, чтобы принудительно показать прикрепления
+            setIsExpanded(true);
+            
+            // Сбрасываем состояние перетаскивания
+            setIsDragging(false);
+            
             setError(null);
             
             console.log('Процесс добавления фото завершен успешно');
@@ -174,12 +194,27 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     };
 
     const handlePhotosAndAlbumsSelected = (photos: Photo[], albums: Album[]) => {
+        // Проверяем общее количество фотографий после добавления новых
+        const currentPhotoCount = attachments.filter(a => a.type === 'photo').length;
+        const totalPhotos = currentPhotoCount + photos.length;
+        
+        if (totalPhotos > 4) {
+            setError('Нельзя прикрепить больше 4 фотографий к посту');
+            return;
+        }
+
         const newAttachments: Attachment[] = [
             ...photos.map(photo => ({ type: 'photo' as const, id: photo.id, data: photo })),
             ...albums.map(album => ({ type: 'album' as const, id: album.id, data: album }))
         ];
         
-        setAttachments(prev => [...prev, ...newAttachments]);
+        // Применяем прямое обновление состояния
+        const updatedAttachments = [...attachments, ...newAttachments];
+        setAttachments(updatedAttachments);
+        
+        // Устанавливаем состояние expanded, чтобы показать прикрепления
+        setIsExpanded(true);
+        
         setShowPhotoSelector(false);
         setError(null);
     };
@@ -193,8 +228,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const handleDragLeave = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        // Проверяем, что курсор действительно покинул форму
+
+        // Проверяем, что это действительно покидание области, а не переход на дочерний элемент
         const rect = formRef.current?.getBoundingClientRect();
         if (rect) {
             const { clientX, clientY } = e;
@@ -206,18 +241,25 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
             ) {
                 setIsDragging(false);
             }
+        } else {
+            setIsDragging(false);
         }
     };
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        // Устанавливаем состояние expanded при перетаскивании
+        setIsExpanded(true);
+        setIsDragging(true);
     };
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        setIsDragging(false);
+        
+        // Не сбрасываем isDragging здесь, так как ImageUploader должен остаться видимым
+        // для обработки загрузки файла. Он будет скрыт в handleImageUploaded
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -268,9 +310,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
 
     const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setContent(e.target.value);
-        if (e.target.value.trim() || attachments.length > 0) {
-            setIsExpanded(true);
-        }
+        // Всегда разворачиваем форму при изменении текста или наличии вложений
+        setIsExpanded(true);
     };
 
     if (!user) {

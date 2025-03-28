@@ -12,6 +12,7 @@ import { FeedPage } from './pages/FeedPage';
 import { UserPage } from './pages/UserPage/UserPage';
 import { PhotosPage } from './pages/PhotosPage';
 import { AlbumPage } from './pages/AlbumPage';
+import { MusicPage } from './pages/MusicPage';
 import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/Header/Header';
 import Sidebar from './components/Sidebar/Sidebar';
@@ -87,6 +88,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <AlbumPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/:userId/music"
+              element={
+                <ProtectedRoute>
+                  <MusicPage />
                 </ProtectedRoute>
               }
             />

@@ -116,6 +116,12 @@ export class PostController {
         try {
             const { content, authorId, photoIds } = req.body;
             
+            // Проверяем количество фотографий
+            if (photoIds && photoIds.length > 4) {
+                res.status(400).json({ message: 'Превышено максимальное количество фотографий (4)' });
+                return;
+            }
+            
             const newPost = this.postRepository.create({
                 content,
                 authorId,

@@ -47,7 +47,7 @@ export class PhotoController {
                 return res.status(400).json({ message: 'No file uploaded' });
             }
 
-            const { userId, description } = req.body;
+            const { userId, description, albumId, skipDefaultAlbum } = req.body;
             
             const photo = this.photoRepository.create({
                 filename: req.file.filename,
@@ -61,6 +61,58 @@ export class PhotoController {
             });
 
             await this.photoRepository.save(photo);
+
+            // Если указан конкретный альбом, добавляем фото в него
+            if (albumId) {
+                try {
+                    const album = await AppDataSource.getRepository('Album').findOne({
+                        where: { id: parseInt(albumId) },
+                        relations: ['photos']
+                    });
+
+                    if (album) {
+                        album.photos.push(photo);
+                        album.photosCount = album.photos.length;
+                        await AppDataSource.getRepository('Album').save(album);
+                    } else {
+                        console.error(`Альбом с ID ${albumId} не найден при загрузке фото`);
+                    }
+                } catch (error) {
+                    console.error('Ошибка при добавлении фото в указанный альбом:', error);
+                }
+            }
+
+            // Если нет флага skipDefaultAlbum, добавляем фото в альбом "Загруженное"
+            if (skipDefaultAlbum !== 'true') {
+                try {
+                    // Ищем или создаем альбом "Загруженное" для пользователя
+                    let uploadedAlbum = await AppDataSource.getRepository('Album').findOne({
+                        where: { 
+                            userId: parseInt(userId),
+                            title: 'Загруженное'
+                        },
+                        relations: ['photos']
+                    });
+
+                    if (!uploadedAlbum) {
+                        uploadedAlbum = AppDataSource.getRepository('Album').create({
+                            title: 'Загруженное',
+                            description: 'Автоматически созданный альбом для загруженных фотографий',
+                            userId: parseInt(userId),
+                            isPrivate: false,
+                            photos: [],
+                            photosCount: 0
+                        });
+                        await AppDataSource.getRepository('Album').save(uploadedAlbum);
+                    }
+
+                    uploadedAlbum.photos.push(photo);
+                    uploadedAlbum.photosCount = uploadedAlbum.photos.length;
+                    await AppDataSource.getRepository('Album').save(uploadedAlbum);
+                } catch (error) {
+                    console.error('Ошибка при добавлении фото в альбом "Загруженное":', error);
+                }
+            }
 
             return res.status(201).json(photo);
         } catch (error) {

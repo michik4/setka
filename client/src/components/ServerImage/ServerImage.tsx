@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, forwardRef } from 'react';
 import { API_URL } from '../../config';
 import styles from './ServerImage.module.css';
 
@@ -10,49 +10,78 @@ interface ServerImageProps {
     className?: string;
     isDeleted?: boolean;
     extension?: string;
+    forceCachedImage?: boolean;
+    onLoad?: () => void;
 }
 
-export const ServerImage: React.FC<ServerImageProps> = ({ 
+// Глобальный кэш для предзагруженных изображений
+const imageCache: Record<string, HTMLImageElement> = {};
+
+// Используем правильное именование для forwardRef
+const ServerImage = forwardRef<HTMLImageElement, ServerImageProps>(({ 
     imageId, 
     path, 
     src, 
     alt, 
     className,
     isDeleted,
-    extension 
-}) => {
+    extension,
+    forceCachedImage = false,
+    onLoad
+}, ref) => {
+    const [imageLoaded, setImageLoaded] = useState(false);
+    
     // Формируем URL изображения
     let imageSrc = '';
     if (src) {
         imageSrc = src;
-        console.log('[ServerImage] Используем прямой src:', imageSrc);
     } else if (imageId) {
         imageSrc = `${API_URL}/photos/${imageId}?file=true`;
-        console.log('[ServerImage] Используем imageId:', imageSrc);
     } else if (path) {
         if (path.startsWith('http')) {
             imageSrc = path;
-            console.log('[ServerImage] Используем внешний URL:', imageSrc);
         } else if (path.startsWith('placeholder_')) {
             imageSrc = `${API_URL}/temp/${path}`;
-            console.log('[ServerImage] Используем временный файл:', imageSrc);
         } else {
             imageSrc = `${API_URL}/photos/file/${path}`;
-            console.log('[ServerImage] Используем файл из photos:', imageSrc);
         }
     }
 
+    // Предзагрузка изображения
     useEffect(() => {
-        if (imageSrc) {
-            console.log('[ServerImage] Попытка загрузки изображения:', {
-                imageSrc,
-                isDeleted,
-                extension,
-                path,
-                imageId
-            });
+        if (imageSrc && !isDeleted && !imageCache[imageSrc]) {
+            const img = new Image();
+            img.src = imageSrc;
+            
+            img.onload = () => {
+                imageCache[imageSrc] = img;
+                setImageLoaded(true);
+                onLoad?.();
+            };
+            
+            img.onerror = (error) => {
+                console.error('[ServerImage] Ошибка предзагрузки изображения:', {
+                    imageSrc,
+                    error,
+                    isDeleted,
+                    extension,
+                    path,
+                    imageId
+                });
+            };
+            
+            return () => {
+                img.onload = null;
+                img.onerror = null;
+            };
+        } else if (imageCache[imageSrc]) {
+            // Если изображение уже в кэше, просто отмечаем как загруженное
+            setImageLoaded(true);
+            onLoad?.();
         }
+    }, [imageSrc, isDeleted, imageId, extension, path, onLoad]);
 
+    useEffect(() => {
         // Добавляем обработчик для очистки временных файлов при закрытии вкладки
         const handleBeforeUnload = () => {
             if (path?.startsWith('placeholder_')) {
@@ -69,16 +98,9 @@ export const ServerImage: React.FC<ServerImageProps> = ({
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, [imageSrc, isDeleted, extension, path, imageId]);
+    }, [path]);
 
     if (!imageSrc || isDeleted) {
-        console.log('[ServerImage] Показываем плейсхолдер:', {
-            reason: !imageSrc ? 'нет источника' : 'фото удалено',
-            isDeleted,
-            extension,
-            path,
-            imageId
-        });
         return (
             <div className={`${styles.defaultImage} ${className || ''}`}>
                 {isDeleted ? (
@@ -93,11 +115,21 @@ export const ServerImage: React.FC<ServerImageProps> = ({
         );
     }
 
+    // Если forceCachedImage=true и у нас есть кэшированное изображение,
+    // и если оно загружено, добавляем класс loaded сразу
+    const isCached = forceCachedImage && imageCache[imageSrc];
+    const imageClassName = `${styles.image} ${className || ''} ${(imageLoaded || isCached) ? styles.loaded : ''}`;
+
     return (
         <img 
+            ref={ref}
             src={imageSrc} 
             alt={alt}
-            className={`${styles.image} ${className || ''}`}
+            className={imageClassName}
+            onLoad={() => {
+                setImageLoaded(true);
+                onLoad?.();
+            }}
             onError={(e) => {
                 console.error('[ServerImage] Ошибка загрузки изображения:', {
                     imageSrc,
@@ -110,4 +142,10 @@ export const ServerImage: React.FC<ServerImageProps> = ({
             }}
         />
     );
-};
+});
+
+// Устанавливаем отображаемое имя компонента для отладки
+ServerImage.displayName = 'ServerImage';
+
+// Экспортируем компонент
+export { ServerImage };

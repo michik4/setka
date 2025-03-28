@@ -14,6 +14,8 @@ const Sidebar: React.FC = () => {
   // Формируем URL для страницы пользователя
   const profileUrl = user ? `/users/${user.id}` : '/';
   const photosUrl = user ? `/users/${user.id}/photos` : '/';
+  const musicUrl = user ? `/users/${user.id}/music` : '/';
+  const messagesUrl = user ? `/users/${user.id}/messages` : '/';
 
   return (
     <nav className={styles.sidebar}>
@@ -46,6 +48,16 @@ const Sidebar: React.FC = () => {
               </svg>
             </div>
             <span>Фотографии</span>
+          </Link>
+        </li>
+        <li className={styles.navItem}>
+          <Link to={musicUrl} className={`${styles.navLink} ${isActive(musicUrl) ? styles.active : ''}`}>
+            <div className={styles.navIcon}>
+              <svg fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
+                <path d="M14.3 4.42c-.17-.65-.8-1.01-1.44-.84L7.31 5.16A1.2 1.2 0 0 0 6.5 6.28v7.45a3.5 3.5 0 1 0 1.5 2.87v-5.24l5.5-1.5V11.1c.39-.09.82-.1 1.25-.01A3.5 3.5 0 1 0 16 8.86V5.27c0-.29-.08-.57-.22-.85zM4.5 18a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm9-1.5a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm-8-8.04V6.28c0-.12.11-.21.23-.19l5.55 1.5c.06.01.1.08.08.14v1.96a.14.14 0 0 1-.17.11l-5.5-1.5a.14.14 0 0 1-.1-.14zm8.5-1.28V5.24a.2.2 0 0 1 .25-.2l1.63.44c.13.04.22.16.22.3v1.76a.2.2 0 0 1-.28.19l-1.75-.47a.1.1 0 0 1-.07-.08z"/>
+              </svg>
+            </div>
+            <span>Музыка</span>
           </Link>
         </li>
         <li className={styles.navItem}>

@@ -4,7 +4,7 @@ import { PhotoController, upload } from '../controllers/photo.controller';
 const router = Router();
 const photoController = new PhotoController();
 
-// Загрузка фотографии
+// Загрузка одиночной фотографии
 router.post('/', upload.single('photo'), photoController.uploadPhoto.bind(photoController));
 
 // Получение всех фотографий

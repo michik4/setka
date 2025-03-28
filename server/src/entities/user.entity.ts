@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from "typeorm"
 import { Photo } from "./photo.entity"
 import { Post } from "./post.entity"
+import { MusicTrack } from "./music.entity"
 
 @Entity('users')
 export class User {
@@ -43,4 +44,7 @@ export class User {
 
     @OneToMany(() => Post, post => post.author)
     posts: Post[]
+
+    @OneToMany(() => MusicTrack, track => track.user)
+    musicTracks: MusicTrack[]
 } 

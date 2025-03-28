@@ -1,25 +1,26 @@
 .container {
-    margin: 16px 0;
+    width: 100%;
+    margin-bottom: 20px;
 }
 
 .dropzone {
     border: 2px dashed #ccc;
     border-radius: 8px;
-    padding: 20px;
+    padding: 40px;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    background: #f8f9fa;
+    background-color: #f9f9f9;
 }
 
 .dropzone:hover {
     border-color: #4a76a8;
-    background: #f1f4f7;
+    background-color: #f0f2f5;
 }
 
 .dragging {
     border-color: #4a76a8;
-    background: #e8f0fe;
+    background-color: #e1eaf7;
 }
 
 .uploading {
@@ -35,8 +36,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    color: #666;
+    gap: 10px;
+    color: #626D7A;
 }
 
 .uploadingMessage {
@@ -48,8 +49,7 @@
 }
 
 .icon {
-    font-size: 24px;
-    margin-bottom: 8px;
+    font-size: 32px;
 }
 
 .spinner {
@@ -62,90 +62,245 @@
 }
 
 .previewContainer {
-    position: relative;
     width: 100%;
-    max-width: 400px;
-    margin: 0 auto;
+    padding: 10px;
+    background-color: #f0f2f5;
     border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .preview {
     width: 100%;
-    height: auto;
-    display: block;
+    max-height: 300px;
+    object-fit: contain;
+    margin-bottom: 10px;
+    border-radius: 8px;
 }
 
 .previewActions {
     display: flex;
+    justify-content: space-between;
     gap: 10px;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.9);
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    justify-content: center;
 }
 
 .actionButton {
-    padding: 8px 16px;
+    flex: 1;
+    padding: 10px;
     border: none;
     border-radius: 4px;
-    font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.actionButton:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background-color 0.2s;
 }
 
 .uploadButton {
-    background-color: #4CAF50;
+    background-color: #4a76a8;
     color: white;
 }
 
 .uploadButton:hover:not(:disabled) {
-    background-color: #45a049;
+    background-color: #5b86bc;
+}
+
+.uploadButton:disabled {
+    background-color: #8cabd4;
+    cursor: not-allowed;
 }
 
 .cancelButton {
-    background-color: #f44336;
-    color: white;
+    background-color: #f2f3f5;
+    color: #626D7A;
 }
 
 .cancelButton:hover:not(:disabled) {
-    background-color: #da190b;
+    background-color: #e1e3e6;
+}
+
+.cancelButton:disabled {
+    color: #939393;
+    cursor: not-allowed;
+}
+
+/* Стили для множественной загрузки */
+.previewHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e7e8ec;
+}
+
+.previewTitle {
+    margin: 0;
+    font-size: 16px;
+    color: #2a5885;
+}
+
+.previewFiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.previewFile {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.previewImageContainer {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    overflow: hidden;
+}
+
+.previewFile .preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.uploadingOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.errorOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(220, 53, 69, 0.6);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+.errorIcon {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.errorText {
+    font-size: 12px;
+    text-align: center;
+    padding: 0 5px;
+}
+
+.fileInfo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+}
+
+.fileName {
+    font-size: 13px;
+    color: #2a5885;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .removeButton {
-    position: absolute;
-    top: 8px;
-    right: 8px;
+    background: none;
+    border: none;
+    color: #818c99;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
     width: 24px;
     height: 24px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
+    border-radius: 50%;
+    transition: background-color 0.2s;
 }
 
 .removeButton:hover {
-    background: rgba(0, 0, 0, 0.7);
+    background-color: #f5f5f5;
+    color: #e64646;
 }
 
 .removeButton:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.addMoreFile {
+    border: 2px dashed #dce1e6;
+    border-radius: 8px;
+    height: 100%;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    background-color: rgba(74, 118, 168, 0.05);
+    transition: all 0.2s ease;
+}
+
+.addMoreFile:hover {
+    background-color: rgba(74, 118, 168, 0.1);
+    border-color: #b0caed;
+}
+
+.addMoreIcon {
+    font-size: 30px;
+    color: #4a76a8;
+    margin-bottom: 5px;
+}
+
+.addMoreText {
+    font-size: 14px;
+    color: #4a76a8;
+}
+
+.subMessage {
+    font-size: 13px;
+    color: #818c99;
+    margin-top: 5px;
+}
+
+@media (max-width: 992px) {
+    .previewFiles {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+}
+
+@media (max-width: 576px) {
+    .previewHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .previewFiles {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+    
+    .previewImageContainer {
+        height: 100px;
+    }
+    
+    .previewActions {
+        width: 100%;
+    }
 }
 
 @keyframes spin {

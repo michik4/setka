@@ -117,26 +117,7 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     };
 
     const handleEdit = async () => {
-        if (!isEditing) {
-            setIsEditing(true);
-            return;
-        }
-
-        if (editedContent.trim() === '' && editedPhotos.length === 0) {
-            setError('Пост не может быть пустым');
-            return;
-        }
-
-        // Проверяем, были ли изменения
-        const contentChanged = editedContent.trim() !== post.content.trim();
-        const photosChanged = editedPhotos.length !== post.photos.length || 
-            editedPhotos.some(photo => !post.photos.some(p => p.id === photo.id));
-
-        // Если нет изменений, просто выходим из режима редактирования
-        if (!contentChanged && !photosChanged) {
-            setIsEditing(false);
-            return;
-        }
+        if (!user) return;
 
         setIsSubmitting(true);
         setError(null);
@@ -144,16 +125,7 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         try {
             const endpoint = post.wallOwnerId ? `/wall/${post.id}` : `/posts/${post.id}`;
             
-            // Сначала отвязываем удаленные фотографии
-            const removedPhotos = post.photos.filter(photo => 
-                !editedPhotos.some(editedPhoto => editedPhoto.id === photo.id)
-            );
-            
-            for (const photo of removedPhotos) {
-                await api.delete(`/photos/${photo.id}/posts/${post.id}`);
-            }
-            
-            // Затем обновляем пост
+            // Обновляем пост с новым контентом и только теми фотографиями, которые остались в посте
             const response = await api.put(endpoint, { 
                 content: editedContent.trim(),
                 photoIds: editedPhotos.map(photo => photo.id)
@@ -161,7 +133,7 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
             
             setIsEditing(false);
             
-            // Обновляем пост локально
+            // Обновляем пост локально только с оставшимися фотографиями
             const updatedPost = {
                 ...post,
                 content: editedContent.trim(),
@@ -210,6 +182,12 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         }
     };
 
+    const handleEditPhotoRemove = (photo: Photo) => {
+        // В режиме редактирования просто удаляем фотографию из локального состояния
+        setEditedPhotos(prev => prev.filter(p => p.id !== photo.id));
+        setError(null);
+    };
+
     const handleImageUploaded = (photo: Photo) => {
         setEditedPhotos(prev => [...prev, photo]);
         setError(null);
@@ -256,7 +234,7 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                     <div className={styles.editPhotos}>
                         <PhotoGrid 
                             photos={editedPhotos}
-                            onPhotoDelete={handlePhotoDelete}
+                            onPhotoDelete={handleEditPhotoRemove}
                             canDelete={true}
                             isEditing={true}
                         />

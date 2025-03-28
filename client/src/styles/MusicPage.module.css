@@ -1,0 +1,33 @@
+.errorContainer {
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+.errorMessage {
+  color: #d32f2f;
+  font-size: 14px;
+}
+
+.errorMessage h3 {
+  margin-top: 0;
+  font-size: 16px;
+}
+
+.loading {
+  margin: 20px 0;
+  padding: 15px;
+  text-align: center;
+  font-size: 16px;
+  color: #555;
+}
+
+.centeredContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  width: 100%;
+} 

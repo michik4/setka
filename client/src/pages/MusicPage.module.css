@@ -1,0 +1,537 @@
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    margin-bottom: 30px;
+}
+
+.title {
+    font-size: 28px;
+    color: #2a5885;
+    margin: 0 0 10px 0;
+}
+
+.subtitle {
+    font-size: 16px;
+    color: #818c99;
+    margin: 0;
+}
+
+.content {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 80px; /* Место для плеера внизу */
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+}
+
+/* Стили списка треков */
+.trackList {
+    width: 100%;
+}
+
+.trackHeader {
+    display: grid;
+    grid-template-columns: 40px 3fr 2fr 1fr 40px;
+    padding: 0 20px 10px 20px;
+    border-bottom: 1px solid #edeef0;
+    color: #818c99;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.trackItem {
+    display: grid;
+    grid-template-columns: 40px 3fr 2fr 1fr 40px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    align-items: center;
+}
+
+.trackItem:hover {
+    background-color: #f5f6f8;
+}
+
+.activeTrack {
+    background-color: #ebedf0;
+}
+
+.activeTrack:hover {
+    background-color: #e5e7ea;
+}
+
+.trackNumber {
+    font-size: 14px;
+    color: #818c99;
+    text-align: center;
+}
+
+.trackInfo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.trackCover {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.trackTitle {
+    font-size: 14px;
+    color: #2a5885;
+    font-weight: 500;
+}
+
+.trackArtist {
+    font-size: 14px;
+    color: #818c99;
+}
+
+.trackDuration {
+    font-size: 14px;
+    color: #818c99;
+    text-align: right;
+}
+
+/* Плеер */
+.player {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #edeef0;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.playerInfo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.playerCover {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.playerTrackInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.playerTitle {
+    font-size: 14px;
+    color: #2a5885;
+    font-weight: 500;
+}
+
+.playerArtist {
+    font-size: 13px;
+    color: #818c99;
+}
+
+.playerControls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex: 1;
+    justify-content: center;
+}
+
+.prevButton,
+.nextButton,
+.playPauseButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2a5885;
+    transition: background-color 0.2s;
+}
+
+.prevButton:hover,
+.nextButton:hover {
+    background-color: #f0f2f5;
+}
+
+.playPauseButton {
+    width: 40px;
+    height: 40px;
+    background-color: #4a76a8;
+    color: white;
+}
+
+.playPauseButton:hover {
+    background-color: #5b86bc;
+}
+
+.playerVolume {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    justify-content: flex-end;
+    color: #818c99;
+}
+
+.volumeSlider {
+    width: 100px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #dce1e6;
+    border-radius: 2px;
+    outline: none;
+}
+
+.volumeSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #4a76a8;
+    cursor: pointer;
+}
+
+.volumeSlider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #4a76a8;
+    cursor: pointer;
+    border: none;
+}
+
+/* Анимация проигрывания */
+.playingIcon {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: 16px;
+    gap: 2px;
+}
+
+.playingIcon span {
+    display: block;
+    width: 3px;
+    height: 8px;
+    background-color: #4a76a8;
+    border-radius: 1px;
+    animation: sound 1.2s linear infinite;
+}
+
+.playingIcon span:nth-child(1) {
+    animation-delay: 0s;
+    height: 8px;
+}
+
+.playingIcon span:nth-child(2) {
+    animation-delay: 0.3s;
+    height: 16px;
+}
+
+.playingIcon span:nth-child(3) {
+    animation-delay: 0.6s;
+    height: 10px;
+}
+
+@keyframes sound {
+    0% {
+        height: 5px;
+    }
+    50% {
+        height: 15px;
+    }
+    100% {
+        height: 5px;
+    }
+}
+
+/* Адаптивная верстка */
+@media (max-width: 768px) {
+    .trackHeader {
+        grid-template-columns: 40px 2fr 1fr 40px;
+    }
+    .trackItem {
+        grid-template-columns: 40px 2fr 1fr 40px;
+    }
+    .trackDuration {
+        display: none;
+    }
+    .player {
+        flex-wrap: wrap;
+        padding: 10px;
+    }
+    .playerInfo {
+        order: 1;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .playerControls {
+        order: 2;
+        width: 60%;
+    }
+    .playerVolume {
+        order: 3;
+        width: 40%;
+    }
+}
+
+@media (max-width: 576px) {
+    .trackHeader {
+        grid-template-columns: 40px 2fr 40px;
+    }
+    .trackItem {
+        grid-template-columns: 40px 2fr 40px;
+    }
+    .trackArtist {
+        display: none;
+    }
+    .container {
+        padding: 10px;
+    }
+    .content {
+        padding: 10px;
+    }
+    .playerControls {
+        width: 100%;
+        order: 2;
+        margin-bottom: 10px;
+    }
+    .playerVolume {
+        width: 100%;
+        order: 3;
+    }
+}
+
+/* Секция загрузки */
+.uploadSection {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.sectionTitle {
+    font-size: 1.2rem;
+    margin: 0 0 15px 0;
+    font-weight: 600;
+}
+
+.uploadForm {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.formGroup label {
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.formInput {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    font-size: 1rem;
+}
+
+.formFile {
+    padding: 8px 0;
+}
+
+.uploadButton {
+    grid-column: 1 / -1;
+    padding: 12px;
+    background-color: #5181b8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+}
+
+.uploadButton:hover {
+    background-color: #4a76a8;
+}
+
+.uploadButton:disabled {
+    background-color: #a5b7c9;
+    cursor: not-allowed;
+}
+
+/* Прогресс-бар загрузки */
+.progressBar {
+    margin-top: 15px;
+    background-color: #f0f2f5;
+    border-radius: 4px;
+    height: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background-color: #5181b8;
+    transition: width 0.3s ease;
+}
+
+.progressText {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: #fff;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Пустое состояние */
+.emptyState {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 0;
+    color: #818c99;
+    font-size: 1rem;
+}
+
+/* Медиа-запросы для адаптивности */
+@media (max-width: 768px) {
+    .uploadForm {
+        grid-template-columns: 1fr;
+    }
+}
+
+.trackActions {
+    display: flex;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.trackItem:hover .trackActions {
+    opacity: 1;
+}
+
+.deleteButton {
+    background: none;
+    border: none;
+    padding: 5px;
+    cursor: pointer;
+    color: #818c99;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.deleteButton:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #f44336;
+}
+
+/* Отладочные элементы */
+.debugButtons {
+    display: flex;
+    gap: 10px;
+    margin-left: 15px;
+}
+
+.debugButton {
+    background-color: #ff5722;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.debugPanel {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.debugHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #eee;
+    border-bottom: 1px solid #ddd;
+}
+
+.debugHeader h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.debugHeader button {
+    background-color: #ff5722;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.debugContent {
+    padding: 10px;
+    margin: 0;
+    max-height: 300px;
+    overflow: auto;
+    font-family: monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+} 

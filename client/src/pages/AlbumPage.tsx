@@ -8,6 +8,7 @@ import { Spinner } from '../components/Spinner/Spinner';
 import { useAuth } from '../contexts/AuthContext';
 import styles from './AlbumPage.module.css';
 import { api } from '../utils/api';
+import { ImageUploader } from '../components/ImageUploader/ImageUploader';
 
 export const AlbumPage: React.FC = () => {
     const { albumId } = useParams<{ albumId: string }>();
@@ -19,6 +20,8 @@ export const AlbumPage: React.FC = () => {
     const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [showUploader, setShowUploader] = useState(false);
     const isAuthor = user?.id === album?.userId;
 
     useEffect(() => {
@@ -90,6 +93,53 @@ export const AlbumPage: React.FC = () => {
         }
     };
 
+    // Обработчик загрузки фотографий
+    const handleImageUploaded = async (photo: Photo) => {
+        if (!album || !albumId) return;
+        
+        try {
+            // Обновляем локальное состояние альбома, добавляя новое фото
+            setAlbum(prevAlbum => {
+                if (!prevAlbum) return null;
+                return {
+                    ...prevAlbum,
+                    photos: [...prevAlbum.photos, photo],
+                    photosCount: prevAlbum.photos.length + 1
+                };
+            });
+            
+            // Запоминаем, что нужно обновить альбом с сервера
+            // после всех загрузок
+            setIsUploading(true);
+            
+        } catch (err) {
+            console.error('Ошибка при добавлении фотографии в альбом:', err);
+            alert('Не удалось добавить фотографию в альбом');
+        }
+    };
+
+    // Обработка завершения всех загрузок
+    const handleUploadComplete = async () => {
+        try {
+            // Обновляем альбом с сервера для получения актуальных данных
+            const updatedAlbum = await api.get(`/albums/${albumId}`);
+            setAlbum(updatedAlbum);
+        } catch (error) {
+            console.error('Ошибка при обновлении альбома:', error);
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleErrorUpload = (errorMessage: string) => {
+        setError(errorMessage);
+        setTimeout(() => setError(null), 3000);
+    };
+
+    const toggleUploader = () => {
+        setShowUploader(!showUploader);
+    };
+
     if (loading) {
         return (
             <div className={styles.loading}>
@@ -107,6 +157,7 @@ export const AlbumPage: React.FC = () => {
     }
 
     const canDelete = user && album.userId === user.id;
+    const nonDeletedPhotos = album.photos.filter(photo => !photo.isDeleted);
 
     return (
         <div className={styles.container}>
@@ -118,8 +169,8 @@ export const AlbumPage: React.FC = () => {
                     )}
                     <div className={styles.info}>
                         <span className={styles.count}>
-                            {album.photos.filter(photo => !photo.isDeleted).length} {album.photos.filter(photo => !photo.isDeleted).length === 1 ? 'фотография' : 
-                             album.photos.filter(photo => !photo.isDeleted).length > 1 && album.photos.filter(photo => !photo.isDeleted).length < 5 ? 'фотографии' : 'фотографий'}
+                            {nonDeletedPhotos.length} {nonDeletedPhotos.length === 1 ? 'фотография' : 
+                             nonDeletedPhotos.length > 1 && nonDeletedPhotos.length < 5 ? 'фотографии' : 'фотографий'}
                         </span>
                         {album.isPrivate && (
                             <span className={styles.private}>Приватный альбом</span>
@@ -128,6 +179,12 @@ export const AlbumPage: React.FC = () => {
                 </div>
                 {canDelete && (
                     <div className={styles.headerActions}>
+                        <button
+                            className={styles.uploadButton}
+                            onClick={toggleUploader}
+                        >
+                            {showUploader ? 'Отмена' : 'Загрузить фото'}
+                        </button>
                         <button
                             className={styles.deleteButton}
                             onClick={handleDeleteAlbum}
@@ -139,10 +196,23 @@ export const AlbumPage: React.FC = () => {
                 )}
             </div>
             
-            {album.photos && album.photos.filter(photo => !photo.isDeleted).length > 0 ? (
+            {canDelete && showUploader && (
+                <div className={styles.uploaderContainer}>
+                    <h3 className={styles.uploaderTitle}>Загрузка фотографий в альбом</h3>
+                    <ImageUploader 
+                        onImageUploaded={handleImageUploaded}
+                        onError={handleErrorUpload}
+                        albumId={parseInt(albumId || '0')}
+                        onUploadComplete={handleUploadComplete}
+                    />
+                    {isUploading && <div className={styles.uploadingStatus}>Загрузка фото...</div>}
+                </div>
+            )}
+            
+            {nonDeletedPhotos.length > 0 ? (
                 <div className={styles.photosContainer}>
                     <div className={styles.photosGrid}>
-                        {album.photos.filter(photo => !photo.isDeleted).map((photo, index) => (
+                        {nonDeletedPhotos.map((photo, index) => (
                             <div 
                                 key={photo.id} 
                                 className={styles.photoItem}
@@ -171,7 +241,7 @@ export const AlbumPage: React.FC = () => {
                     }}
                     onDelete={isAuthor ? () => handlePhotoDelete(selectedPhoto) : undefined}
                     canDelete={isAuthor}
-                    allPhotos={album.photos.filter(photo => !photo.isDeleted)}
+                    allPhotos={nonDeletedPhotos}
                     currentIndex={selectedPhotoIndex || 0}
                     onPhotoChange={handlePhotoChange}
                 />
