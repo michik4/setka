@@ -16,7 +16,15 @@ const userRepository = AppDataSource.getRepository(User);
 // Настройка хранилища для multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../../uploads/music');
+        let uploadDir;
+        
+        if (file.fieldname === 'audioFile') {
+            uploadDir = path.join(__dirname, '../../uploads/music');
+        } else if (file.fieldname === 'coverImage') {
+            uploadDir = path.join(__dirname, '../../uploads/covers');
+        } else {
+            uploadDir = path.join(__dirname, '../../uploads/other');
+        }
         
         // Создаем директорию, если она не существует
         if (!fs.existsSync(uploadDir)) {
@@ -33,24 +41,26 @@ const storage = multer.diskStorage({
 
 // Фильтр файлов для multer
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    const allowedMimeTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/ogg', 'audio/x-wav'];
+    const allowedAudioMimeTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/ogg', 'audio/x-wav'];
+    const allowedImageMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     
     console.log('[API Music] Получен файл:', file.originalname, file.mimetype);
     
-    if (allowedMimeTypes.includes(file.mimetype)) {
+    if (file.fieldname === 'audioFile' && allowedAudioMimeTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else if (file.fieldname === 'coverImage' && allowedImageMimeTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
         console.log('[API Music] Недопустимый тип файла:', file.mimetype);
-        cb(new Error('Разрешены только MP3, WAV и OGG файлы!'));
+        cb(new Error('Разрешены только MP3, WAV, OGG файлы для аудио и JPG, PNG для обложек!'));
     }
 };
 
+// Инициализация multer
 const upload = multer({ 
     storage, 
-    fileFilter,
-    limits: {
-        fileSize: 10 * 1024 * 1024 // Ограничение размера файла: 10MB
-    }
+    fileFilter, 
+    limits: { fileSize: 25 * 1024 * 1024 } // Ограничение размера файла в 25 МБ
 });
 
 // Тестовый маршрут для проверки API
@@ -97,27 +107,46 @@ router.get('/', authenticateSession, async (req: any, res) => {
 });
 
 // Обработчик загрузки треков
-router.post('/upload', upload.single('audioFile'), async (req: any, res) => {
+router.post('/upload', upload.fields([
+    { name: 'audioFile', maxCount: 1 },
+    { name: 'coverImage', maxCount: 1 }
+]), async (req: any, res) => {
     try {
         console.log('[Music] Получен запрос на загрузку файла');
         
-        if (!req.file) {
-            console.error('[Music] Файл не найден в запросе');
-            return res.status(400).json({ message: 'Файл не найден в запросе' });
+        if (!req.files || !req.files.audioFile) {
+            console.error('[Music] Аудиофайл не найден в запросе');
+            return res.status(400).json({ message: 'Аудиофайл не найден в запросе' });
         }
         
-        console.log('[Music] Загружен файл:', req.file.originalname, req.file.mimetype, req.file.size);
-        console.log('[Music] Файл сохранен как:', req.file.filename);
-        console.log('[Music] Полный путь к файлу:', req.file.path);
+        const audioFile = req.files.audioFile[0];
+        const coverFile = req.files.coverImage ? req.files.coverImage[0] : null;
+        
+        console.log('[Music] Загружен файл:', audioFile.originalname, audioFile.mimetype, audioFile.size);
+        console.log('[Music] Файл сохранен как:', audioFile.filename);
+        console.log('[Music] Полный путь к файлу:', audioFile.path);
+        
+        if (coverFile) {
+            console.log('[Music] Загружена обложка:', coverFile.originalname, coverFile.mimetype, coverFile.size);
+            console.log('[Music] Обложка сохранена как:', coverFile.filename);
+            
+            // Проверяем, что обложка была успешно сохранена
+            const savedCoverPath = coverFile.path;
+            if (!fs.existsSync(savedCoverPath)) {
+                console.error('[Music] Ошибка: Обложка не была сохранена в:', savedCoverPath);
+            } else {
+                console.log('[Music] Обложка успешно сохранена в:', savedCoverPath);
+            }
+        }
         
         // Создаем объект с данными о треке
         const trackData = {
             title: req.body.title || 'Без названия',
             artist: req.body.artist || 'Неизвестный исполнитель',
-            duration: '0:00', // Временно, нужно будет добавить извлечение длительности
-            filename: req.file.filename,
-            filepath: `/api/media/music/${req.file.filename}`, // Полный путь для API
-            coverUrl: 'https://via.placeholder.com/300', // Заглушка для обложки
+            duration: req.body.duration || '0:00', // Используем длительность из запроса
+            filename: audioFile.filename,
+            filepath: `/api/media/music/${audioFile.filename}`, // Полный путь для API
+            coverUrl: coverFile ? `/api/music/cover/${coverFile.filename}` : 'https://via.placeholder.com/300',
             userId: req.user?.id || 1, // Если пользователь не аутентифицирован, используем ID=1
             playCount: 0
         };
@@ -125,12 +154,12 @@ router.post('/upload', upload.single('audioFile'), async (req: any, res) => {
         console.log('[Music] Данные трека для сохранения:', trackData);
         
         // Проверка существования директории для сохранения
-        const musicDir = path.dirname(req.file.path);
+        const musicDir = path.dirname(audioFile.path);
         console.log('[Music] Проверка директории музыки:', musicDir);
         console.log('[Music] Директория существует:', fs.existsSync(musicDir));
         
         // Проверяем, что файл был успешно сохранен
-        const savedFilePath = req.file.path;
+        const savedFilePath = audioFile.path;
         if (!fs.existsSync(savedFilePath)) {
             console.error('[Music] Ошибка: Файл не был сохранен в:', savedFilePath);
             return res.status(500).json({ message: 'Ошибка при сохранении файла' });
@@ -227,7 +256,83 @@ router.post('/:id/play', async (req, res) => {
     }
 });
 
-// Получение аудиофайла по имени
-router.get('/file/:filename', musicController.getMusicFile);
+// Маршрут для получения аудиофайла
+router.get('/file/:filename', (req, res) => {
+    try {
+        const { filename } = req.params;
+        const filePath = path.join(__dirname, '../../uploads/music', filename);
+        
+        console.log('[API Music] Запрос на получение файла:', filename);
+        console.log('[API Music] Полный путь:', filePath);
+        
+        // Проверяем, существует ли файл
+        if (!fs.existsSync(filePath)) {
+            console.error('[API Music] Файл не найден:', filePath);
+            return res.status(404).json({ message: 'Файл не найден' });
+        }
+        
+        // Отправляем файл клиенту
+        res.sendFile(filePath);
+    } catch (error) {
+        console.error('[API Music] Ошибка при получении файла:', error);
+        res.status(500).json({ message: 'Ошибка сервера при получении файла' });
+    }
+});
+
+// Маршрут для получения обложки
+router.get('/cover/:filename', (req, res) => {
+    try {
+        const { filename } = req.params;
+        const filePath = path.join(__dirname, '../../uploads/covers', filename);
+        
+        console.log('[API Music] Запрос на получение обложки:', filename);
+        console.log('[API Music] Полный путь:', filePath);
+        
+        // Проверяем, существует ли файл
+        if (!fs.existsSync(filePath)) {
+            console.error('[API Music] Обложка не найдена:', filePath);
+            return res.status(404).json({ message: 'Обложка не найдена' });
+        }
+        
+        // Отправляем файл клиенту
+        res.sendFile(filePath);
+    } catch (error) {
+        console.error('[API Music] Ошибка при получении обложки:', error);
+        res.status(500).json({ message: 'Ошибка сервера при получении обложки' });
+    }
+});
+
+// Маршрут для обновления длительности трека
+router.put('/duration/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { duration } = req.body;
+        
+        console.log(`[API Music] Запрос на обновление длительности трека ${id}:`, duration);
+        
+        // Проверяем валидность данных
+        if (!duration) {
+            return res.status(400).json({ message: 'Длительность трека не указана' });
+        }
+        
+        // Находим трек в базе данных
+        const track = await musicRepository.findOne({ where: { id: parseInt(id) } });
+        
+        if (!track) {
+            return res.status(404).json({ message: 'Трек не найден' });
+        }
+        
+        // Обновляем длительность трека
+        track.duration = duration;
+        await musicRepository.save(track);
+        
+        console.log(`[API Music] Длительность трека ${id} обновлена:`, duration);
+        
+        res.status(200).json({ message: 'Длительность трека успешно обновлена', track });
+    } catch (error) {
+        console.error('[API Music] Ошибка при обновлении длительности трека:', error);
+        res.status(500).json({ message: 'Ошибка сервера при обновлении длительности трека' });
+    }
+});
 
 export default router; 

@@ -16,6 +16,7 @@ import { MusicPage } from './pages/MusicPage';
 import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/Header/Header';
 import Sidebar from './components/Sidebar/Sidebar';
+import { PlayerProvider } from './contexts/PlayerContext';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -99,6 +100,14 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/music"
+              element={
+                <ProtectedRoute>
+                  <MusicPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </div>
       </div>
@@ -107,10 +116,12 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <div className="app">
-        <Header />
-        {renderContent()}
-      </div>
+      <PlayerProvider>
+        <div className="app">
+          <Header />
+          {renderContent()}
+        </div>
+      </PlayerProvider>
     </BrowserRouter>
   );
 };

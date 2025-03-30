@@ -50,6 +50,70 @@ npm install
 npm start
 ```
 
+## Конфигурация проекта
+
+### Переменные окружения
+
+#### Клиент (.env)
+```
+REACT_APP_API_URL=http://localhost:3001
+REACT_APP_UPLOAD_URL=http://localhost:3001/uploads
+REACT_APP_MAX_FILE_SIZE=5242880
+```
+
+#### Сервер (.env)
+```
+PORT=3001
+NODE_ENV=development
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=setka
+DB_USER=postgres
+DB_PASSWORD=postgres
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=30d
+UPLOAD_DIR=uploads
+MAX_FILE_SIZE=5242880
+```
+
+## Структура базы данных
+
+```
+┌─────────────┐     ┌─────────────┐
+│    User     │     │    Post     │
+├─────────────┤     ├─────────────┤
+│ id          │     │ id          │
+│ username    │     │ content     │
+│ email       │     │ userId      │
+│ password    │     │ createdAt   │
+│ avatar      │     │ updatedAt   │
+│ status      │     └──────┬──────┘
+│ createdAt   │            │
+└──────┬──────┘            │
+       │                   │
+       │     ┌─────────────┐
+       └─────┤   Photo     │
+             ├─────────────┤
+             │ id          │
+             │ filename    │
+             │ userId      │
+             │ postId      │
+             │ createdAt   │
+             └─────────────┘
+```
+
+## Решение проблем
+
+### Клиент
+- **CORS ошибки**: Убедитесь, что сервер настроен с правильными CORS заголовками
+- **404 для изображений**: Проверьте правильность пути REACT_APP_UPLOAD_URL в .env
+- **Авторизация**: Проверьте, что куки сохраняются и отправляются с запросами
+
+### Сервер
+- **Ошибки подключения к БД**: Проверьте настройки подключения в .env
+- **Ошибки загрузки файлов**: Убедитесь, что директория uploads существует и доступна для записи
+- **JWT ошибки**: Проверьте срок действия токена и секретный ключ
+
 ## Технологии
 
 ### Frontend

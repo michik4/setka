@@ -33,6 +33,17 @@
     opacity: 0.9;
 }
 
+.userActions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.miniPlayerWrapper {
+    display: flex;
+    align-items: center;
+}
+
 .userInfo {
     display: flex;
     align-items: center;
