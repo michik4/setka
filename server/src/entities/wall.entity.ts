@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, ManyToMany, JoinTable, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
 import { Photo } from './photo.entity';
+import { Album } from './album.entity';
 
 @Entity('wall_posts')
 export class WallPost {
@@ -37,6 +38,20 @@ export class WallPost {
         }
     })
     photos: Photo[];
+
+    @ManyToMany(() => Album)
+    @JoinTable({
+        name: "post_album",
+        joinColumn: {
+            name: "postId", 
+            referencedColumnName: "id"
+        },
+        inverseJoinColumn: {
+            name: "albumId",
+            referencedColumnName: "id"
+        }
+    })
+    albums: Album[];
 
     @Column("int", { default: 0 })
     likesCount: number;

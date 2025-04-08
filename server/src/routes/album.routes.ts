@@ -22,6 +22,9 @@ router.get('/user/:userId', authenticateSession, handleRequest(albumController.g
 // Получение конкретного альбома
 router.get('/:albumId', authenticateSession, handleRequest(albumController.getAlbum.bind(albumController)));
 
+// Получение обложки альбома
+router.get('/:albumId/cover', authenticateSession, handleRequest(albumController.getAlbumCover.bind(albumController)));
+
 // Создание нового альбома (требует авторизации)
 router.post('/', authenticateSession, handleRequest(albumController.createAlbum.bind(albumController)));
 

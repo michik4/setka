@@ -140,92 +140,358 @@
     margin: 20px 0;
 }
 
-/* Стили списка треков */
-.trackList {
-    width: 100%;
-}
-
-.trackListHeader {
+/* Современный список треков */
+.modernTrackList {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.trackCount {
-    font-size: 14px;
-    color: #626d7a;
-    padding: 5px 10px;
-    background-color: rgba(81, 129, 184, 0.08);
-    border-radius: 15px;
-}
-
-.trackHeader {
-    display: grid;
-    grid-template-columns: 40px 3fr 2fr 1fr 80px;
-    padding: 0 20px 10px 20px;
-    border-bottom: 1px solid #edeef0;
-    color: #818c99;
-    font-size: 12px;
-    font-weight: 500;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 15px;
 }
 
 .trackItem {
-    display: grid;
-    grid-template-columns: 40px 3fr 2fr 1fr 80px;
-    padding: 12px 20px;
-    border-radius: 8px;
-    transition: background-color 0.2s;
-    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.7);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
 }
 
 .trackItem:hover {
-    background-color: #f5f6f8;
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .activeTrack {
-    background-color: #ebedf0;
+    background-color: rgba(81, 129, 184, 0.1);
+    border-left: 3px solid #5181b8;
+    position: relative;
+    overflow: hidden;
 }
 
 .activeTrack:hover {
-    background-color: #e5e7ea;
+    background-color: rgba(81, 129, 184, 0.15);
 }
 
-.trackNumber {
-    font-size: 14px;
-    color: #818c99;
-    text-align: center;
+/* Эффект пульсации для активного трека */
+.activeTrack::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, rgba(81, 129, 184, 0.2) 0%, rgba(81, 129, 184, 0) 70%);
+    opacity: 0;
+    z-index: 0;
+    animation: pulse 2s infinite;
 }
 
-.trackInfo {
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    50% {
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+.trackMainInfo {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;  /* Поднимаем содержимое над эффектом пульсации */
+}
+
+.trackCoverContainer {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
 .trackCover {
-    width: 40px;
-    height: 40px;
-    border-radius: 4px;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
+    border-radius: 6px;
+}
+
+.playOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.trackMainInfo:hover .playOverlay {
+    opacity: 1;
+}
+
+.playIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.playingOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pauseIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.pauseIcon span {
+    width: 4px;
+    height: 16px;
+    background-color: white;
+    border-radius: 2px;
+}
+
+/* Новая анимация проигрывания */
+.playingWaveform {
+    display: flex;
+    align-items: flex-end;
+    height: 20px;
+    gap: 2px;
+}
+
+.playingWaveform span {
+    display: block;
+    width: 3px;
+    background-color: white;
+    border-radius: 1.5px;
+    animation: waveformAnimation 1.4s ease infinite;
+    opacity: 0.8;
+}
+
+.playingWaveform span:nth-child(1) { animation-delay: 0.2s; }
+.playingWaveform span:nth-child(2) { animation-delay: 0.4s; }
+.playingWaveform span:nth-child(3) { animation-delay: 0.6s; }
+.playingWaveform span:nth-child(4) { animation-delay: 0.8s; }
+.playingWaveform span:nth-child(5) { animation-delay: 1.0s; }
+
+@keyframes waveformAnimation {
+    0%, 100% { height: 4px; }
+    50% { height: 16px; }
+}
+
+.playingOverlay .playingWaveform {
+    display: flex; /* Показываем новую анимацию */
+}
+
+.pauseIcon {
+    display: none; /* Скрываем старую анимацию паузы */
+}
+
+.trackMetadata {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .trackTitle {
-    font-size: 14px;
-    color: #2a5885;
+    font-size: 15px;
     font-weight: 500;
+    color: #2a5885;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .trackArtist {
-    font-size: 14px;
+    font-size: 13px;
     color: #818c99;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.trackSecondaryInfo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-left: 10px;
+    position: relative;
+    z-index: 1;  /* Поднимаем содержимое над эффектом пульсации */
 }
 
 .trackDuration {
-    font-size: 14px;
+    font-size: 13px;
     color: #818c99;
+    min-width: 35px;
     text-align: right;
+}
+
+.trackActions {
+    display: flex;
+    gap: 8px;
+    opacity: 0.4;
+    transition: opacity 0.2s ease;
+}
+
+.trackItem:hover .trackActions {
+    opacity: 1;
+}
+
+.queueButton {
+    background: none;
+    border: none;
+    padding: 5px;
+    cursor: pointer;
+    color: #5181b8;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.queueButton:hover {
+    background-color: rgba(81, 129, 184, 0.1);
+    color: #5181b8;
+}
+
+/* Вкладки */
+.tabs {
+    display: flex;
+    gap: 1px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #edeef0;
+}
+
+.tab {
+    background: none;
+    border: none;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #626d7a;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.tab:hover {
+    color: #2a5885;
+}
+
+.tabActive {
+    color: #2a5885;
+}
+
+.tabActive::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #5181b8;
+}
+
+.tabContent {
+    padding: 10px 0;
+}
+
+/* Очередь */
+.queueContainer {
+    padding: 10px 0;
+}
+
+.queueHeader {
+    margin-bottom: 15px;
+}
+
+/* Контейнер для треков */
+.trackListContainer {
+    position: relative;
+}
+
+/* Индикатор загрузки дополнительных треков */
+.loadingMore {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    gap: 10px;
+}
+
+.loadingMore p {
+    color: #626d7a;
+    margin: 0;
+}
+
+/* Индикатор конца списка */
+.endOfList {
+    text-align: center;
+    padding: 20px 0;
+    color: #818c99;
+    font-size: 14px;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .trackItem {
+        padding: 8px;
+    }
+    
+    .trackCoverContainer {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .trackTitle {
+        font-size: 14px;
+    }
+    
+    .trackArtist {
+        font-size: 12px;
+    }
+    
+    .trackDuration {
+        font-size: 12px;
+    }
+    
+    .trackActions {
+        gap: 4px;
+    }
 }
 
 /* Плеер */
@@ -684,75 +950,6 @@
     max-height: 150px;
     border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.tabs {
-    display: flex;
-    gap: 2px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #edeef0;
-    position: relative;
-    z-index: 2;
-}
-
-.tab {
-    padding: 12px 20px;
-    font-size: 15px;
-    font-weight: 500;
-    color: #626d7a;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    transition: all 0.3s ease;
-}
-
-.tab:hover {
-    color: #2a5885;
-    background-color: rgba(81, 129, 184, 0.05);
-}
-
-.tabActive {
-    color: #2a5885;
-    border-bottom: 2px solid #2a5885;
-}
-
-.tabContent {
-    padding: 20px 0;
-    min-height: 300px;
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.queueButton {
-    background: none;
-    border: none;
-    color: #818c99;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.8;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s, opacity 0.2s;
-}
-
-.queueButton:hover {
-    background-color: rgba(81, 129, 184, 0.1);
-    color: #5181b8;
-    opacity: 1;
 }
 
 .centeredContainer {

@@ -20,6 +20,26 @@
     flex: 1;
 }
 
+.playerOpenedInfo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 120px;
+    background-color: rgba(30, 58, 138, 0.1);
+    border-radius: 8px;
+    color: #1e3a8a;
+    font-size: 14px;
+    margin: 15px 0;
+    text-align: center;
+    padding: 15px;
+}
+
+.playerOpenedInfo p {
+    margin: 0;
+    opacity: 0.8;
+}
+
 @media (max-width: 768px) {
     .auPlayWrap {
         padding: 15px;

@@ -79,7 +79,7 @@ router.get('/test', (req, res) => {
 
 // Получить все треки пользователя
 router.get('/', authenticateSession, async (req: any, res) => {
-    console.log('[API Music] GET / - Запрос на получение всех треков пользователя');
+    console.log('[API Music] GET / - Запрос на получение треков пользователя');
     console.log('[API Music] Пользователь:', req.user?.id);
     
     try {
@@ -90,16 +90,40 @@ router.get('/', authenticateSession, async (req: any, res) => {
         
         const userId = req.user.id;
         
-        console.log('[API Music] Поиск треков для пользователя:', userId);
-        const tracks = await musicRepository.find({
-            where: { userId },
-            order: { createdAt: 'DESC' }
+        // Параметры пагинации
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const skip = (page - 1) * limit;
+        
+        console.log(`[API Music] Пагинация: страница ${page}, лимит ${limit}, пропустить ${skip}`);
+        
+        // Получаем общее количество треков пользователя
+        const totalTracks = await musicRepository.count({
+            where: { userId }
         });
         
-        console.log(`[API Music] Найдено ${tracks.length} треков`);
+        // Получаем треки с пагинацией
+        const tracks = await musicRepository.find({
+            where: { userId },
+            order: { createdAt: 'DESC' },
+            skip,
+            take: limit
+        });
+        
+        console.log(`[API Music] Найдено ${tracks.length} треков на странице ${page} из ${Math.ceil(totalTracks / limit)} страниц`);
+        
         // Добавляем заголовок Content-Type для явного указания формата ответа
         res.setHeader('Content-Type', 'application/json');
-        return res.json(tracks);
+        return res.json({
+            tracks,
+            pagination: {
+                total: totalTracks,
+                page,
+                limit,
+                pages: Math.ceil(totalTracks / limit),
+                hasMore: page < Math.ceil(totalTracks / limit)
+            }
+        });
     } catch (error) {
         console.error('[API Music] Ошибка при получении треков:', error);
         return res.status(500).json({ message: 'Ошибка сервера' });
@@ -107,7 +131,7 @@ router.get('/', authenticateSession, async (req: any, res) => {
 });
 
 // Обработчик загрузки треков
-router.post('/upload', upload.fields([
+router.post('/upload', authenticateSession, upload.fields([
     { name: 'audioFile', maxCount: 1 },
     { name: 'coverImage', maxCount: 1 }
 ]), async (req: any, res) => {
@@ -123,55 +147,9 @@ router.post('/upload', upload.fields([
         const coverFile = req.files.coverImage ? req.files.coverImage[0] : null;
         
         console.log('[Music] Загружен файл:', audioFile.originalname, audioFile.mimetype, audioFile.size);
-        console.log('[Music] Файл сохранен как:', audioFile.filename);
-        console.log('[Music] Полный путь к файлу:', audioFile.path);
         
-        if (coverFile) {
-            console.log('[Music] Загружена обложка:', coverFile.originalname, coverFile.mimetype, coverFile.size);
-            console.log('[Music] Обложка сохранена как:', coverFile.filename);
-            
-            // Проверяем, что обложка была успешно сохранена
-            const savedCoverPath = coverFile.path;
-            if (!fs.existsSync(savedCoverPath)) {
-                console.error('[Music] Ошибка: Обложка не была сохранена в:', savedCoverPath);
-            } else {
-                console.log('[Music] Обложка успешно сохранена в:', savedCoverPath);
-            }
-        }
-        
-        // Создаем объект с данными о треке
-        const trackData = {
-            title: req.body.title || 'Без названия',
-            artist: req.body.artist || 'Неизвестный исполнитель',
-            duration: req.body.duration || '0:00', // Используем длительность из запроса
-            filename: audioFile.filename,
-            filepath: `/api/media/music/${audioFile.filename}`, // Полный путь для API
-            coverUrl: coverFile ? `/api/music/cover/${coverFile.filename}` : 'https://via.placeholder.com/300',
-            userId: req.user?.id || 1, // Если пользователь не аутентифицирован, используем ID=1
-            playCount: 0
-        };
-        
-        console.log('[Music] Данные трека для сохранения:', trackData);
-        
-        // Проверка существования директории для сохранения
-        const musicDir = path.dirname(audioFile.path);
-        console.log('[Music] Проверка директории музыки:', musicDir);
-        console.log('[Music] Директория существует:', fs.existsSync(musicDir));
-        
-        // Проверяем, что файл был успешно сохранен
-        const savedFilePath = audioFile.path;
-        if (!fs.existsSync(savedFilePath)) {
-            console.error('[Music] Ошибка: Файл не был сохранен в:', savedFilePath);
-            return res.status(500).json({ message: 'Ошибка при сохранении файла' });
-        }
-        
-        console.log('[Music] Файл успешно сохранен в:', savedFilePath);
-        console.log('[Music] Размер сохраненного файла:', fs.statSync(savedFilePath).size, 'байт');
-        
-        // Сохраняем информацию о треке в базу данных
-        const track = await musicRepository.create(trackData);
-        await musicRepository.save(track);
-        console.log('[Music] Трек успешно создан в БД с ID:', track.id);
+        // Используем метод контроллера для обработки загрузки
+        const track = await musicController.uploadTrack(req, audioFile, coverFile);
         
         // Возвращаем успешный ответ
         return res.status(201).json({
@@ -181,6 +159,98 @@ router.post('/upload', upload.fields([
     } catch (error) {
         console.error('[Music] Ошибка при загрузке трека:', error);
         return res.status(500).json({ message: 'Не удалось загрузить трек' });
+    }
+});
+
+// Новый маршрут для множественной загрузки файлов
+router.post('/upload/multiple', authenticateSession, multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: { fileSize: 25 * 1024 * 1024 }
+}).fields([
+    { name: 'audioFile', maxCount: 100 }, // Увеличиваем до 100 файлов одновременно
+    { name: 'coverImage', maxCount: 1 }
+]), async (req: any, res) => {
+    try {
+        console.log('[Music] Получен запрос на множественную загрузку файлов');
+        
+        if (!req.files || !req.files.audioFile || req.files.audioFile.length === 0) {
+            console.error('[Music] Аудиофайлы не найдены в запросе');
+            return res.status(400).json({ message: 'Аудиофайлы не найдены в запросе' });
+        }
+        
+        const audioFiles = req.files.audioFile;
+        const coverFile = req.files.coverImage ? req.files.coverImage[0] : null;
+        
+        console.log(`[Music] Загружено ${audioFiles.length} файлов`);
+        
+        // Проверяем, не превышает ли размер всех файлов вместе максимально допустимый
+        const totalSize = audioFiles.reduce((sum: number, file: Express.Multer.File) => sum + file.size, 0);
+        const maxTotalSize = 1000 * 1024 * 1024; // 1 ГБ максимум для всех файлов вместе
+        
+        if (totalSize > maxTotalSize) {
+            return res.status(413).json({
+                message: `Общий размер файлов превышает максимально допустимый (${Math.round(maxTotalSize / (1024 * 1024))} МБ)`
+            });
+        }
+        
+        // Обрабатываем каждый аудиофайл
+        const results = [];
+        const errors = [];
+        
+        // Обрабатываем файлы последовательно для экономии памяти
+        for (const audioFile of audioFiles) {
+            try {
+                console.log(`[Music] Обработка файла: ${audioFile.originalname}`);
+                
+                // Проверка наличия дубликата по имени файла
+                const existingTrack = await musicRepository.findOne({
+                    where: { 
+                        userId: req.user.id,
+                        title: path.parse(audioFile.originalname).name // Используем имя файла для проверки
+                    }
+                });
+                
+                if (existingTrack) {
+                    console.log(`[Music] Трек с похожим названием уже существует: ${existingTrack.title}`);
+                    errors.push({
+                        success: false,
+                        originalName: audioFile.originalname,
+                        error: 'Трек с таким названием уже существует в вашей коллекции'
+                    });
+                    continue; // Пропускаем этот файл и переходим к следующему
+                }
+                
+                // Используем метод контроллера для обработки загрузки
+                const track = await musicController.uploadTrack(req, audioFile, coverFile);
+                
+                results.push({
+                    success: true,
+                    track,
+                    originalName: audioFile.originalname
+                });
+            } catch (error: any) {
+                console.error(`[Music] Ошибка при обработке файла ${audioFile.originalname}:`, error);
+                
+                errors.push({
+                    success: false,
+                    originalName: audioFile.originalname,
+                    error: error.message || 'Неизвестная ошибка'
+                });
+            }
+        }
+        
+        // Возвращаем результаты загрузки
+        return res.status(201).json({
+            message: `Загружено ${results.length} файлов, ${errors.length} ошибок`,
+            results,
+            errors,
+            totalUploaded: results.length,
+            totalFailed: errors.length
+        });
+    } catch (error) {
+        console.error('[Music] Общая ошибка при множественной загрузке:', error);
+        return res.status(500).json({ message: 'Не удалось загрузить файлы' });
     }
 });
 
@@ -253,6 +323,59 @@ router.post('/:id/play', async (req, res) => {
     } catch (error) {
         console.error('Ошибка при обновлении счетчика прослушиваний:', error);
         res.status(500).json({ message: 'Ошибка сервера' });
+    }
+});
+
+// Удалить все треки пользователя
+router.delete('/user/all', authenticateSession, async (req: any, res) => {
+    try {
+        const userId = req.user.id;
+        
+        console.log(`[API Music] Запрос на удаление всех треков пользователя ID=${userId}`);
+        
+        // Находим все треки пользователя
+        const tracks = await musicRepository.find({
+            where: { userId }
+        });
+        
+        const trackCount = tracks.length;
+        console.log(`[API Music] Найдено ${trackCount} треков для удаления`);
+        
+        if (trackCount === 0) {
+            return res.json({ message: 'У вас нет треков для удаления', deletedCount: 0 });
+        }
+        
+        // Удаляем файлы с диска
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const track of tracks) {
+            try {
+                const filePath = path.join(__dirname, '../../uploads/music', track.filename);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    successCount++;
+                }
+            } catch (fileError) {
+                console.error(`[API Music] Ошибка при удалении файла трека ${track.id}:`, fileError);
+                errorCount++;
+            }
+        }
+        
+        // Удаляем записи из БД
+        await musicRepository.remove(tracks);
+        
+        console.log(`[API Music] Удалено ${trackCount} треков пользователя ${userId}`);
+        
+        return res.json({
+            message: `Успешно удалено ${trackCount} треков`,
+            deletedCount: trackCount,
+            fileSuccess: successCount,
+            fileErrors: errorCount
+        });
+    } catch (error) {
+        console.error('[API Music] Ошибка при удалении всех треков:', error);
+        return res.status(500).json({ message: 'Ошибка при удалении треков' });
     }
 });
 

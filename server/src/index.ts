@@ -101,6 +101,31 @@ const startServer = async () => {
     
     console.log('Настроена раздача статических файлов из:', uploadsPath);
 
+    // Настраиваем отдачу React-приложения из папки public
+    const publicPath = path.join(__dirname, '..', 'public');
+    console.log('Настраиваем отдачу React-приложения из:', publicPath);
+    
+    // Проверяем, существует ли папка
+    if (fs.existsSync(publicPath)) {
+      console.log('Папка public существует, настраиваем статические маршруты');
+      
+      // Статические файлы из папки public
+      app.use(express.static(publicPath));
+      
+      // Все остальные GET запросы не к API направляем на index.html
+      app.get('*', (req, res, next) => {
+        // Исключаем запросы к API
+        if (!req.path.startsWith('/api/')) {
+          console.log(`[SPA] Запрос к ${req.path} направлен на index.html`);
+          res.sendFile(path.join(publicPath, 'index.html'));
+        } else {
+          next();
+        }
+      });
+    } else {
+      console.warn('Папка public не существует! React-приложение не будет доступно. Создайте папку и скопируйте туда файлы сборки.');
+    }
+
     const PORT = process.env.PORT || 3000
     server.listen(PORT, () => {
       console.log(`Сервер запущен на порту ${PORT}`)

@@ -13,6 +13,9 @@ import { usePlayer } from '../../contexts/PlayerContext';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || 'http://localhost:3000/api/media';
 
+// В начале файла добавить константу для URL обложки по умолчанию
+const DEFAULT_COVER_URL = '/api/music/cover/default.png';
+
 // Функция для форматирования времени в формат MM:SS
 const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
@@ -84,6 +87,9 @@ const AuPlayer = () => {
     const volumeSliderRef = useRef<HTMLInputElement>(null);
     const volumeTimerRef = useRef<number | null>(null);
     const [expandedMode, setExpandedMode] = useState(false);
+    const [popupMode, setPopupMode] = useState(false);
+    const [showTracks, setShowTracks] = useState(false);
+    const [newWindowRef, setNewWindowRef] = useState<Window | null>(null);
 
     // Обновляем CSS переменную для отображения прогресса воспроизведения
     useEffect(() => {
@@ -96,7 +102,6 @@ const AuPlayer = () => {
     useEffect(() => {
         if (volumeSliderRef.current) {
             volumeSliderRef.current.style.setProperty('--volume-width', `${volumeLevel}%`);
-            console.log(`[AuPlayer] Обновляю переменную громкости: ${volumeLevel}%`);
         }
     }, [volumeLevel, showVolumeSlider]);
 
@@ -157,7 +162,6 @@ const AuPlayer = () => {
         // Устанавливаем переменную CSS даже если ползунок не виден
         if (volumeLevel) {
             document.documentElement.style.setProperty('--volume-width', `${volumeLevel}%`);
-            console.log(`[AuPlayer] Инициализация переменной громкости: ${volumeLevel}%`);
         }
     }, []);
 
@@ -168,6 +172,12 @@ const AuPlayer = () => {
 
     // Загрузка треков
     useEffect(() => {
+        // Проверяем, уже есть ли треки в очереди
+        if (queueTracks.length > 0) {
+            setIsLoading(false);
+            return; // Не загружаем треки повторно, если они уже загружены
+        }
+
         setIsLoading(true);
         fetchTracks().then(async tracksData => {
             // Загружаем длительность для каждого трека
@@ -215,7 +225,7 @@ const AuPlayer = () => {
                     title: track.title || 'Неизвестный трек',
                     artist: track.artist || 'Неизвестный исполнитель',
                     duration: track.duration || '0:00',
-                    coverUrl: track.coverUrl || '/default-cover.jpg',
+                    coverUrl: track.coverUrl || DEFAULT_COVER_URL,
                     audioUrl: track.filename ? `${API_URL}/music/file/${track.filename}` : '',
                     playCount: track.playCount || 0
                 };
@@ -277,13 +287,34 @@ const AuPlayer = () => {
 
     // Функция для переключения расширенного режима
     const toggleExpandedMode = useCallback(() => {
+        if (popupMode) {
+            setPopupMode(false);
+        }
         setExpandedMode(prev => !prev);
+    }, [popupMode]);
+
+    // Функция для переключения режима отдельного окна
+    const togglePopupMode = useCallback(() => {
+        // Если включаем popup режим, выключаем расширенный, и наоборот
+        if (popupMode) {
+            document.body.classList.remove('popupModeActive');
+            setPopupMode(false);
+        } else {
+            document.body.classList.add('popupModeActive');
+            setExpandedMode(false);
+            setPopupMode(true);
+        }
+    }, [popupMode]);
+
+    // Очистка класса body при размонтировании
+    useEffect(() => {
+        return () => {
+            document.body.classList.remove('popupModeActive');
+        };
     }, []);
 
     // Функция для удаления трека
     const handleDeleteTrack = useCallback((id: number) => {
-        console.log('[AuPlayer] Запрос на удаление трека из очереди:', id);
-        
         // Проверяем, не является ли удаляемый трек текущим
         if (currentTrack && currentTrack.id === id) {
             // Если это текущий трек, останавливаем воспроизведение
@@ -304,6 +335,29 @@ const AuPlayer = () => {
         // Удаляем трек из списка очереди
         setQueueTracks(prev => prev.filter(track => track.id !== id));
     }, [currentTrack, currentTrackIndex, queueTracks, setIsPlaying, setQueueTracks, playTrackByIndex]);
+
+    // Функция для переключения видимости списка треков в popup режиме
+    const toggleTracksVisibility = useCallback(() => {
+        setShowTracks(prev => !prev);
+    }, []);
+
+    // Открываем плеер в новом окне браузера
+    const openInNewWindow = useCallback(() => {
+        // Определяем размеры окна
+        const width = 500;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+
+        // Открываем новое окно с плеером
+        window.open(
+            '/player',
+            'MusicPlayer',
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no`
+        );
+        
+        // Теперь все синхронизируется через BroadcastChannel
+    }, []);
 
     if (isLoading) {
         return <div>Загрузка...</div>;
@@ -335,7 +389,7 @@ const AuPlayer = () => {
     }
 
     // Получаем URL обложки
-    const coverUrl = currentTrack ? (coverError ? '/default-cover.jpg' : getTrackCover(currentTrack.coverUrl)) : '';
+    const coverUrl = currentTrack ? (coverError ? DEFAULT_COVER_URL : getTrackCover(currentTrack.coverUrl)) : '';
 
     // Форматируем время для отображения
     const formatTime = (time: number) => {
@@ -346,43 +400,78 @@ const AuPlayer = () => {
     };
 
     return (
-        <div className={`${styles.auPlayerContainer} ${expandedMode ? styles.expandedMode : ''}`}>
+        <div className={`${styles.auPlayerContainer} ${expandedMode ? styles.expandedMode : ''} ${popupMode ? styles.popupMode : ''} ${showTracks ? styles.showTracks : ''} ${isPlaying ? styles.isPlaying : ''}`}>
             {/* Фон с размытой обложкой */}
-            {currentTrack && (
+            {currentTrack && !popupMode && (
                 <div 
                     className={styles.playerBackground} 
                     style={{ backgroundImage: `url(${coverUrl})` }}
                 />
             )}
             
-            {/* Кнопка переключения режима */}
-            <button 
-                className={styles.toggleViewModeButton}
-                onClick={toggleExpandedMode}
-                title={expandedMode ? "Компактный режим" : "Расширенный режим"}
-            >
-                {expandedMode ? (
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            {/* Оверлей для popup режима */}
+            {popupMode && <div className={styles.popupModeOverlay} onClick={togglePopupMode}></div>}
+            
+            {/* Кнопки переключения режимов */}
+            <div className={styles.viewModeButtons}>
+                <button 
+                    className={`${styles.toggleViewModeButton} ${expandedMode && !popupMode ? styles.active : ""}`}
+                    onClick={toggleExpandedMode}
+                    title="Развернутый режим"
+                >
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H5V5h14v14z"/>
+                        <path d="M7 12h10v2H7z"/>
+                        <path d="M7 9h5v2H7z"/>
                     </svg>
-                ) : (
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                </button>
+                
+                <button 
+                    className={`${styles.popupModeButton} ${popupMode ? styles.active : ""}`}
+                    onClick={() => setPopupMode(!popupMode)}
+                    title="Режим всплывающего окна"
+                >
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H5V5h14v14z"/>
+                        <path d="M15 5v2h2v2h2V5h-4z"/>
+                        <path d="M5 15v4h4v-2H7v-2H5z"/>
                     </svg>
-                )}
-            </button>
+                </button>
+                
+                <button 
+                    className={styles.newWindowButton}
+                    onClick={openInNewWindow}
+                    title="Открыть в новом окне"
+                >
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7z"/>
+                        <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                    </svg>
+                </button>
+            </div>
             
             <div className={styles.playerContent}>
                 <div className={styles.trackInfo}>
-                    <img 
-                        src={coverUrl} 
-                        alt={currentTrack?.title}
-                        className={styles.coverImage} 
-                        onError={handleCoverError}
-                        onClick={toggleExpandedMode}
-                        style={{ cursor: 'pointer' }}
-                        title="Нажмите для переключения режима отображения"
-                    />
+                    <div className={styles.coverImageContainer}>
+                        <img 
+                            src={coverUrl} 
+                            alt={currentTrack?.title}
+                            className={styles.coverImage} 
+                            onError={handleCoverError}
+                            onClick={toggleExpandedMode}
+                            title="Нажмите для переключения режима отображения"
+                        />
+                        {/* Анимация эквалайзера под обложкой */}
+                        <div className={styles.playingAnimation}>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
                     <div className={styles.trackDetails}>
                         <div className={styles.trackTitle}>{currentTrack?.title}</div>
                         <div className={styles.trackArtist}>{currentTrack?.artist}</div>
@@ -548,13 +637,26 @@ const AuPlayer = () => {
                 )}
             </div>
 
+            {/* Кнопка показа/скрытия списка треков в popup режиме */}
+            {popupMode && (
+                <button 
+                    className={styles.toggleTracksButton}
+                    onClick={toggleTracksVisibility}
+                >
+                    {showTracks ? 'Скрыть список треков' : 'Показать список треков'}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className={showTracks ? styles.rotated : ""}>
+                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                    </svg>
+                </button>
+            )}
+
             <div className={styles.tracksList}>
                 <AuOrder 
                     tracks={queueTracks} 
                     currentTrackIndex={currentTrackIndex} 
                     onSelectTrack={playTrackByIndex} 
                     onDeleteTrack={handleDeleteTrack}
-                    expandedMode={expandedMode}
+                    expandedMode={expandedMode || popupMode}
                 />
             </div>
         </div>

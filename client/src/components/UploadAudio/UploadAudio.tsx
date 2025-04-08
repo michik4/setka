@@ -5,6 +5,9 @@ import styles from './UploadAudio.module.css';
 // API URL из переменных окружения
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
+// Добавить константу для обложки по умолчанию
+const DEFAULT_COVER_URL = '/api/music/cover/default.png';
+
 interface UploadAudioProps {
     onTrackUploaded?: (newTrack: any) => void;
 }
@@ -157,7 +160,7 @@ const UploadAudio: React.FC<UploadAudioProps> = ({ onTrackUploaded }) => {
                     try {
                         const response = JSON.parse(xhr.responseText);
                         
-                        const coverUrl = response.coverUrl || '/default-cover.jpg';
+                        const coverUrl = response.coverUrl || DEFAULT_COVER_URL;
                         
                         const validTrack = {
                             id: response.id || 0,

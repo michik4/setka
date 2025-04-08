@@ -8,7 +8,7 @@ console.log('Переменные окружения:', {
 });
 
 // Используем значение по умолчанию, если переменная окружения не определена
-const WS_URL = process.env.REACT_APP_WS_URL || 'http://localhost:3000';
+const WS_URL = process.env.REACT_APP_WS_URL || 'https://rich-socks-dance.loca.lt';
 
 class SocketService {
     private socket: Socket | null = null;

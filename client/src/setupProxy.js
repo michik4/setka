@@ -4,7 +4,7 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:3000',
+      target: 'https://odd-trees-wear.loca.lt',
       changeOrigin: true,
       secure: false,
       pathRewrite: {

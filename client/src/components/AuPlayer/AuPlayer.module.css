@@ -17,6 +17,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     position: relative;
     transition: all 0.3s ease;
+    overflow: hidden;
 }
 
 .trackInfo {
@@ -25,15 +26,27 @@
     gap: 1rem;
     padding: 0.5rem 0;
     transition: all 0.4s ease;
+    width: 100%;
 }
 
-.coverImage {
+.coverImageContainer {
+    position: relative;
     width: 60px;
     height: 60px;
     border-radius: 0.5rem;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.coverImage {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
+    border-radius: 0.5rem;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     transition: all 0.4s ease-in-out;
+    cursor: pointer;
 }
 
 .trackDetails {
@@ -41,6 +54,9 @@
     flex-direction: column;
     gap: 0.3rem;
     transition: opacity 0.3s ease, transform 0.3s ease;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .trackTitle {
@@ -83,9 +99,15 @@
         padding: 0.5rem;
     }
     
-    .coverImage {
+    .coverImageContainer {
         width: 50px;
         height: 50px;
+    }
+    
+    .expandedMode .coverImageContainer {
+        width: 95%;
+        height: auto;
+        max-width: 300px;
     }
     
     .trackTitle {
@@ -96,20 +118,43 @@
         font-size: 0.8rem;
     }
     
-    .expandedMode .coverImage {
-        max-width: 200px;
-    }
-    
-    .toggleViewModeButton {
-        top: 5px;
-        right: 5px;
+    .popupMode {
+        width: 320px;
+        padding: 12px;
     }
 }
 
 /* Для очень узких экранов */
 @media (max-width: 480px) {
-    .expandedMode .coverImage {
-        max-width: 100%;
+    .coverImageContainer {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .expandedMode .coverImageContainer {
+        width: 95%;
+        height: auto;
+        max-width: 250px;
+    }
+    
+    .popupMode {
+        width: 300px;
+        padding: 10px;
+    }
+    
+    .popupMode .playerButtons {
+        gap: 4px;
+    }
+    
+    .popupMode .progressControls {
+        padding: 0 5px;
+    }
+}
+
+/* Для очень широких экранов */
+@media (min-width: 1200px) {
+    .expandedMode .coverImageContainer {
+        max-width: 600px;
     }
 }
 
@@ -350,27 +395,31 @@
     align-items: center;
     text-align: center;
     padding: 1rem 0;
-    transform: translateY(10px);
+    margin: 0 auto;
+}
+
+.expandedMode .coverImageContainer {
+    width: 90%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    max-width: 500px;
+    margin-bottom: 1rem;
+    border-radius: 8px;
 }
 
 .expandedMode .coverImage {
-    width: 100%;
-    max-width: 300px;
-    height: auto;
-    aspect-ratio: 1 / 1;
     border-radius: 8px;
-    margin-bottom: 1rem;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    transform: scale(1.02);
 }
 
 .expandedMode .trackDetails {
     width: 100%;
-    align-items: center;
-    margin-top: 1rem;
+    max-width: 300px;
+    text-align: center;
+    margin-top: 0.5rem;
 }
 
-/* Фон с размытой обложкой */
+/* Улучшенный фон для плеера */
 .playerBackground {
     position: absolute;
     top: 0;
@@ -379,22 +428,29 @@
     bottom: 0;
     background-size: cover;
     background-position: center;
-    opacity: 0;
-    filter: blur(15px);
-    border-radius: 8px;
-    z-index: 0;
-    overflow: hidden;
-    transition: opacity 0.3s ease;
+    z-index: -1;
+    filter: blur(25px);
+    opacity: 0.3;
+    transform: scale(1.1);
+}
+
+.isPlaying .playerBackground {
+    opacity: 0.4;
 }
 
 .expandedMode .playerBackground {
-    opacity: 0.25;
+    filter: blur(30px);
+    opacity: 0.3;
 }
 
 /* Содержимое поверх фона */
 .playerContent {
     position: relative;
     z-index: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* Кнопка переключения режима отображения */
@@ -415,4 +471,264 @@
 .toggleViewModeButton:hover {
     opacity: 1;
     transform: scale(1.1);
+}
+
+/* Убираем все анимации */
+.playingAnimation {
+    display: none;
+}
+
+/* Стандартная обложка без пульсации */
+.expandedMode.isPlaying .coverImage {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Отключение всех анимаций в кнопке воспроизведения */
+.isPlaying .playButton {
+    position: relative;
+    overflow: visible;
+    box-shadow: none;
+}
+
+.isPlaying .playButton::after {
+    display: none;
+}
+
+/* Доп. стили для расширенного режима */
+.expandedMode {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.expandedMode .trackInfo {
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 0;
+    position: relative;
+}
+
+.expandedMode .coverImage {
+    width: auto;
+    height: auto;
+    max-width: 300px;
+    max-height: 300px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+/* Кнопки режимов отображения плеера */
+.viewModeButtons {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 20px;
+    padding: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(5px);
+}
+
+.toggleViewModeButton, 
+.popupModeButton,
+.newWindowButton {
+    background: none;
+    border: none;
+    color: #4a76a8;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    padding: 0;
+    z-index: 2;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.toggleViewModeButton:hover, 
+.popupModeButton:hover,
+.newWindowButton:hover {
+    opacity: 1;
+    background-color: rgba(81, 129, 184, 0.1);
+    transform: scale(1.1);
+}
+
+.toggleViewModeButton::after,
+.popupModeButton::after,
+.newWindowButton::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    pointer-events: none;
+}
+
+.toggleViewModeButton:hover::after,
+.popupModeButton:hover::after,
+.newWindowButton:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+.expandedMode .viewModeButtons,
+.popupMode .viewModeButtons {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Индикатор активного режима */
+.expandedMode .toggleViewModeButton,
+.popupMode .popupModeButton {
+    color: #2a5885;
+    background-color: rgba(81, 129, 184, 0.2);
+    box-shadow: 0 0 0 2px rgba(81, 129, 184, 0.3);
+}
+
+/* Стили для popup режима */
+.popupMode {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 350px;
+    max-width: 90vw;
+    z-index: 9999;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    padding: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.popupMode .coverImageContainer {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto 16px;
+    border-radius: 8px;
+}
+
+.popupMode .trackInfo {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.popupMode .trackDetails {
+    width: 100%;
+    text-align: center;
+    margin-top: 8px;
+}
+
+.popupMode .playerButtons {
+    margin-top: 16px;
+}
+
+.popupMode .progressSlider {
+    margin-top: 12px;
+}
+
+.popupMode .tracksList {
+    max-height: 250px;
+    overflow-y: auto;
+    margin-top: 16px;
+}
+
+.popupModeOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    display: none;
+}
+
+body.popupModeActive .popupModeOverlay {
+    display: block;
+}
+
+.closePopupButton {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 4px;
+    z-index: 2;
+    transition: color 0.2s ease;
+}
+
+.closePopupButton:hover {
+    color: #333;
+}
+
+/* Стиль для списка треков */
+.tracksList {
+    margin-top: 20px;
+    transition: all 0.3s ease;
+}
+
+/* Скрытие и показ списка треков в popup режиме */
+.popupMode .tracksList {
+    max-height: 0;
+    overflow: hidden;
+    margin-top: 0;
+    opacity: 0;
+}
+
+.popupMode.showTracks .tracksList {
+    max-height: 250px;
+    overflow-y: auto;
+    margin-top: 16px;
+    opacity: 1;
+}
+
+/* Кнопка для показа/скрытия списка треков в popup режиме */
+.toggleTracksButton {
+    margin-top: 10px;
+    background: none;
+    border: none;
+    color: #4a76a8;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: background-color 0.2s;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.toggleTracksButton:hover {
+    background-color: rgba(74, 118, 168, 0.1);
+}
+
+.toggleTracksButton svg {
+    transition: transform 0.3s ease;
+}
+
+.showTracks .toggleTracksButton svg {
+    transform: rotate(180deg);
 } 

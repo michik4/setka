@@ -4,6 +4,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import styles from './MiniPlayer.module.css';
 
+// Константа для обложки по умолчанию
+const DEFAULT_COVER_URL = '/api/music/cover/default.png';
+
 const MiniPlayer: React.FC = () => {
     const { 
         currentTrack, 
@@ -14,7 +17,8 @@ const MiniPlayer: React.FC = () => {
         tracks,
         audio,
         getTrackCover,
-        setCurrentTrackIndex
+        setCurrentTrackIndex,
+        isPlayerWindowOpen
     } = usePlayer();
     const { user } = useAuth();
     const [progress, setProgress] = useState(0);
@@ -23,6 +27,7 @@ const MiniPlayer: React.FC = () => {
     const [volume, setVolume] = useState(() => audio?.volume || 1);
     const [coverErrors, setCoverErrors] = useState<Record<number, boolean>>({});
     const panelRef = useRef<HTMLDivElement>(null);
+    const [coverUrl, setCoverUrl] = useState(DEFAULT_COVER_URL);
 
     useEffect(() => {
         const updateProgress = () => {
@@ -42,6 +47,15 @@ const MiniPlayer: React.FC = () => {
     useEffect(() => {
         setCoverError(false);
     }, [currentTrack?.id]);
+
+    // Получаем URL обложки для основного отображения в плеере
+    useEffect(() => {
+        if (!currentTrack) return;
+        
+        // Используем функцию getTrackCover для получения правильного URL обложки
+        const source = getTrackCover(currentTrack.coverUrl);
+        setCoverUrl(source);
+    }, [currentTrack, getTrackCover, coverError]);
 
     // Инициализация громкости
     useEffect(() => {
@@ -65,22 +79,19 @@ const MiniPlayer: React.FC = () => {
         };
     }, []);
 
-    console.log('[MiniPlayer] Tracks:', tracks.length, 'CurrentTrack:', currentTrack, 'IsPlaying:', isPlaying);
-
-    if (!currentTrack) {
-        console.log('[MiniPlayer] No current track, not rendering');
-        return null; // Если нет текущего трека, не отображаем мини-плеер
+    // Если окно плеера открыто или нет текущего трека, не отображаем мини-плеер
+    if (isPlayerWindowOpen || !currentTrack) {
+        return null;
     }
 
     // Обработка ошибки загрузки обложки
     const handleCoverError = () => {
-        console.warn('[MiniPlayer] Ошибка загрузки обложки:', currentTrack.coverUrl);
         setCoverError(true);
+        setCoverUrl(DEFAULT_COVER_URL);
     };
 
     // Обработка ошибки загрузки обложки в очереди
     const handleQueueCoverError = (trackId: number) => {
-        console.warn('[MiniPlayer] Ошибка загрузки обложки в очереди для трека ID:', trackId);
         setCoverErrors(prev => ({ ...prev, [trackId]: true }));
     };
 
@@ -103,9 +114,6 @@ const MiniPlayer: React.FC = () => {
     const toggleExpand = () => {
         setIsExpanded(!isExpanded);
     };
-
-    // Получаем URL обложки
-    const coverUrl = coverError ? '/default-cover.jpg' : getTrackCover(currentTrack.coverUrl);
 
     return (
         <div className={`${styles.miniPlayer} ${isExpanded ? styles.expanded : ''}`}>
@@ -194,8 +202,9 @@ const MiniPlayer: React.FC = () => {
                 <div className={styles.trackQueue}>
                     {tracks.map((track, index) => {
                         const isCurrentTrack = currentTrack && track.id === currentTrack.id;
+                        // Получаем URL обложки с проверкой ошибок
                         const trackCoverUrl = coverErrors[track.id] 
-                            ? '/default-cover.jpg' 
+                            ? DEFAULT_COVER_URL
                             : getTrackCover(track.coverUrl);
                         
                         return (

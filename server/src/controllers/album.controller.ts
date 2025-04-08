@@ -209,4 +209,39 @@ export class AlbumController {
             return res.status(500).json({ message: 'Ошибка при обновлении альбома' });
         }
     }
+
+    // Получение обложки альбома
+    async getAlbumCover(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { albumId } = req.params;
+            console.log(`Запрос обложки для альбома ${albumId}`);
+            
+            // Получаем фотографии альбома, отсортированные по убыванию ID (сначала новые)
+            const photosQuery = await AppDataSource.query(`
+                SELECT p.id, p.filename, p.path, p."originalName", p.mimetype, p.size
+                FROM photo p
+                JOIN album_photos ap ON p.id = ap."photoId"
+                WHERE ap."albumId" = $1
+                ORDER BY p.id DESC
+                LIMIT 1
+            `, [albumId]);
+            
+            if (!photosQuery || photosQuery.length === 0) {
+                console.log(`Альбом ${albumId} не содержит фотографий`);
+                return res.status(404).json({ message: 'Альбом не содержит фотографий' });
+            }
+            
+            // Берем первую фотографию как обложку (самую новую)
+            const coverPhoto = photosQuery[0];
+            // Преобразуем ID в числовой тип для консистентности
+            coverPhoto.id = Number(coverPhoto.id);
+            
+            console.log(`Возвращаем обложку для альбома ${albumId}: фото ID=${coverPhoto.id}, путь=${coverPhoto.path}`);
+            
+            return res.json(coverPhoto);
+        } catch (error) {
+            console.error(`Ошибка при получении обложки альбома ${req.params.albumId}:`, error);
+            return res.status(500).json({ message: 'Ошибка при получении обложки альбома' });
+        }
+    }
 } 
