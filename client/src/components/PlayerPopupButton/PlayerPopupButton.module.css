@@ -1,0 +1,48 @@
+.popupButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    margin-right: 10px;
+    position: relative;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    width: 30px;
+    height: 30px;
+}
+
+.popupButton:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.popupIcon {
+    display: block;
+}
+
+.tooltipText {
+    visibility: hidden;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 12px;
+    position: absolute;
+    z-index: 1;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+}
+
+.popupButton:hover .tooltipText {
+    visibility: visible;
+    opacity: 1;
+} 

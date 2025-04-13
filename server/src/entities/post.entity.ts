@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { User } from "./user.entity";
 import { Photo } from "./photo.entity";
 import { WallPost } from "./wall.entity";
+import { MusicTrack } from "./music.entity";
 
 @Entity("posts")
 export class Post {
@@ -33,6 +34,20 @@ export class Post {
         }
     })
     photos: Photo[];
+
+    @ManyToMany(() => MusicTrack)
+    @JoinTable({
+        name: "posts_tracks",
+        joinColumn: {
+            name: "postId",
+            referencedColumnName: "id"
+        },
+        inverseJoinColumn: {
+            name: "trackId",
+            referencedColumnName: "id"
+        }
+    })
+    tracks: MusicTrack[];
 
     @Column("int", { default: 0 })
     likesCount: number;

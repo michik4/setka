@@ -52,53 +52,51 @@ export const PlayerWindowProvider: React.FC<{ children: React.ReactNode }> = ({ 
       audio.onloadstart = null;
       audio.onloadeddata = null;
       
-      // Выполняем операцию
-      const result = callback();
-      
-      // Проверяем, изменился ли источник
-      if (audio.src !== currentSrc) {
-        // Источник изменился, что означает смену трека
-        // Разрешаем нормальную загрузку нового трека
-        // Восстанавливаем обработчики
-        audio.onprogress = originalOnProgress;
-        audio.onloadstart = originalOnLoadStart;
-        audio.onloadeddata = originalOnLoadedData;
-      } else {
-        // Источник не изменился, контролируем состояние текущего трека
+      try {
+        // Выполняем операцию
+        const result = callback();
         
-        // Проверяем действительно ли изменилось время (для перемотки)
-        if (Math.abs(audio.currentTime - currentTime) > 0.5) {
-          // Реальная перемотка произошла, обрабатываем
+        // Проверяем, изменился ли источник
+        if (audio.src !== currentSrc) {
+          // Источник изменился, что означает смену трека
+          // Разрешаем нормальную загрузку нового трека
         } else {
-          // Проверяем, не была ли операция заменой текущего трека на сервере
-          // Не восстанавливаем время, если это инициированная смена трека
+          // Источник не изменился, контролируем состояние текущего трека
+          
+          // Проверяем действительно ли изменилось время (для перемотки)
+          if (Math.abs(audio.currentTime - currentTime) > 0.5) {
+            // Реальная перемотка произошла, обрабатываем
+          }
+          
+          // Восстанавливаем воспроизведение, только если оно было активно до операции
+          if (wasPlaying && audio.paused && audio.readyState >= 2) {
+            // Используем setTimeout для предотвращения слишком быстрого вызова play()
+            setTimeout(() => {
+              if (audio && audio.paused && audio.readyState >= 2) {
+                audio.play().catch(() => {});
+              }
+            }, 100);
+          }
         }
         
-        // Восстанавливаем обработчики
+        return result;
+      } finally {
+        // Восстанавливаем обработчики в любом случае
         audio.onprogress = originalOnProgress;
         audio.onloadstart = originalOnLoadStart;
         audio.onloadeddata = originalOnLoadedData;
         
-        // Восстанавливаем воспроизведение, только если оно было активно до операции
-        if (wasPlaying && audio.paused && audio.readyState >= 2) {
-          // Используем setTimeout для предотвращения слишком быстрого вызова play()
-          setTimeout(() => {
-            if (audio && audio.paused && audio.readyState >= 2) {
-              audio.play().catch(() => {});
-            }
-          }, 100);
-        }
+        // Очищаем флаг операции
+        operationInProgressRef.current = false;
       }
-      
-      // Очищаем флаг операции
-      operationInProgressRef.current = false;
-      
-      return result;
     } else {
-      // Выполняем операцию без оптимизаций
-      const result = callback();
-      operationInProgressRef.current = false;
-      return result;
+      try {
+        // Выполняем операцию без оптимизаций
+        return callback();
+      } finally {
+        // Очищаем флаг операции
+        operationInProgressRef.current = false;
+      }
     }
   };
 

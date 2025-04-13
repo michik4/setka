@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Photo } from '../../types/post.types';
 import { Album } from '../../types/album.types';
+import { Track } from '../../types/music.types';
 import { ImageUploader } from '../ImageUploader/ImageUploader';
 import { PhotoGrid } from '../PhotoGrid/PhotoGrid';
+import UploadAudio from '../UploadAudio';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './CreatePostForm.module.css';
 import { api } from '../../utils/api';
 import { PhotoSelector } from '../PhotoSelector/PhotoSelector';
 import { ServerImage } from '../ServerImage/ServerImage';
+import { TrackSelector } from '../TrackSelector';
 
 interface CreatePostFormProps {
     onSuccess?: () => void;
@@ -15,7 +18,7 @@ interface CreatePostFormProps {
 }
 
 interface AttachmentBase {
-    type: 'photo' | 'album';
+    type: 'photo' | 'album' | 'track';
     id: number;
 }
 
@@ -29,7 +32,12 @@ interface AlbumAttachment extends AttachmentBase {
     data: Album;
 }
 
-type Attachment = PhotoAttachment | AlbumAttachment;
+interface TrackAttachment extends AttachmentBase {
+    type: 'track';
+    data: Track;
+}
+
+type Attachment = PhotoAttachment | AlbumAttachment | TrackAttachment;
 
 export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallOwnerId }) => {
     const { user } = useAuth();
@@ -38,6 +46,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPhotoSelector, setShowPhotoSelector] = useState(false);
+    const [showAudioUploader, setShowAudioUploader] = useState(false);
+    const [showTrackSelector, setShowTrackSelector] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [uploadAlbumId, setUploadAlbumId] = useState<number | null>(null);
@@ -185,6 +195,28 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         }
     };
 
+    const handleTrackUploaded = (track: Track) => {
+        // Проверяем количество уже прикрепленных треков
+        const currentTrackCount = attachments.filter(a => a.type === 'track').length;
+        if (currentTrackCount >= 1) {
+            setError('Нельзя прикрепить больше 1 трека к посту');
+            return;
+        }
+
+        const newAttachment: TrackAttachment = { type: 'track', id: track.id, data: track };
+        
+        // Обновляем состояние с новым вложением
+        setAttachments(prev => [...prev, newAttachment]);
+        
+        // Устанавливаем состояние expanded, чтобы показать прикрепления
+        setIsExpanded(true);
+        
+        // Скрываем загрузчик аудио
+        setShowAudioUploader(false);
+        
+        setError(null);
+    };
+
     const handleUploadError = (errorMessage: string) => {
         setError(errorMessage);
     };
@@ -279,6 +311,13 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         setError(null);
 
         try {
+            // Извлекаем ID треков
+            const trackAttachments = attachments.filter((a): a is TrackAttachment => a.type === 'track');
+            const trackIds = trackAttachments.map(a => a.id);
+            
+            console.log('Треки для отправки:', trackAttachments);
+            console.log('ID треков для отправки:', trackIds);
+            
             const endpoint = wallOwnerId ? '/wall' : '/posts';
             const body = {
                 content: content.trim(),
@@ -288,11 +327,23 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                 albumIds: attachments
                     .filter((a): a is AlbumAttachment => a.type === 'album')
                     .map(a => a.id),
+                trackIds: trackIds,
                 authorId: user.id,
                 ...(wallOwnerId && { wallOwnerId })
             };
 
-            await api.post(endpoint, body);
+            console.log('Отправка данных поста:', JSON.stringify(body, null, 2));
+            
+            // Добавляем трек напрямую в запрос, для гарантии
+            const requestBody: any = {...body};
+            if (trackIds.length > 0) {
+                console.log(`Добавляем трек ${trackIds[0]} напрямую в запрос`);
+                requestBody.trackId = trackIds[0];
+            }
+
+            const response = await api.post(endpoint, requestBody);
+            console.log('Ответ сервера при создании поста:', response);
+            
             setContent('');
             setAttachments([]);
             onSuccess?.();
@@ -314,6 +365,35 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         setIsExpanded(true);
     };
 
+    const handleTracksSelected = (tracks: Track[]) => {
+        // Проверяем количество уже прикрепленных треков
+        const currentTrackCount = attachments.filter(a => a.type === 'track').length;
+        if (currentTrackCount >= 1 || tracks.length > 1) {
+            setError('Нельзя прикрепить больше 1 трека к посту');
+            setShowTrackSelector(false);
+            return;
+        }
+
+        // Добавляем выбранный трек
+        if (tracks.length > 0) {
+            const track = tracks[0];
+            const newAttachment: TrackAttachment = { type: 'track', id: track.id, data: track };
+            
+            // Обновляем состояние с новым вложением
+            setAttachments(prev => [...prev, newAttachment]);
+            
+            // Устанавливаем состояние expanded, чтобы показать прикрепления
+            setIsExpanded(true);
+            
+            // Скрываем селектор треков
+            setShowTrackSelector(false);
+            
+            setError(null);
+        } else {
+            setShowTrackSelector(false);
+        }
+    };
+
     if (!user) {
         return (
             <div className={styles.error}>
@@ -324,6 +404,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
 
     const photoAttachments = attachments.filter((a): a is PhotoAttachment => a.type === 'photo');
     const albumAttachments = attachments.filter((a): a is AlbumAttachment => a.type === 'album');
+    const trackAttachments = attachments.filter((a): a is TrackAttachment => a.type === 'track');
     const hasContent = content.trim().length > 0 || attachments.length > 0;
 
     return (
@@ -396,17 +477,70 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                             ))}
                         </div>
                     )}
+
+                    {trackAttachments.length > 0 && (
+                        <div className={styles.tracksPreview}>
+                            {trackAttachments.map(attachment => (
+                                <div key={attachment.id} className={styles.trackPreviewItem}>
+                                    <div className={styles.trackCover}>
+                                        <img 
+                                            src={attachment.data.coverUrl} 
+                                            alt={attachment.data.title}
+                                            className={styles.trackCoverImage}
+                                        />
+                                        <button
+                                            type="button"
+                                            className={styles.deleteButton}
+                                            onClick={() => handleAttachmentDelete(attachment)}
+                                            title="Удалить трек"
+                                        />
+                                    </div>
+                                    <div className={styles.trackInfo}>
+                                        <div className={styles.trackTitle}>{attachment.data.title}</div>
+                                        <div className={styles.trackArtist}>{attachment.data.artist}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </>
             )}
 
             <div className={styles.mediaSection}>
-                <button
-                    type="button"
-                    className={styles.photoSelectorButton}
-                    onClick={() => setShowPhotoSelector(true)}
-                >
-                    Прикрепить
-                </button>
+                <div className={styles.attachButtons}>
+                    <button
+                        type="button"
+                        className={styles.photoSelectorButton}
+                        onClick={() => setShowPhotoSelector(true)}
+                    >
+                        Фото
+                    </button>
+                    <div className={styles.dropdownContainer}>
+                        <button
+                            type="button"
+                            className={styles.audioSelectorButton}
+                            onClick={() => setShowTrackSelector(true)}
+                        >
+                            Музыка
+                        </button>
+                        <div className={styles.dropdownContent}>
+                            <button
+                                type="button"
+                                className={styles.dropdownItem}
+                                onClick={() => setShowTrackSelector(true)}
+                            >
+                                Моя музыка
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.dropdownItem}
+                                onClick={() => setShowAudioUploader(true)}
+                            >
+                                Загрузить
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 {hasContent && (
                     <button
@@ -430,6 +564,35 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                 </div>
             )}
 
+            {showAudioUploader && (
+                <div className={styles.audioUploaderOverlay}>
+                    <div className={styles.audioUploaderContainer}>
+                        <div className={styles.audioUploaderHeader}>
+                            <h3>Загрузка музыки</h3>
+                            <button 
+                                type="button" 
+                                className={styles.closeButton} 
+                                onClick={() => setShowAudioUploader(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <UploadAudio onTrackUploaded={handleTrackUploaded} />
+                    </div>
+                </div>
+            )}
+
+            {showTrackSelector && (
+                <div className={styles.audioUploaderOverlay}>
+                    <TrackSelector
+                        userId={user.id}
+                        onSelect={handleTracksSelected}
+                        onCancel={() => setShowTrackSelector(false)}
+                        multiple={false}
+                    />
+                </div>
+            )}
+
             {error && (
                 <div className={styles.error}>
                     {error}
@@ -442,8 +605,10 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                         {attachments.length > 0 && (
                             <>
                                 {photoAttachments.length > 0 && `${photoAttachments.length} фото`}
-                                {photoAttachments.length > 0 && albumAttachments.length > 0 && ', '}
+                                {(photoAttachments.length > 0 && (albumAttachments.length > 0 || trackAttachments.length > 0)) && ', '}
                                 {albumAttachments.length > 0 && `${albumAttachments.length} альбом${albumAttachments.length > 1 ? 'а' : ''}`}
+                                {(albumAttachments.length > 0 && trackAttachments.length > 0) && ', '}
+                                {trackAttachments.length > 0 && `${trackAttachments.length} трек`}
                             </>
                         )}
                     </span>

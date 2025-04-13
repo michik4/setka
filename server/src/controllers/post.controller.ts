@@ -7,6 +7,7 @@ import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { WallPost } from '../entities/wall.entity';
 import { Album } from '../entities/album.entity';
 import { PostAlbum } from '../entities/post_album.entity';
+import { MusicTrack } from '../entities/music.entity';
 
 export class PostController {
     private get postRepository() {
@@ -21,7 +22,11 @@ export class PostController {
         return AppDataSource.getRepository(WallPost);
     }
 
-    // Получение сохраненный пост со всеми связями
+    private get musicTrackRepository() {
+        return AppDataSource.getRepository(MusicTrack);
+    }
+
+    // Получение сохраненного поста со всеми связями
     private async getPostWithRelations(postId: number) {
         try {
             // Получаем пост с основными связями
@@ -30,6 +35,7 @@ export class PostController {
                 .leftJoinAndSelect('post.author', 'author')
                 .leftJoinAndSelect('author.avatar', 'authorAvatar')
                 .leftJoinAndSelect('post.photos', 'photos')
+                .leftJoinAndSelect('post.tracks', 'tracks')
                 .select([
                     'post.id',
                     'post.content',
@@ -49,7 +55,13 @@ export class PostController {
                     'authorAvatar.path',
                     'photos.id',
                     'photos.filename',
-                    'photos.path'
+                    'photos.path',
+                    'tracks.id',
+                    'tracks.title',
+                    'tracks.artist',
+                    'tracks.duration',
+                    'tracks.filename',
+                    'tracks.coverUrl'
                 ])
                 .where('post.id = :id', { id: postId })
                 .getOne();
@@ -88,6 +100,44 @@ export class PostController {
                     console.error('Ошибка при загрузке альбомов:', error);
                     (post as any).albums = [];
                 }
+
+                // Преобразуем пути к аудиофайлам для каждого трека
+                if (post.tracks && post.tracks.length > 0) {
+                    console.log(`[PostController] Найдено ${post.tracks.length} треков для поста ${postId}:`, 
+                      post.tracks.map(t => ({ id: t.id, title: t.title, filename: t.filename })));
+                    
+                    post.tracks = post.tracks.map(track => {
+                        // Проверим, что у нас есть имя файла
+                        if (!track.filename) {
+                            console.error(`[PostController] Трек с ID ${track.id} не имеет имени файла! Детали трека:`, track);
+                            // Добавляем пустой audioUrl для предотвращения ошибок на клиенте
+                            return {
+                                ...track,
+                                audioUrl: ''
+                            };
+                        }
+                        
+                        // Создаем URL для аудио
+                        const audioUrl = `/api/music/file/${track.filename}`;
+                        console.log(`[PostController] Добавлен URL для трека ${track.id}: ${audioUrl}`);
+                        
+                        return {
+                            ...track,
+                            audioUrl
+                        };
+                    });
+                    
+                    // Проверяем, что у всех треков есть audioUrl
+                    for (const track of post.tracks) {
+                        const trackWithAudio = track as any;
+                        if (!trackWithAudio.audioUrl) {
+                            console.error(`[PostController] ОШИБКА: Трек ${track.id} не имеет audioUrl после обработки!`);
+                            trackWithAudio.audioUrl = `/api/music/file/${track.filename || 'unknown'}`; 
+                        }
+                    }
+                } else {
+                    console.log(`[PostController] Не найдено треков для поста ${postId}`);
+                }
             }
             
             return post;
@@ -107,6 +157,7 @@ export class PostController {
                 .leftJoinAndSelect('post.author', 'author')
                 .leftJoinAndSelect('author.avatar', 'authorAvatar')
                 .leftJoinAndSelect('post.photos', 'photos')
+                .leftJoinAndSelect('post.tracks', 'tracks')
                 .select([
                     'post.id',
                     'post.content',
@@ -126,12 +177,18 @@ export class PostController {
                     'authorAvatar.path',
                     'photos.id',
                     'photos.filename',
-                    'photos.path'
+                    'photos.path',
+                    'tracks.id',
+                    'tracks.title',
+                    'tracks.artist',
+                    'tracks.duration',
+                    'tracks.filename',
+                    'tracks.coverUrl'
                 ])
                 .orderBy('post.createdAt', 'DESC')
                 .getMany();
                 
-            // Для каждого поста загружаем альбомы
+            // Для каждого поста загружаем альбомы и обрабатываем треки
             const posts = [];
             try {
                 for (const post of postsQuery) {
@@ -139,13 +196,37 @@ export class PostController {
                     if (postWithAlbums) {
                         posts.push(postWithAlbums);
                     } else {
-                        posts.push({...post, albums: []});
+                        // Если не удалось загрузить с отношениями, добавляем базовый пост
+                        // и обрабатываем треки
+                        const basicPost = {...post, albums: []};
+                        
+                        // Добавляем audioUrl к каждому треку
+                        if (basicPost.tracks && basicPost.tracks.length > 0) {
+                            basicPost.tracks = basicPost.tracks.map(track => ({
+                                ...track,
+                                audioUrl: `/api/music/file/${track.filename}`
+                            }));
+                        }
+                        
+                        posts.push(basicPost);
                     }
                 }
             } catch (error) {
-                console.error('Ошибка при загрузке альбомов для постов:', error);
-                // В случае ошибки добавляем посты без альбомов
-                posts.push(...postsQuery.map(post => ({...post, albums: []})));
+                console.error('Ошибка при загрузке альбомов и треков для постов:', error);
+                
+                // В случае ошибки добавляем посты с минимальной обработкой
+                for (const post of postsQuery) {
+                    const basicPost = {...post, albums: []};
+                    
+                    if (basicPost.tracks && basicPost.tracks.length > 0) {
+                        basicPost.tracks = basicPost.tracks.map(track => ({
+                            ...track,
+                            audioUrl: `/api/music/file/${track.filename}`
+                        }));
+                    }
+                    
+                    posts.push(basicPost);
+                }
             }
 
             console.log(`[PostController] Найдено ${posts.length} постов`);
@@ -180,11 +261,188 @@ export class PostController {
 
     // Создание нового поста
     public createPost = async (req: Request, res: Response): Promise<void> => {
+        console.log('*****************************************');
+        console.log('[PostController] НАЧАЛО СОЗДАНИЯ ПОСТА');
+        console.log('*****************************************');
         try {
-            console.log('Body поста:', req.body);
-            console.log('Файлы:', req.files);
+            console.log('[PostController] Body поста:', JSON.stringify(req.body, null, 2));
+            console.log('[PostController] Файлы:', req.files);
             
-            const { content, authorId } = req.body;
+            // Проверяем существование таблицы posts_tracks
+            try {
+                const tableExists = await AppDataSource.query(`
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_schema = 'public'
+                        AND table_name = 'posts_tracks'
+                    );
+                `);
+                console.log('[PostController] Таблица posts_tracks существует:', tableExists[0].exists);
+                
+                // Также проверяем существование таблицы music_tracks
+                const musicTableExists = await AppDataSource.query(`
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_schema = 'public'
+                        AND table_name = 'music_tracks'
+                    );
+                `);
+                console.log('[PostController] Таблица music_tracks существует:', musicTableExists[0].exists);
+                
+                // Если нет таблицы music_tracks, создаем её
+                if (!musicTableExists[0].exists) {
+                    console.log('[PostController] Таблица music_tracks не существует. Создаем...');
+                    
+                    await AppDataSource.query(`
+                        CREATE TABLE music_tracks (
+                            id SERIAL PRIMARY KEY,
+                            title VARCHAR(255) NOT NULL,
+                            artist VARCHAR(255) NOT NULL,
+                            duration VARCHAR(255) NOT NULL,
+                            filename VARCHAR(255) NOT NULL,
+                            filepath VARCHAR(255) NOT NULL,
+                            "coverUrl" VARCHAR(255),
+                            "playCount" INT DEFAULT 0,
+                            "userId" INT NOT NULL,
+                            "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+                            "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+                            CONSTRAINT fk_user FOREIGN KEY ("userId") REFERENCES users(id)
+                        );
+                    `);
+                    
+                    console.log('[PostController] Таблица music_tracks успешно создана');
+                }
+                
+                // Если таблица не существует, создаем её
+                if (!tableExists[0].exists) {
+                    console.log('[PostController] Таблица posts_tracks не существует. Создаем...');
+                    
+                    await AppDataSource.query(`
+                        CREATE TABLE posts_tracks (
+                            "postId" integer NOT NULL,
+                            "trackId" integer NOT NULL,
+                            CONSTRAINT "PK_posts_tracks" PRIMARY KEY ("postId", "trackId"),
+                            CONSTRAINT "FK_posts_tracks_post" FOREIGN KEY ("postId") 
+                                REFERENCES "posts" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+                            CONSTRAINT "FK_posts_tracks_track" FOREIGN KEY ("trackId") 
+                                REFERENCES "music_tracks" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+                        );
+                    `);
+                    
+                    console.log('[PostController] Таблица posts_tracks успешно создана');
+                    
+                    // Проверяем, что таблица создалась успешно
+                    const checkTableExists = await AppDataSource.query(`
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_schema = 'public'
+                            AND table_name = 'posts_tracks'
+                        );
+                    `);
+                    
+                    console.log('[PostController] Проверка: таблица posts_tracks создана:', checkTableExists[0].exists);
+                }
+                
+                // Проверяем структуру таблицы, если она существует
+                if (tableExists[0].exists) {
+                    const tableStructure = await AppDataSource.query(`
+                        SELECT column_name, data_type, is_nullable
+                        FROM information_schema.columns 
+                        WHERE table_name = 'posts_tracks';
+                    `);
+                    console.log('[PostController] Структура таблицы posts_tracks:', tableStructure);
+                    
+                    // Проверяем наличие внешних ключей
+                    const foreignKeys = await AppDataSource.query(`
+                        SELECT
+                            tc.constraint_name,
+                            tc.table_name,
+                            kcu.column_name,
+                            ccu.table_name AS foreign_table_name,
+                            ccu.column_name AS foreign_column_name
+                        FROM
+                            information_schema.table_constraints AS tc
+                            JOIN information_schema.key_column_usage AS kcu
+                              ON tc.constraint_name = kcu.constraint_name
+                            JOIN information_schema.constraint_column_usage AS ccu
+                              ON ccu.constraint_name = tc.constraint_name
+                        WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = 'posts_tracks';
+                    `);
+                    console.log('[PostController] Внешние ключи таблицы posts_tracks:', foreignKeys);
+                    
+                    // Если нет внешних ключей, добавляем их
+                    if (foreignKeys.length === 0) {
+                        console.log('[PostController] Внешние ключи отсутствуют. Добавляем...');
+                        
+                        try {
+                            // Добавляем внешний ключ для postId
+                            await AppDataSource.query(`
+                                ALTER TABLE posts_tracks 
+                                ADD CONSTRAINT "FK_posts_tracks_post" 
+                                FOREIGN KEY ("postId") REFERENCES posts(id) 
+                                ON DELETE CASCADE ON UPDATE CASCADE;
+                            `);
+                            
+                            // Добавляем внешний ключ для trackId
+                            await AppDataSource.query(`
+                                ALTER TABLE posts_tracks 
+                                ADD CONSTRAINT "FK_posts_tracks_track" 
+                                FOREIGN KEY ("trackId") REFERENCES music_tracks(id) 
+                                ON DELETE CASCADE ON UPDATE CASCADE;
+                            `);
+                            
+                            console.log('[PostController] Внешние ключи успешно добавлены');
+                        } catch (fkError) {
+                            console.error('[PostController] Ошибка при добавлении внешних ключей:', fkError);
+                            // Продолжаем выполнение, даже если не удалось добавить внешние ключи
+                        }
+                    }
+                }
+            } catch (tableError) {
+                console.error('[PostController] Ошибка при проверке таблицы posts_tracks:', tableError);
+            }
+            
+            const { content, authorId, photoIds, albumIds, trackIds, trackId } = req.body;
+            
+            console.log('[PostController] Полученные данные треков:');
+            console.log('- trackIds:', trackIds, typeof trackIds, Array.isArray(trackIds));
+            console.log('- trackId:', trackId, typeof trackId);
+            
+            // Собираем все ID треков в один массив
+            let allTrackIds: any[] = [];
+            
+            // Обрабатываем trackIds
+            if (trackIds) {
+                let parsedTrackIds = trackIds;
+                if (typeof trackIds === 'string') {
+                    try {
+                        parsedTrackIds = JSON.parse(trackIds);
+                        console.log('[PostController] Удалось распарсить trackIds из строки:', parsedTrackIds);
+                    } catch (e) {
+                        console.error('[PostController] Ошибка при парсинге trackIds:', e);
+                        // Если это одиночное значение, пробуем превратить его в массив
+                        if (!isNaN(Number(trackIds))) {
+                            parsedTrackIds = [Number(trackIds)];
+                            console.log('[PostController] Преобразовано в массив из одного элемента:', parsedTrackIds);
+                        }
+                    }
+                }
+                
+                if (Array.isArray(parsedTrackIds)) {
+                    allTrackIds = [...allTrackIds, ...parsedTrackIds];
+                }
+            }
+            
+            // Добавляем trackId, если он есть
+            if (trackId) {
+                const parsedTrackId = Number(trackId);
+                if (!isNaN(parsedTrackId) && !allTrackIds.includes(parsedTrackId)) {
+                    allTrackIds.push(parsedTrackId);
+                }
+            }
+            
+            console.log('[PostController] Итоговый список ID треков:', allTrackIds);
+            
             let albums = req.body.albums;
             
             // Проверяем, есть ли albums в JSON формате и преобразуем его
@@ -198,145 +456,219 @@ export class PostController {
             
             const photos = req.files as Express.Multer.File[];
             
-            console.log('Создание поста с данными:', { 
-                content, 
-                authorId, 
-                albumsCount: albums?.length || 0,
-                photosCount: photos?.length || 0 
-            });
-            
-            // Проверяем количество фотографий
-            if (photos && photos.length > 4) {
-                res.status(400).json({ message: 'Превышено максимальное количество фотографий (4)' });
-                return;
-            }
-            
             // Создаем новый пост
-            const newPost = this.postRepository.create({
-                content,
-                authorId: parseInt(authorId)
-            });
-
-            // Сохраняем пост
-            const savedPost = await this.postRepository.save(newPost);
+            const post = new Post();
+            post.content = content;
+            post.authorId = Number(authorId);
             
-            // Если есть фотографии, связываем их с постом
-            if (photos && photos.length > 0) {
-                // Обрабатываем фотографии
-                const photoEntities = [];
-                for (const file of photos) {
-                    const photo = new Photo();
-                    photo.filename = file.filename;
-                    photo.originalName = file.originalname;
-                    photo.mimetype = file.mimetype;
-                    photo.path = `/uploads/${file.filename}`;
-                    photo.size = file.size;
-                    
-                    const savedPhoto = await AppDataSource.getRepository(Photo).save(photo);
-                    photoEntities.push(savedPhoto);
-                }
-
-                // Связываем фотографии с постом
-                newPost.photos = photoEntities;
-                await this.postRepository.save(newPost);
-            }
+            // Устанавливаем заглушки для счетчиков
+            post.likesCount = 0;
+            post.commentsCount = 0;
+            post.sharesCount = 0;
+            post.viewsCount = 0;
             
-            // Если есть альбомы, связываем их с постом
-            if (albums && albums.length > 0) {
-                console.log(`Найдено ${albums.length} альбомов для привязки к посту ${savedPost.id}`);
+            // Загружаем пользователя для установки автора
+            post.author = await AppDataSource.manager.findOne('User', {
+                where: { id: Number(authorId) }
+            }) as any;
+            
+            // Сохраняем пост в базу
+            const savedPost = await this.postRepository.save(post);
+            console.log('[PostController] Сохранен пост:', savedPost);
+            
+            // Обрабатываем добавление фотографий
+            if (Array.isArray(photoIds) && photoIds.length > 0) {
+                const photosEntities = await AppDataSource.manager.find('Photo', {
+                    where: photoIds.map(id => ({ id: Number(id) }))
+                }) as Photo[];
                 
-                // Находим альбомы по ID
-                for (const albumId of albums) {
-                    try {
-                        const album = await AppDataSource.getRepository(Album).findOneBy({ id: albumId });
-                        
-                        if (album) {
-                            // Создаем запись в таблице связей напрямую через SQL
-                            await AppDataSource.query(`
-                                INSERT INTO post_album ("postId", "albumId")
-                                VALUES ($1, $2)
-                            `, [savedPost.id, album.id]);
-                            
-                            console.log(`Привязан альбом ${album.id} к посту ${savedPost.id}`);
-                        } else {
-                            console.log(`Альбом с ID ${albumId} не найден`);
-                        }
-                    } catch (error) {
-                        console.error(`Ошибка при связывании поста ${savedPost.id} с альбомом ${albumId}:`, error);
-                    }
+                if (photosEntities.length > 0) {
+                    savedPost.photos = photosEntities;
+                    await this.postRepository.save(savedPost);
+                    console.log(`[PostController] Добавлено ${photosEntities.length} фотографий к посту ${savedPost.id}`);
                 }
             }
             
-            // Загружаем пост с отношениями включая альбомы
-            const postWithRelations = await this.getPostWithRelations(newPost.id);
+            // Обрабатываем добавление музыкальных треков - ИСПОЛЬЗУЕМ ТОЛЬКО ORM
+            if (Array.isArray(allTrackIds) && allTrackIds.length > 0) {
+                console.log(`[PostController] Начинаем добавление ${allTrackIds.length} треков к посту ${savedPost.id}`, allTrackIds);
+                
+                try {
+                    // Проверяем доступные треки в базе данных
+                    console.log('[PostController] Проверка доступных треков в базе данных...');
+                    const allTracks = await this.musicTrackRepository.find();
+                    console.log(`[PostController] В базе данных найдено ${allTracks.length} треков:`);
+                    if (allTracks.length > 0) {
+                        console.log(allTracks.map(t => ({ id: t.id, title: t.title, artist: t.artist })));
+                    } else {
+                        console.log('[PostController] В базе данных нет треков!');
+                    }
+                    
+                    // Преобразуем все ID в числа для безопасного поиска
+                    const trackIdsNumbers = allTrackIds
+                        .map(id => Number(id))
+                        .filter(id => !isNaN(id));
+                    
+                    console.log(`[PostController] Преобразованные ID треков: ${JSON.stringify(trackIdsNumbers)}`);
+                    
+                    // Находим треки по ID
+                    const trackEntities = await this.musicTrackRepository.findBy(
+                        trackIdsNumbers.map(id => ({ id }))
+                    );
+                    
+                    console.log(`[PostController] Найдено ${trackEntities.length} треков из ${trackIdsNumbers.length} запрошенных`);
+                    console.log('[PostController] Найденные треки:', trackEntities.map(t => ({ id: t.id, title: t.title, artist: t.artist })));
+                    
+                    if (trackEntities.length > 0) {
+                        // Проверим состояние поста до добавления треков
+                        console.log(`[PostController] Состояние поста ДО добавления треков:`, {
+                            id: savedPost.id,
+                            hasTracks: !!savedPost.tracks,
+                            tracksCount: savedPost.tracks?.length || 0
+                        });
+                        
+                        // Присваиваем треки к посту через ORM
+                        savedPost.tracks = trackEntities;
+                        
+                        console.log(`[PostController] Присвоены треки к посту:`, {
+                            postId: savedPost.id, 
+                            tracksAssigned: savedPost.tracks.length,
+                            tracksDetails: savedPost.tracks.map(t => ({ id: t.id, title: t.title }))
+                        });
+                        
+                        // Сохраняем обновленный пост с треками
+                        const updatedPost = await this.postRepository.save(savedPost);
+                        
+                        console.log(`[PostController] Результат сохранения поста:`, {
+                            id: updatedPost.id,
+                            hasTracks: !!updatedPost.tracks,
+                            tracksCount: updatedPost.tracks?.length || 0
+                        });
+                        
+                        console.log(`[PostController] Добавлено ${trackEntities.length} треков к посту ${savedPost.id} через ORM`);
+                        
+                        // Проверим SQL запросы напрямую
+                        try {
+                            const trackRelations = await AppDataSource.query(
+                                `SELECT * FROM posts_tracks WHERE "postId" = $1`,
+                                [savedPost.id]
+                            );
+                            console.log(`[PostController] Связи в таблице posts_tracks:`, trackRelations);
+                        } catch (sqlError) {
+                            console.error(`[PostController] Ошибка при проверке связей:`, sqlError);
+                        }
+                    } else {
+                        console.log(`[PostController] Не найдено треков для добавления к посту`);
+                    }
+                    
+                    // Проверяем, добавились ли треки
+                    const postWithTracks = await this.postRepository.findOne({
+                        where: { id: savedPost.id },
+                        relations: ['tracks']
+                    });
+                    
+                    console.log(`[PostController] Проверка добавления треков:`, {
+                        postId: savedPost.id, 
+                        hasTracks: !!postWithTracks?.tracks,
+                        tracksCount: postWithTracks?.tracks?.length || 0,
+                        tracks: postWithTracks?.tracks?.map(t => ({ id: t.id, title: t.title })) || 'Треки не добавлены'
+                    });
+                } catch (error) {
+                    console.error(`[PostController] Ошибка при добавлении треков:`, error);
+                }
+            } else {
+                console.log(`[PostController] Нет треков для добавления к посту`);
+            }
             
-            res.status(201).json(postWithRelations);
-        } catch (error: any) {
-            console.error('Ошибка при создании поста:', error);
-            res.status(500).json({ message: 'Ошибка при создании поста', error: error.message });
+            // Обрабатываем альбомы
+            if (Array.isArray(albumIds) && albumIds.length > 0) {
+                for (const albumId of albumIds) {
+                    const postAlbum = new PostAlbum();
+                    postAlbum.postId = savedPost.id;
+                    postAlbum.albumId = Number(albumId);
+                    await AppDataSource.manager.save(postAlbum);
+                }
+                console.log(`[PostController] Добавлено ${albumIds.length} альбомов к посту ${savedPost.id}`);
+            }
+            
+            // Возвращаем пост со всеми связями
+            const fullPost = await this.getPostWithRelations(savedPost.id);
+            console.log(`[PostController] Финальный пост с отношениями:`, {
+                id: fullPost?.id,
+                content: fullPost?.content,
+                hasTracks: fullPost?.tracks && fullPost.tracks.length > 0,
+                tracksCount: fullPost?.tracks?.length,
+                tracks: fullPost?.tracks?.map(t => ({ id: t.id, title: t.title }))
+            });
+            
+            res.status(201).json(fullPost);
+        } catch (error) {
+            console.error('[PostController] Ошибка при создании поста:', error);
+            res.status(500).json({ message: 'Ошибка при создании поста', error });
         }
     };
 
     // Обновление поста
     public updatePost = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { id } = req.params;
-            const { content, photoIds } = req.body;
+            const id = Number(req.params.id);
+            const { content, photoIds, trackIds } = req.body;
             
-            let post = await this.postRepository.findOne({
-                where: { id: Number(id) },
-                relations: ['photos']
+            console.log(`[PostController] Обновление поста ${id}`);
+            console.log('Новый контент:', content);
+            console.log('Новые ID фотографий:', photoIds);
+            console.log('Новые ID треков:', trackIds);
+            
+            // Находим пост
+            const post = await this.postRepository.findOne({
+                where: { id },
+                relations: ['photos', 'tracks']
             });
             
             if (!post) {
                 res.status(404).json({ message: 'Пост не найден' });
                 return;
             }
-
-            // Обновляем текст
+            
             post.content = content;
-
-            // Обновляем фотографии
-            if (photoIds && Array.isArray(photoIds)) {
-                const photoRepository = AppDataSource.getRepository(Photo);
-                const photos = await photoRepository.findByIds(photoIds);
+            
+            // Обрабатываем изменение фотографий
+            if (Array.isArray(photoIds)) {
+                const photos = await AppDataSource.manager.find('Photo', {
+                    where: photoIds.map(id => ({ id: Number(id) }))
+                }) as Photo[];
                 post.photos = photos;
+                console.log(`[PostController] Установлено ${photos.length} фотографий для поста ${id}`);
             }
-
-            // Сохраняем обновленный пост
+            
+            // Обрабатываем изменение треков
+            if (Array.isArray(trackIds)) {
+                // Преобразуем ID в числа и отфильтруем невалидные значения
+                const validTrackIds = trackIds
+                    .map(id => Number(id))
+                    .filter(id => !isNaN(id));
+                
+                console.log(`[PostController] Поиск ${validTrackIds.length} треков для обновления поста ${id}`);
+                
+                // Находим треки по ID
+                const tracks = await this.musicTrackRepository.findBy(
+                    validTrackIds.map(id => ({ id }))
+                );
+                
+                console.log(`[PostController] Найдено ${tracks.length} треков из ${validTrackIds.length}`);
+                
+                // Присваиваем треки посту
+                post.tracks = tracks;
+                console.log(`[PostController] Установлено ${tracks.length} треков для поста ${id}`);
+            }
+            
+            // Сохраняем изменения
             await this.postRepository.save(post);
+            console.log(`[PostController] Пост ${id} успешно обновлен`);
             
-            // Загружаем обновленный пост со всеми связями
-            post = await this.postRepository
-                .createQueryBuilder('post')
-                .leftJoinAndSelect('post.author', 'author')
-                .leftJoinAndSelect('author.avatar', 'authorAvatar')
-                .leftJoinAndSelect('post.photos', 'photos')
-                .select([
-                    'post.id',
-                    'post.content',
-                    'post.authorId',
-                    'post.likesCount',
-                    'post.commentsCount',
-                    'post.sharesCount',
-                    'post.viewsCount',
-                    'post.createdAt',
-                    'post.updatedAt',
-                    'author.id',
-                    'author.firstName',
-                    'author.lastName',
-                    'author.nickname',
-                    'author.email',
-                    'authorAvatar.id',
-                    'authorAvatar.path',
-                    'photos.id',
-                    'photos.filename',
-                    'photos.path'
-                ])
-                .where('post.id = :id', { id: Number(id) })
-                .getOne();
-            
-            res.json(post);
+            // Загружаем полный пост со всеми связями
+            const updatedPost = await this.getPostWithRelations(id);
+            res.json(updatedPost);
         } catch (error) {
             console.error('[PostController] Ошибка при обновлении поста:', error);
             res.status(500).json({ message: 'Ошибка при обновлении поста', error });
@@ -370,11 +702,12 @@ export class PostController {
             const userId = Number(req.params.userId);
             console.log(`[PostController] Запрос на получение постов пользователя: ${userId}`);
             
-            const posts = await this.postRepository
+            const postsQuery = await this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.author', 'author')
                 .leftJoinAndSelect('author.avatar', 'authorAvatar')
                 .leftJoinAndSelect('post.photos', 'photos')
+                .leftJoinAndSelect('post.tracks', 'tracks')
                 .select([
                     'post.id',
                     'post.content',
@@ -394,11 +727,58 @@ export class PostController {
                     'authorAvatar.path',
                     'photos.id',
                     'photos.filename',
-                    'photos.path'
+                    'photos.path',
+                    'tracks.id',
+                    'tracks.title',
+                    'tracks.artist',
+                    'tracks.duration',
+                    'tracks.filename',
+                    'tracks.coverUrl'
                 ])
                 .where('post.authorId = :userId', { userId })
                 .orderBy('post.createdAt', 'DESC')
                 .getMany();
+            
+            // Для каждого поста загружаем альбомы и обрабатываем треки
+            const posts = [];
+            try {
+                for (const post of postsQuery) {
+                    const postWithRelations = await this.getPostWithRelations(post.id);
+                    if (postWithRelations) {
+                        posts.push(postWithRelations);
+                    } else {
+                        // Если не удалось загрузить с отношениями, добавляем базовый пост
+                        // и обрабатываем треки
+                        const basicPost = {...post, albums: []};
+                        
+                        // Добавляем audioUrl к каждому треку
+                        if (basicPost.tracks && basicPost.tracks.length > 0) {
+                            basicPost.tracks = basicPost.tracks.map(track => ({
+                                ...track,
+                                audioUrl: `/api/music/file/${track.filename}`
+                            }));
+                        }
+                        
+                        posts.push(basicPost);
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке альбомов и треков для постов пользователя:', error);
+                
+                // В случае ошибки добавляем посты с минимальной обработкой
+                for (const post of postsQuery) {
+                    const basicPost = {...post, albums: []};
+                    
+                    if (basicPost.tracks && basicPost.tracks.length > 0) {
+                        basicPost.tracks = basicPost.tracks.map(track => ({
+                            ...track,
+                            audioUrl: `/api/music/file/${track.filename}`
+                        }));
+                    }
+                    
+                    posts.push(basicPost);
+                }
+            }
             
             console.log(`[PostController] Найдено ${posts.length} постов пользователя ${userId}`);
             res.json(posts);
@@ -509,6 +889,9 @@ export class PostController {
             const posts = await this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.photos', 'photos')
+                .leftJoinAndSelect('post.tracks', 'tracks')
+                .leftJoinAndSelect('post.author', 'author')
+                .leftJoinAndSelect('author.avatar', 'authorAvatar')
                 .where('photos.id = :photoId', { photoId })
                 .getMany();
 
@@ -516,11 +899,24 @@ export class PostController {
             const wallPosts = await this.wallPostRepository
                 .createQueryBuilder('wallPost')
                 .leftJoinAndSelect('wallPost.photos', 'photos')
+                .leftJoinAndSelect('wallPost.author', 'author')
+                .leftJoinAndSelect('author.avatar', 'authorAvatar')
                 .where('photos.id = :photoId', { photoId })
                 .getMany();
 
+            // Обрабатываем треки для обычных постов
+            const processedPosts = posts.map(post => {
+                if (post.tracks && post.tracks.length > 0) {
+                    post.tracks = post.tracks.map(track => ({
+                        ...track,
+                        audioUrl: `/api/music/file/${track.filename}`
+                    }));
+                }
+                return post;
+            });
+
             // Объединяем результаты
-            const allPosts = [...posts, ...wallPosts];
+            const allPosts = [...processedPosts, ...wallPosts];
             
             res.json(allPosts);
         } catch (error) {
@@ -528,4 +924,56 @@ export class PostController {
             res.status(500).json({ message: 'Ошибка при получении постов', error });
         }
     };
+
+    // Метод для создания связи между постом и треком напрямую через SQL
+    private async createPostTrackRelation(postId: number, trackId: number): Promise<void> {
+        try {
+            // Проверяем входные данные
+            if (!postId || !trackId) {
+                console.error(`[PostController] Неверные данные для создания связи поста и трека: postId=${postId}, trackId=${trackId}`);
+                return;
+            }
+            
+            console.log(`[PostController] Создание связи между постом ${postId} и треком ${trackId}`);
+            
+            // Проверяем существование связи
+            const existingRelation = await AppDataSource.query(
+                `SELECT * FROM posts_tracks WHERE "postId" = $1 AND "trackId" = $2`,
+                [postId, trackId]
+            );
+            
+            if (existingRelation && existingRelation.length > 0) {
+                console.log(`[PostController] Связь между постом ${postId} и треком ${trackId} уже существует`);
+                return;
+            }
+            
+            try {
+                // Создаем связь через SQL-запрос
+                await AppDataSource.query(
+                    `INSERT INTO posts_tracks ("postId", "trackId") VALUES ($1, $2)`,
+                    [postId, trackId]
+                );
+                
+                console.log(`[PostController] Создана связь между постом ${postId} и треком ${trackId} напрямую через SQL`);
+                
+                // Проверяем, что связь действительно создалась
+                const checkRelation = await AppDataSource.query(
+                    `SELECT * FROM posts_tracks WHERE "postId" = $1 AND "trackId" = $2`,
+                    [postId, trackId]
+                );
+                
+                if (checkRelation && checkRelation.length > 0) {
+                    console.log(`[PostController] Проверка: связь между постом ${postId} и треком ${trackId} успешно создана`);
+                } else {
+                    console.error(`[PostController] Проверка: связь между постом ${postId} и треком ${trackId} НЕ СОЗДАНА!`);
+                }
+            } catch (sqlError) {
+                console.error(`[PostController] SQL ошибка при создании связи между постом ${postId} и треком ${trackId}:`, sqlError);
+                throw sqlError;
+            }
+        } catch (error) {
+            console.error(`[PostController] Ошибка при создании связи между постом ${postId} и треком ${trackId}:`, error);
+            throw error;
+        }
+    }
 } 

@@ -8,8 +8,8 @@ import AuOrder from '../components/AuPlayer/AuOrder';
 import { usePlayer } from '../contexts/PlayerContext';
 import UploadAudio from '../components/UploadAudio';
 // Получаем URL API из переменных окружения
-const API_URL = process.env.REACT_APP_API_URL || 'https://rich-socks-dance.loca.lt/api';
-const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || 'https://rich-socks-dance.loca.lt/api/media';
+const API_URL = process.env.REACT_APP_API_URL || '/api';
+const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || '/api/media';
 
 interface Track {
     id: number;
@@ -50,10 +50,12 @@ export const MusicPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabType>(TabType.MyMusic);
     const [expandedView, setExpandedView] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
+    const [volume, setVolume] = useState(1);
+    const [showVolumeControl, setShowVolumeControl] = useState(false);
     const [pagination, setPagination] = useState<PaginationInfo>({
         total: 0,
         page: 1,
-        limit: 20,
+        limit: 50,
         pages: 0,
         hasMore: false
     });
@@ -65,7 +67,8 @@ export const MusicPage: React.FC = () => {
         getTrackCover,
         tracks: queueTracks,
         setTracks: setQueueTracks,
-        addToQueue
+        addToQueue,
+        audio
     } = usePlayer();
 
     useEffect(() => {
@@ -75,6 +78,7 @@ export const MusicPage: React.FC = () => {
     useEffect(() => {
         // Обработчик скролла для ленивой загрузки на уровне окна
         const handleScroll = () => {
+            // Проверяем нужно ли загружать дополнительные треки
             if (activeTab !== TabType.MyMusic || !pagination.hasMore || isLoadingMore || isLoading) {
                 return;
             }
@@ -84,8 +88,12 @@ export const MusicPage: React.FC = () => {
             const windowHeight = window.innerHeight;
             const documentHeight = document.documentElement.scrollHeight;
             
-            // Если пользователь прокрутил до конца страницы (примерно 300px до конца)
-            if (documentHeight - scrollTop - windowHeight < 300) {
+            // Отображаем контроль громкости, если страница прокручена больше чем на 200px
+            setShowVolumeControl(scrollTop > 200);
+            
+            // Если пользователь прокрутил почти до конца страницы, загружаем еще треки
+            // Увеличиваем порог для более раннего начала загрузки
+            if (documentHeight - scrollTop - windowHeight < 500) {
                 loadMoreTracks();
             }
         };
@@ -173,7 +181,8 @@ export const MusicPage: React.FC = () => {
         setIsLoading(resetTracks);
         setIsLoadingMore(page > 1);
         
-        fetch(`${API_URL}/music?page=${page}&limit=${pagination.limit}`, {
+        // Загружаем все треки сразу, увеличив лимит
+        fetch(`${API_URL}/music?page=${page}&limit=1000`, {
             headers: {
                 'Accept': 'application/json'
             },
@@ -206,22 +215,6 @@ export const MusicPage: React.FC = () => {
                         console.warn(`[Music] Трек ${validTrack.title} (ID: ${validTrack.id}) не имеет аудио URL`);
                     }
                     
-                    // Проверяем валидность обложки
-                    if (validTrack.coverUrl && validTrack.coverUrl !== '/api/music/cover/default.png') {
-                        // Создаем изображение для проверки загрузки
-                        const img = new Image();
-                        img.onerror = () => {
-                            console.warn(`[Music] Невалидная обложка для трека ${validTrack.title}: ${validTrack.coverUrl}`);
-                            // Обновляем трек в массиве с плейсхолдером вместо битой обложки
-                            setTracks(current => 
-                                current.map(t => 
-                                    t.id === validTrack.id ? { ...t, coverUrl: '/api/music/cover/default.png' } : t
-                                )
-                            );
-                        };
-                        img.src = validTrack.coverUrl;
-                    }
-                    
                     return validTrack;
                 });
                 
@@ -230,6 +223,12 @@ export const MusicPage: React.FC = () => {
                     setTracks(validatedTracks);
                 } else {
                     setTracks(prevTracks => [...prevTracks, ...validatedTracks]);
+                }
+                
+                // Одновременно обновляем и очередь воспроизведения в плеере
+                if (resetTracks) {
+                    console.log(`[Music] Добавляем в очередь все ${validatedTracks.length} треков`);
+                    setQueueTracks([...validatedTracks]);
                 }
                 
                 // Обновляем информацию о пагинации
@@ -596,6 +595,11 @@ export const MusicPage: React.FC = () => {
             );
         }
         
+        // Определяем индекс текущего трека
+        const currentQueueIndex = playerTrack 
+            ? queueTracks.findIndex(track => track.id === playerTrack.id) 
+            : -1;
+        
         return (
             <div className={styles.queueContainer}>
                 <div className={styles.queueHeader}>
@@ -605,85 +609,20 @@ export const MusicPage: React.FC = () => {
                     </div>
                 </div>
                 
-                <div className={styles.modernTrackList}>
-                    {queueTracks.map((track, index) => {
-                        const isCurrentTrack = playerTrack && playerTrack.id === track.id;
-                        const coverUrl = getTrackCover(track.coverUrl);
-                        
-                        return (
-                            <div 
-                                key={`queue-${track.id}-${index}`} 
-                                className={`${styles.trackItem} ${isCurrentTrack ? styles.activeTrack : ''}`}
-                            >
-                                <div 
-                                    className={styles.trackMainInfo}
-                                    onClick={() => playTrack(track)}
-                                >
-                                    <div className={styles.trackCoverContainer}>
-                                        <img 
-                                            src={coverUrl} 
-                                            alt={track.title} 
-                                            className={styles.trackCover}
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).src = '/api/music/cover/default.png';
-                                            }}
-                                        />
-                                        {isCurrentTrack && playerIsPlaying ? (
-                                            <div className={styles.playingOverlay}>
-                                                <div className={styles.playingWaveform}>
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className={styles.playOverlay}>
-                                                <div className={styles.playIcon}>
-                                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
-                                                        <path d="M8 5v14l11-7z"/>
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    <div className={styles.trackMetadata}>
-                                        <div className={styles.trackTitle}>
-                                            {track.title}
-                                        </div>
-                                        <div className={styles.trackArtist}>
-                                            {track.artist}
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div className={styles.trackSecondaryInfo}>
-                                    <div className={styles.trackDuration}>
-                                        {track.duration}
-                                    </div>
-                                    
-                                    <div className={styles.trackActions}>
-                                        <button 
-                                            className={styles.deleteButton}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Удаляем трек из очереди
-                                                setQueueTracks(prev => prev.filter((t, i) => i !== index));
-                                            }}
-                                            title="Удалить из очереди"
-                                        >
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M19 13H5v-2h14v2z"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                <AuOrder 
+                    tracks={queueTracks} 
+                    currentTrackIndex={currentQueueIndex} 
+                    onSelectTrack={(index) => {
+                        if (queueTracks[index]) {
+                            playTrack(queueTracks[index]);
+                        }
+                    }} 
+                    onDeleteTrack={(trackId) => {
+                        // Удаляем трек из очереди по ID
+                        setQueueTracks(prev => prev.filter(t => t.id !== trackId));
+                    }}
+                    expandedMode={true}
+                />
             </div>
         );
     };
@@ -695,6 +634,22 @@ export const MusicPage: React.FC = () => {
 
     // Получаем URL обложки для фона
     const coverUrl = playerTrack ? (coverError ? '/api/music/cover/default.png' : getTrackCover(playerTrack.coverUrl)) : '';
+
+    // Инициализация громкости
+    useEffect(() => {
+        if (audio) {
+            setVolume(audio.volume);
+        }
+    }, [audio]);
+
+    // Обработчик изменения громкости
+    const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newVolume = parseFloat(e.target.value);
+        setVolume(newVolume);
+        if (audio) {
+            audio.volume = newVolume;
+        }
+    };
 
     // Если страница загружается в первый раз, показываем индикатор загрузки
     if (isLoading && tracks.length === 0 && queueTracks.length === 0) {
@@ -722,7 +677,7 @@ export const MusicPage: React.FC = () => {
                         />
                         {/* Невидимое изображение для отслеживания ошибок загрузки */}
                         <img 
-                            src={playerTrack.coverUrl} 
+                            src={coverUrl} 
                             onError={handleBackgroundCoverError} 
                             style={{ display: 'none' }} 
                             alt="" 
@@ -791,6 +746,33 @@ export const MusicPage: React.FC = () => {
                         <AuPlayerWrap expandedMode={expandedView} />
                     </div>
                 </div>
+
+                {/* Фиксированный контроль громкости */}
+                {showVolumeControl && (
+                    <div className={styles.volumeControlFixed}>
+                        <div className={styles.volumeIcon}>
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d={
+                                    volume === 0 
+                                        ? "M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"
+                                        : volume < 0.5
+                                        ? "M7 9v6h4l5 5V4l-5 5H7z"
+                                        : "M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
+                                } />
+                            </svg>
+                        </div>
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={volume}
+                            onChange={handleVolumeChange}
+                            aria-label="Громкость"
+                            className={styles.volumeSliderFixed}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

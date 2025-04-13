@@ -23,8 +23,10 @@ export const Header: React.FC = () => {
                 <Link to="/" className={styles.logo}>Сетка</Link>
                 {user && (
                     <div className={styles.userActions}>
-                        <div className={styles.miniPlayerWrapper}>
-                            <MiniPlayer />
+                        <div className={styles.playerControls}>
+                            <div className={styles.miniPlayerWrapper}>
+                                <MiniPlayer />
+                            </div>
                         </div>
                         <div className={styles.userInfo}>
                             <Link 

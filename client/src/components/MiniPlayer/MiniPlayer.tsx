@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import styles from './MiniPlayer.module.css';
 
+
 // Константа для обложки по умолчанию
 const DEFAULT_COVER_URL = '/api/music/cover/default.png';
 
@@ -28,6 +29,7 @@ const MiniPlayer: React.FC = () => {
     const [coverErrors, setCoverErrors] = useState<Record<number, boolean>>({});
     const panelRef = useRef<HTMLDivElement>(null);
     const [coverUrl, setCoverUrl] = useState(DEFAULT_COVER_URL);
+    const [playerWindow, setPlayerWindow] = useState<Window | null>(null);
 
     useEffect(() => {
         const updateProgress = () => {
@@ -79,8 +81,26 @@ const MiniPlayer: React.FC = () => {
         };
     }, []);
 
-    // Если окно плеера открыто или нет текущего трека, не отображаем мини-плеер
-    if (isPlayerWindowOpen || !currentTrack) {
+    // Отслеживаем состояние окна плеера
+    useEffect(() => {
+        // Проверка состояния окна периодически
+        const checkWindow = () => {
+            if (playerWindow && playerWindow.closed) {
+                // Окно закрыто, нужно обновить состояние
+                setPlayerWindow(null);
+                localStorage.setItem('player_window_closed', Date.now().toString());
+            }
+        };
+        
+        const interval = setInterval(checkWindow, 1000);
+        
+        return () => {
+            clearInterval(interval);
+        };
+    }, [playerWindow]);
+
+    // Если нет текущего трека или открыто отдельное окно плеера, не отображаем мини-плеер
+    if (!currentTrack || isPlayerWindowOpen) {
         return null;
     }
 
@@ -105,14 +125,72 @@ const MiniPlayer: React.FC = () => {
     const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newVolume = parseFloat(e.target.value);
         setVolume(newVolume);
-        if (audio) {
+        if (audio && !isPlayerWindowOpen) {
             audio.volume = newVolume;
         }
     };
 
     // Переключение раскрытия панели
     const toggleExpand = () => {
+        if (isPlayerWindowOpen) return;
         setIsExpanded(!isExpanded);
+    };
+
+    // Открытие плеера в отдельном окне
+    const openPlayerWindow = () => {
+        // Сохраняем текущее состояние перед открытием
+        if (currentTrack) {
+            console.log('Открытие окна плеера с текущим треком:', currentTrack.title);
+            
+            // Получаем текущее состояние плеера
+            const currentPosition = audio ? audio.currentTime : 0;
+            const currentVolume = audio ? audio.volume : 1;
+            
+            // Сохраняем состояние в localStorage для передачи в новое окно
+            localStorage.setItem('player_current_track', JSON.stringify(currentTrack));
+            localStorage.setItem('player_current_position', String(currentPosition));
+            localStorage.setItem('player_current_volume', String(currentVolume));
+            localStorage.setItem('player_is_playing', String(isPlaying));
+        }
+        
+        const newWindow = window.open(
+            '/player',
+            'playerWindow',
+            'width=550,height=630,resizable=yes,scrollbars=no,status=no,location=no,toolbar=no,menubar=no'
+        );
+        
+        if (newWindow) {
+            // Фокусируем новое окно и сохраняем ссылку на него
+            newWindow.focus();
+            setPlayerWindow(newWindow);
+            
+            // Отключаем звук в мини-плеере
+            if (audio) {
+                audio.muted = true;
+                
+                // Если трек играет, делаем паузу в мини-плеере
+                if (!audio.paused) {
+                    console.log('Музыка играет, заглушаем звук в мини-плеере');
+                }
+            }
+            
+            console.log('Окно плеера успешно открыто');
+        } else {
+            console.error('Не удалось открыть окно плеера');
+        }
+    };
+
+    // Закрытие плеера в отдельном окне
+    const closePlayerWindow = () => {
+        if (playerWindow && !playerWindow.closed) {
+            playerWindow.close();
+            setPlayerWindow(null);
+            localStorage.setItem('player_window_closed', Date.now().toString());
+            // Включаем звук обратно в мини-плеере
+            if (audio) {
+                audio.muted = false;
+            }
+        }
     };
 
     return (
@@ -175,6 +253,22 @@ const MiniPlayer: React.FC = () => {
                 </button>
             </div>
             <div className={styles.rightControls}>
+                <button 
+                    className={`${styles.controlButton} ${styles.popupWindowButton}`}
+                    onClick={playerWindow ? closePlayerWindow : openPlayerWindow}
+                    title={playerWindow ? "Закрыть отдельное окно" : "Открыть в отдельном окне"}
+                    aria-label={playerWindow ? "Закрыть отдельное окно" : "Открыть в отдельном окне"}
+                >
+                    {playerWindow ? (
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                        </svg>
+                    ) : (
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                            <path d="M18 7h4v2h-4v4h-2V9h-4V7h4V3h2v4zm-8 13H4v-6h2v4h4v2z"/>
+                        </svg>
+                    )}
+                </button>
                 <button 
                     className={styles.toggleButton} 
                     onClick={toggleExpand}
@@ -255,9 +349,9 @@ const MiniPlayer: React.FC = () => {
                             min="0" 
                             max="1" 
                             step="0.01" 
-                            value={volume}
-                            onChange={handleVolumeChange}
-                            aria-label="Громкость"
+                            value={volume} 
+                            onChange={handleVolumeChange} 
+                            className={styles.volumeRange}
                         />
                     </div>
                 </div>

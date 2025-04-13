@@ -2,14 +2,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background-color: #1a1a1a;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
+    background-color: #fff;
+    color: #2a5885;
+    padding: 6px 10px;
+    border-radius: 6px;
     min-width: 280px;
     max-width: 320px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     position: relative;
+    border: 1px solid var(--vk-color-border);
 }
 
 .trackInfo {
@@ -17,16 +18,16 @@
     align-items: center;
     flex-grow: 1;
     overflow: hidden;
-    margin-right: 10px;
+    margin-right: 8px;
 }
 
 .coverImage {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 4px;
     object-fit: cover;
     margin-right: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .trackDetails {
@@ -35,16 +36,17 @@
 }
 
 .trackTitle {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: #2a5885;
 }
 
 .trackArtist {
-    font-size: 0.75rem;
-    color: #cccccc;
+    font-size: 0.7rem;
+    color: #818c99;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -53,15 +55,15 @@
 .controls {
     display: flex;
     align-items: center;
-    margin-right: 10px;
+    margin-right: 8px;
 }
 
 .controlButton {
     background: none;
     border: none;
-    color: white;
+    color: #5181b8;
     cursor: pointer;
-    padding: 4px;
+    padding: 3px;
     margin: 0 2px;
     display: flex;
     align-items: center;
@@ -70,58 +72,233 @@
 }
 
 .controlButton:hover {
-    color: #5181b8;
+    color: #2a5885;
     transform: scale(1.1);
 }
 
 .playButton {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(81, 129, 184, 0.1);
     border-radius: 50%;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
 }
 
+.playButton:hover {
+    background-color: rgba(81, 129, 184, 0.2);
+}
+
+.rightControls {
+    display: flex;
+    align-items: center;
+}
+
+.toggleButton,
 .expandLink {
-    color: white;
+    background: none;
+    border: none;
+    color: #5181b8;
+    cursor: pointer;
+    padding: 3px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4px;
     transition: color 0.2s ease;
 }
 
+.toggleButton:hover,
 .expandLink:hover {
+    color: #2a5885;
+}
+
+/* Стили для кнопки отдельного окна */
+.popupWindowButton {
+    position: relative;
+    margin-right: 4px;
+}
+
+.popupWindowButton:hover {
+    color: #f44336; /* Красный цвет для закрытия окна */
+}
+
+.progressBar {
+    width: 100%;
+    height: 3px;
+    background-color: #edeef0;
+    border-radius: 1.5px;
+    margin-top: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progressFilled {
+    height: 100%;
+    background: #5181b8;
+    border-radius: 1.5px;
+    transition: width 0.2s linear;
+}
+
+.expandPanel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    z-index: 100;
+    border: 1px solid var(--vk-color-border);
+    border-top: none;
+}
+
+.expanded .expandPanel {
+    max-height: 300px;
+    padding: 8px;
+    overflow-y: auto;
+}
+
+.queueTitle {
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #2a5885;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #edeef0;
+}
+
+.trackQueue {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.queueItem {
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.queueItem:hover {
+    background-color: var(--vk-color-hover);
+}
+
+.queueItemActive {
+    background-color: rgba(81, 129, 184, 0.1);
+}
+
+.queueItemImage {
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    margin-right: 6px;
+    object-fit: cover;
+}
+
+.queueItemInfo {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.queueItemTitle {
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #2a5885;
+}
+
+.queueItemArtist {
+    font-size: 0.7rem;
+    color: #818c99;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.volumeControls {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    padding: 4px 0;
+    border-top: 1px solid #edeef0;
+}
+
+.volumeIcon {
+    margin-right: 8px;
     color: #5181b8;
+}
+
+.volumeSlider {
+    flex: 1;
+}
+
+.volumeSlider input[type="range"] {
+    width: 100%;
+    height: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #edeef0;
+    border-radius: 1.5px;
+    outline: none;
+}
+
+.volumeSlider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #5181b8;
+    cursor: pointer;
+}
+
+.volumeSlider input[type="range"]::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #5181b8;
+    cursor: pointer;
+    border: none;
 }
 
 /* Адаптивные стили */
 @media (max-width: 768px) {
     .miniPlayer {
         min-width: 240px;
-        padding: 6px 8px;
+        padding: 4px 8px;
     }
 
     .coverImage {
-        width: 30px;
-        height: 30px;
+        width: 28px;
+        height: 28px;
     }
 
     .trackTitle {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
 
     .trackArtist {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
     }
 
     .controlButton svg {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
     }
 
     .playButton {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
     }
 }
 
@@ -134,239 +311,5 @@
 
     .trackInfo {
         display: none;
-    }
-}
-
-.progressBar {
-    width: 100%;
-    height: 4px;
-    background-color: #333333;
-    border-radius: 2px;
-    margin-top: 5px;
-    overflow: hidden;
-    position: relative;
-}
-
-.progressFilled {
-    height: 100%;
-    background: linear-gradient(90deg, #5181b8 0%, #6a98cf 100%);
-    border-radius: 2px;
-    transition: width 0.2s linear;
-    box-shadow: 0 0 4px rgba(81, 129, 184, 0.6);
-}
-
-.expandPanel {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background-color: #1a1a1a;
-    border-radius: 0 0 4px 4px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
-    max-height: 0;
-    transition: max-height 0.3s ease, padding 0.3s ease;
-    z-index: 100;
-}
-
-.expanded .expandPanel {
-    max-height: 300px;
-    padding: 10px;
-    overflow-y: auto;
-}
-
-.queueTitle {
-    font-size: 0.85rem;
-    font-weight: 500;
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.trackQueue {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.queueItem {
-    display: flex;
-    align-items: center;
-    padding: 5px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.queueItem:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.queueItemActive {
-    background-color: rgba(81, 129, 184, 0.2);
-}
-
-.queueItemImage {
-    width: 30px;
-    height: 30px;
-    border-radius: 3px;
-    margin-right: 8px;
-    object-fit: cover;
-}
-
-.queueItemInfo {
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.queueItemTitle {
-    font-size: 0.8rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.queueItemArtist {
-    font-size: 0.7rem;
-    color: #cccccc;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.queueControls {
-    margin-left: 5px;
-    display: flex;
-}
-
-.queueButton {
-    background: none;
-    border: none;
-    color: #cccccc;
-    cursor: pointer;
-    padding: 2px;
-    margin: 0 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.queueButton:hover {
-    color: white;
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.volumeControl {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.volumeSlider {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.volumeSlider input[type="range"] {
-    flex-grow: 1;
-    height: 4px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: #333333;
-    outline: none;
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.volumeSlider input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #5181b8;
-    cursor: pointer;
-    box-shadow: -100px 0 0 100px #5181b8;
-}
-
-.volumeIcon {
-    color: #cccccc;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.toggleButton {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.toggleButton:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #5181b8;
-}
-
-.rightControls {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-/* Анимация проигрывания в очереди */
-.queueControls .playingIcon {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    height: 13px;
-    gap: 2px;
-}
-
-.queueControls .playingIcon span {
-    display: block;
-    width: 2px;
-    height: 5px;
-    background-color: #4a76a8;
-    border-radius: 1px;
-    animation: queueSound 1.2s linear infinite;
-}
-
-.queueControls .playingIcon span:nth-child(1) {
-    animation-delay: 0s;
-    height: 5px;
-}
-
-.queueControls .playingIcon span:nth-child(2) {
-    animation-delay: 0.3s;
-    height: 10px;
-}
-
-.queueControls .playingIcon span:nth-child(3) {
-    animation-delay: 0.6s;
-    height: 7px;
-}
-
-@keyframes queueSound {
-    0% {
-        height: 3px;
-    }
-    50% {
-        height: 10px;
-    }
-    100% {
-        height: 3px;
     }
 } 

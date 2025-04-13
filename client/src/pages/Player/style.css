@@ -1,0 +1,14 @@
+/* Стили для страницы отдельного плеера */
+
+.player-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #121212;
+  color: white;
+  overflow: hidden;
+}
+
+/* Если нужно будет добавить дополнительные стили для плеера в отдельном окне */ 

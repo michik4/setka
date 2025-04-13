@@ -29,10 +29,35 @@ app.use(cookieParser())
 
 // Добавляем логирование всех запросов
 app.use((req, res, next) => {
+  console.log('\n======================================================================');
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Headers:', req.headers);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
   console.log('Base URL:', req.baseUrl);
   console.log('Original URL:', req.originalUrl);
+  
+  // Логируем body для запросов, которые его содержат
+  if (req.method !== 'GET' && req.body) {
+    console.log('Request Body:', JSON.stringify(req.body, null, 2));
+    
+    // Проверяем содержимое полей, связанных с треками
+    if (req.body.trackIds) {
+      console.log('TrackIds в запросе:', req.body.trackIds, typeof req.body.trackIds);
+      if (typeof req.body.trackIds === 'string') {
+        try {
+          const parsed = JSON.parse(req.body.trackIds);
+          console.log('Распарсенные trackIds:', parsed);
+        } catch (e) {
+          console.log('Не удалось распарсить trackIds');
+        }
+      }
+    }
+    
+    if (req.body.trackId) {
+      console.log('TrackId в запросе:', req.body.trackId, typeof req.body.trackId);
+    }
+  }
+  
+  console.log('======================================================================\n');
   next();
 });
 

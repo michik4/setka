@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Post as PostType } from '../../types/post.types';
 import { Photo } from '../../types/post.types';
+import { Track } from '../../types/music.types';
 import { PhotoGrid } from '../PhotoGrid/PhotoGrid';
 import { ImageUploader } from '../ImageUploader/ImageUploader';
 import { ImageSelector } from '../ImageSelector/ImageSelector';
@@ -10,6 +11,7 @@ import { api } from '../../utils/api';
 import styles from './Post.module.css';
 import { ServerImage } from '../ServerImage/ServerImage';
 import { PhotoViewer } from '../PhotoViewer/PhotoViewer';
+import { usePlayer } from '../../contexts/PlayerContext';
 
 interface PostProps {
     post: PostType;
@@ -22,6 +24,7 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(post.content);
     const [editedPhotos, setEditedPhotos] = useState<Photo[]>(post.photos || []);
+    const [editedTracks, setEditedTracks] = useState<Track[]>(post.tracks || []);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [liked, setLiked] = useState(false);
@@ -29,6 +32,11 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     const [isLikeLoading, setIsLikeLoading] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+    const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    
+    // Импортируем контекст плеера
+    const { playTrack, currentTrack: playerCurrentTrack, isPlaying: playerIsPlaying, togglePlay, tracks: playerTracks, addToQueue } = usePlayer();
 
     useEffect(() => {
         // Проверяем, лайкнул ли пользователь этот пост
@@ -125,19 +133,21 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         try {
             const endpoint = post.wallOwnerId ? `/wall/${post.id}` : `/posts/${post.id}`;
             
-            // Обновляем пост с новым контентом и только теми фотографиями, которые остались в посте
+            // Обновляем пост с новым контентом, фотографиями и треками
             const response = await api.put(endpoint, { 
                 content: editedContent.trim(),
-                photoIds: editedPhotos.map(photo => photo.id)
+                photoIds: editedPhotos.map(photo => photo.id),
+                trackIds: editedTracks.map(track => track.id)
             });
             
             setIsEditing(false);
             
-            // Обновляем пост локально только с оставшимися фотографиями
+            // Обновляем пост локально с измененными данными
             const updatedPost = {
                 ...post,
                 content: editedContent.trim(),
-                photos: editedPhotos
+                photos: editedPhotos,
+                tracks: editedTracks
             };
             
             // Вызываем колбэк обновления
@@ -146,6 +156,7 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
             // Обновляем локальное состояние
             post.content = editedContent.trim();
             post.photos = editedPhotos;
+            post.tracks = editedTracks;
         } catch (err) {
             console.error('Ошибка при редактировании поста:', err);
             setError('Не удалось отредактировать пост');
@@ -204,6 +215,127 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         setSelectedPhotoIndex(index);
     };
 
+    const handleTrackRemove = (track: Track) => {
+        // В режиме редактирования удаляем трек из локального состояния
+        setEditedTracks(prev => prev.filter(t => t.id !== track.id));
+        setError(null);
+    };
+
+    // Добавляем функцию проверки состояния окна плеера
+    const checkPlayerWindowState = () => {
+        const playerWindowOpened = localStorage.getItem('player_window_opened');
+        const playerWindowClosed = localStorage.getItem('player_window_closed');
+        let isPlayerWindowActive = false;
+        
+        if (playerWindowOpened && playerWindowClosed) {
+            const openedTime = parseInt(playerWindowOpened);
+            const closedTime = parseInt(playerWindowClosed);
+            isPlayerWindowActive = openedTime > closedTime;
+        } else if (playerWindowOpened && !playerWindowClosed) {
+            isPlayerWindowActive = true;
+        }
+        
+        return isPlayerWindowActive;
+    };
+
+    const togglePlayTrack = (track: Track) => {
+        console.log('Попытка воспроизведения трека из поста:', track);
+        console.log('Аудио URL:', track.audioUrl);
+        
+        if (!track.audioUrl) {
+            console.error('ОШИБКА: У трека отсутствует URL для воспроизведения!');
+            return;
+        }
+        
+        // Добавляем метаданные о посте к треку
+        const trackWithSource = {
+            ...track,
+            source: {
+                type: 'post',
+                postId: post.id,
+                authorId: post.authorId,
+                authorName: `${post.author.firstName} ${post.author.lastName}`
+            }
+        };
+
+        const isPlayerWindowActive = checkPlayerWindowState();
+        const isCurrentWindowPlayerWindow = window.location.pathname.includes('/player');
+
+        // Принудительно заглушаем звук во всех окнах, кроме окна плеера
+        if (isPlayerWindowActive && !isCurrentWindowPlayerWindow) {
+            // Глобальное отключение звука
+            const allAudioElements = document.querySelectorAll('audio');
+            allAudioElements.forEach(audioElement => {
+                audioElement.muted = true;
+                if (!audioElement.paused) {
+                    audioElement.pause();
+                }
+            });
+        }
+
+        // Если окно плеера открыто и мы не в окне плеера
+        if (isPlayerWindowActive && !isCurrentWindowPlayerWindow) {
+            console.log('[Post] Окно плеера открыто, проверяем наличие трека в очереди');
+            
+            // Проверяем, есть ли трек уже в плейлисте
+            const existingTrackIndex = playerTracks.findIndex(t => t.id === track.id);
+            
+            if (existingTrackIndex !== -1) {
+                console.log('[Post] Трек уже в очереди, отправляем команду на переключение');
+                // Используем только синхронизационные сообщения, но сами не воспроизводим звук
+                
+                // Отправляем команду на воспроизведение в окно плеера
+                localStorage.setItem('play_track_command', JSON.stringify({
+                    trackId: track.id,
+                    timestamp: Date.now()
+                }));
+
+                // Обновляем локальное состояние
+                setIsPlaying(true);
+                setCurrentTrack(track);
+            } else {
+                console.log('[Post] Трек не в очереди, добавляем и отправляем команду на воспроизведение');
+                addToQueue(trackWithSource);
+                
+                // После добавления в очередь отправляем команду на воспроизведение
+                setTimeout(() => {
+                    localStorage.setItem('play_track_command', JSON.stringify({
+                        trackId: track.id,
+                        timestamp: Date.now()
+                    }));
+                }, 200); // Увеличиваем задержку, чтобы трек успел добавиться в очередь
+            }
+            
+            return;
+        }
+        
+        // Если мы в окне плеера или отдельное окно не открыто
+        if (isCurrentWindowPlayerWindow || !isPlayerWindowActive) {
+            if (playerCurrentTrack?.id === track.id) {
+                togglePlay();
+            } else {
+                playTrack(trackWithSource);
+            }
+            setCurrentTrack(track);
+        }
+    };
+
+    // Логгирование треков для отладки
+    useEffect(() => {
+        if (post.tracks && post.tracks.length > 0) {
+            console.log('Треки поста для отображения:', JSON.stringify(post.tracks, null, 2));
+            console.log('Присутствует ли audioUrl у треков:', post.tracks.every(track => Boolean(track.audioUrl)));
+            if (!post.tracks.every(track => Boolean(track.audioUrl))) {
+                console.error('ВНИМАНИЕ: У некоторых треков отсутствует audioUrl!');
+                for (const track of post.tracks) {
+                    if (!track.audioUrl) {
+                        console.error('Трек без audioUrl:', track);
+                    }
+                }
+            }
+        }
+    }, [post.tracks]);
+
     return (
         <div className={styles.post}>
             <div className={styles.header}>
@@ -247,6 +379,34 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                         )}
                     </div>
 
+                    {/* Отображение и редактирование треков */}
+                    {editedTracks && editedTracks.length > 0 && (
+                        <div className={styles.editTracks}>
+                            {editedTracks.map(track => (
+                                <div key={track.id} className={styles.trackItem}>
+                                    <div className={styles.trackCover}>
+                                        <img 
+                                            src={track.coverUrl} 
+                                            alt={track.title} 
+                                            className={styles.trackCoverImage}
+                                        />
+                                    </div>
+                                    <div className={styles.trackInfo}>
+                                        <div className={styles.trackTitle}>{track.title}</div>
+                                        <div className={styles.trackArtist}>{track.artist}</div>
+                                    </div>
+                                    <button
+                                        className={styles.trackDeleteBtn}
+                                        onClick={() => handleTrackRemove(track)}
+                                        title="Удалить трек"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {error && <div className={styles.error}>{error}</div>}
 
                     <div className={styles.editButtons}>
@@ -257,6 +417,7 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                                     setIsEditing(false);
                                     setEditedContent(post.content);
                                     setEditedPhotos(post.photos || []);
+                                    setEditedTracks(post.tracks || []);
                                     setError(null);
                                 }}
                                 disabled={isSubmitting}
@@ -296,6 +457,49 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                             isWallPost={Boolean(post.wallOwnerId)}
                             onPhotoClick={handlePhotoClick}
                         />
+                    )}
+
+                    {/* Отображение треков в посте */}
+                    {post.tracks && post.tracks.length > 0 && (
+                        <div className={styles.tracks}>
+                            {post.tracks.map(track => (
+                                <div key={track.id} className={styles.trackItem}>
+                                    <div className={styles.trackCover}>
+                                        <img 
+                                            src={track.coverUrl} 
+                                            alt={track.title} 
+                                            className={styles.trackCoverImage}
+                                        />
+                                        <button 
+                                            className={styles.playButton}
+                                            onClick={() => togglePlayTrack(track)}
+                                            title={checkPlayerWindowState() ? "Добавить в плеер" : "Воспроизвести"}
+                                        >
+                                            {checkPlayerWindowState() ? (
+                                                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                                                    <path d="M14 12l-8.5 6V6L14 12zm3-1.5v3l4.5-1.5L17 10.5z"/>
+                                                </svg>
+                                            ) : (
+                                                playerCurrentTrack?.id === track.id && playerIsPlaying ? (
+                                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                                                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                                                    </svg>
+                                                ) : (
+                                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                                                        <path d="M8 5v14l11-7z"/>
+                                                    </svg>
+                                                )
+                                            )}
+                                        </button>
+                                    </div>
+                                    <div className={styles.trackInfo}>
+                                        <div className={styles.trackTitle}>{track.title}</div>
+                                        <div className={styles.trackArtist}>{track.artist}</div>
+                                        <div className={styles.trackDuration}>{track.duration}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
 
                     {selectedPhoto && (

@@ -15,7 +15,7 @@ interface AuOrderProps {
 }
 
 const AuOrder = ({ tracks, currentTrackIndex, onSelectTrack, onDeleteTrack, expandedMode = false }: AuOrderProps) => {
-    const { getTrackCover } = usePlayer();
+    const { getTrackCover, isPlaying } = usePlayer();
     const [coverErrors, setCoverErrors] = useState<Record<number, boolean>>({});
 
     // Обработчик ошибки загрузки обложки
@@ -37,33 +37,47 @@ const AuOrder = ({ tracks, currentTrackIndex, onSelectTrack, onDeleteTrack, expa
                 return (
                     <div 
                         key={track.id} 
-                        className={`${styles.auOrderTrack} ${isCurrentTrack ? styles.current : ''}`}
+                        className={`${styles.auOrderTrack} ${isCurrentTrack ? styles.activeTrack : ''}`}
                         onClick={() => onSelectTrack(index)}
                     >
-                        <div className={styles.trackInfo}>
-                            <div className={styles.trackImage}>
+                        <div className={styles.auOrderTrackLeft}>
+                            <div className={styles.auOrderTrackImage}>
                                 <img 
                                     src={coverUrl} 
                                     alt={track.title} 
                                     onError={() => handleCoverError(track.id)}
                                 />
-                                {isCurrentTrack && (
-                                    <div className={styles.currentIndicator}>
-                                        <span>▶</span>
+                                {isCurrentTrack && isPlaying ? (
+                                    <div className={styles.playingOverlay}>
+                                        <div className={styles.playingIcon}>
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className={styles.playOverlay}>
+                                        <div className={styles.pausedIcon}>
+                                            <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+                                                <path d="M8 5v14l11-7z"/>
+                                            </svg>
+                                        </div>
                                     </div>
                                 )}
                             </div>
-                            <div className={styles.trackDetails}>
-                                <div className={styles.trackTitle}>
+                            <div className={styles.auOrderTrackInfo}>
+                                <div className={styles.auOrderTitle}>
                                     {track.title}
                                 </div>
-                                <div className={styles.trackArtist}>
+                                <div className={styles.auOrderArtist}>
                                     {track.artist}
                                 </div>
                             </div>
                         </div>
-                        <div className={styles.trackActions}>
-                            <div className={styles.trackDuration}>
+                        <div className={styles.auOrderTrackRight}>
+                            <div className={styles.auOrderTrackDuration}>
                                 {track.duration}
                             </div>
                             <button 

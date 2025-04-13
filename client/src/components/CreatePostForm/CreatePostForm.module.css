@@ -245,4 +245,181 @@
     .albumInfo {
         padding: 8px;
     }
+}
+
+/* Стили для аудио */
+.audioButtons {
+    display: flex;
+    gap: 8px;
+}
+
+.audioSelectorButton {
+    background-color: transparent;
+    border: none;
+    color: #3f51b5;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.audioSelectorButton:hover {
+    background-color: rgba(63, 81, 181, 0.1);
+}
+
+.audioUploaderOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.audioUploaderContainer {
+    width: 500px;
+    max-width: 95%;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.audioUploaderHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.audioUploaderHeader h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.tracksPreview {
+    margin-top: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.trackPreviewItem {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.trackCover {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    margin-right: 12px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.trackCoverImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.trackInfo {
+    flex: 1;
+}
+
+.trackTitle {
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.trackArtist {
+    font-size: 12px;
+    color: #616161;
+}
+
+.attachButtons {
+    display: flex;
+    gap: 8px;
+}
+
+/* Переопределение стилей для сохранения дизайна */
+.deleteButton {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: white;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.deleteButton::before {
+    content: "×";
+}
+
+.trackCover:hover .deleteButton,
+.albumCover:hover .deleteButton {
+    opacity: 1;
+}
+
+/* Стили для выпадающего меню */
+.dropdownContainer {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdownContent {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #fff;
+    min-width: 160px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    z-index: 10;
+    overflow: hidden;
+}
+
+.dropdownContainer:hover .dropdownContent {
+    display: block;
+}
+
+.dropdownItem {
+    color: #3f51b5;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    background: none;
+    border: none;
+    text-align: left;
+    width: 100%;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dropdownItem:hover {
+    background-color: rgba(63, 81, 181, 0.1);
 } 

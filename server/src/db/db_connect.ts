@@ -17,6 +17,7 @@ import { AddWallPostIdToPhotos1710000000002 } from "../migrations/1710000000002-
 import { ChangePhotoRelations1710000000003 } from "../migrations/1710000000003-ChangePhotoRelations"
 import { AddPhotoExtensionAndIsDeleted1709123456789 } from "../migrations/1709123456789-AddPhotoExtensionAndIsDeleted"
 import { CreateMusicTable1680078632000 } from "../migrations/1680078632000-CreateMusicTable"
+import { CreatePostsTracks1680078633000 } from "../migrations/1680078633000-CreatePostsTracks"
 
 // Загружаем переменные окружения
 dotenv.config()
@@ -39,7 +40,8 @@ export const AppDataSource = new DataSource({
         AddWallPostIdToPhotos1710000000002,
         ChangePhotoRelations1710000000003,
         AddPhotoExtensionAndIsDeleted1709123456789,
-        CreateMusicTable1680078632000
+        CreateMusicTable1680078632000,
+        CreatePostsTracks1680078633000
     ],
     subscribers: [],
     migrationsTableName: "migrations"

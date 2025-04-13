@@ -168,7 +168,7 @@ const UploadAudio: React.FC<UploadAudioProps> = ({ onTrackUploaded }) => {
                             artist: response.artist || 'Неизвестный исполнитель',
                             duration: response.duration || 0,
                             coverUrl: coverUrl,
-                            audioUrl: `${API_URL}/music/file/${response.filename}`,
+                            audioUrl: `/api/music/file/${response.filename}`,
                             playCount: response.playCount || 0
                         };
                         

@@ -10,10 +10,10 @@ import { usePlayer } from '../../contexts/PlayerContext';
 // import 'react-h5-audio-player/src/styles.scss' Use SASS
 
 // Получаем URL API из переменных окружения
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
-const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || 'http://localhost:3000/api/media';
+const API_URL = process.env.REACT_APP_API_URL || '/api';
+const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || '/api/media';
 
-// В начале файла добавить константу для URL обложки по умолчанию
+// Константа для обложки по умолчанию
 const DEFAULT_COVER_URL = '/api/music/cover/default.png';
 
 // Функция для форматирования времени в формат MM:SS
@@ -209,7 +209,7 @@ const AuPlayer = () => {
 
     const fetchTracks = async () => {
         try {
-            const data = await api.get(`/music`, {
+            const data = await api.get(`/music?limit=1000`, {
                 headers: {
                     'Accept': 'application/json'
                 },
@@ -218,8 +218,16 @@ const AuPlayer = () => {
     
             console.log('[Music] Получены треки:', data);
     
+            // Проверяем структуру данных
+            const tracksData = data.tracks || data;
+            
+            if (!tracksData || !Array.isArray(tracksData)) {
+                console.error('[Music] Некорректный формат данных треков:', data);
+                return [];
+            }
+            
             // Возвращаем массив треков
-            return data.map((track: any) => {
+            return tracksData.map((track: any) => {
                 const validTrack: Track = {
                     id: track.id || 0,
                     title: track.title || 'Неизвестный трек',
@@ -344,8 +352,8 @@ const AuPlayer = () => {
     // Открываем плеер в новом окне браузера
     const openInNewWindow = useCallback(() => {
         // Определяем размеры окна
-        const width = 500;
-        const height = 700;
+        const width = 550;
+        const height = 630;
         const left = window.screenX + (window.outerWidth - width) / 2;
         const top = window.screenY + (window.outerHeight - height) / 2;
 

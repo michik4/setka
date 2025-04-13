@@ -35,6 +35,12 @@ router.get('/user/:userId', authenticateSession, (req: Request, res: Response) =
 
 // Создание нового поста
 router.post('/', authenticateSession, (req: Request, res: Response) => {
+    console.log('==================================================');
+    console.log('[Posts Routes] Запрос на создание нового поста');
+    console.log('[Posts Routes] Body:', JSON.stringify(req.body, null, 2));
+    console.log('[Posts Routes] Файлы:', req.files);
+    console.log('[Posts Routes] Content-Type:', req.headers['content-type']);
+    console.log('==================================================');
     initializeController().createPost(req, res);
 });
 

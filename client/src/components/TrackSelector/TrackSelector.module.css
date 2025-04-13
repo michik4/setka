@@ -1,0 +1,189 @@
+.container {
+  width: 100%;
+  max-width: 700px;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  max-height: 80vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #e7e8ec;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: #2a2f45;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #818c99;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.closeButton:hover {
+  color: #4a76a8;
+}
+
+.searchContainer {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e7e8ec;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dce1e6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #4a76a8;
+}
+
+.trackList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.trackItem {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.trackItem:hover {
+  background-color: #f5f6f8;
+}
+
+.trackItem.selected {
+  background-color: #ebf1f9;
+}
+
+.trackCover {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.trackCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trackInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.trackTitle {
+  font-weight: 500;
+  font-size: 14px;
+  color: #2a2f45;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trackArtist {
+  font-size: 13px;
+  color: #818c99;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trackDuration {
+  color: #818c99;
+  font-size: 13px;
+  margin-left: 10px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 15px 20px;
+  border-top: 1px solid #e7e8ec;
+  gap: 10px;
+}
+
+.cancelButton, .confirmButton {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.cancelButton {
+  background-color: #f0f2f5;
+  color: #4a76a8;
+}
+
+.cancelButton:hover {
+  background-color: #e5e8ed;
+}
+
+.confirmButton {
+  background-color: #4a76a8;
+  color: white;
+}
+
+.confirmButton:hover {
+  background-color: #3d6898;
+}
+
+.confirmButton:disabled {
+  background-color: #c4d1de;
+  cursor: not-allowed;
+}
+
+.loading, .error, .noResults {
+  padding: 20px;
+  text-align: center;
+  color: #818c99;
+}
+
+.error {
+  color: #e64646;
+}
+
+@media (max-width: 500px) {
+  .container {
+    max-width: 100%;
+    border-radius: 0;
+    max-height: 100vh;
+    height: 100vh;
+  }
+  
+  .trackCover {
+    width: 32px;
+    height: 32px;
+  }
+} 

@@ -52,14 +52,29 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 const PlayerPageContainer: React.FC = () => {
   // Устанавливаем флаг открытия окна плеера
   useEffect(() => {
+    // Устанавливаем флаг открытия окна плеера
     localStorage.setItem('player_window_opened', Date.now().toString());
+    console.log('Окно плеера открыто, установлена метка:', Date.now().toString());
     
     // При закрытии окна плеера
     const handleUnload = () => {
-      localStorage.setItem('player_window_closed', Date.now().toString());
+      const timestamp = Date.now().toString();
+      localStorage.setItem('player_window_closed', timestamp);
+      console.log('Окно плеера закрыто, установлена метка:', timestamp);
     };
     
     window.addEventListener('unload', handleUnload);
+    
+    // Через небольшую задержку проверяем и делаем окно плеера мастером
+    setTimeout(() => {
+      const { becomeMasterPlayer } = window.playerApi || {};
+      if (typeof becomeMasterPlayer === 'function') {
+        console.log('Окно плеера становится мастером');
+        becomeMasterPlayer();
+      } else {
+        console.warn('Функция becomeMasterPlayer недоступна');
+      }
+    }, 500);
     
     return () => {
       window.removeEventListener('unload', handleUnload);
@@ -128,8 +143,8 @@ const App: React.FC = () => {
     // При открытии плеера в новом окне (добавляем только обработчик)
     const handleNewWindowClick = () => {
       // Открываем новое окно через открытие ссылки
-      const width = 500;
-      const height = 700;
+      const width = 550;
+      const height = 630;
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
       

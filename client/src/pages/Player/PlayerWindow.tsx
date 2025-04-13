@@ -1,10 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { usePlayerWindow } from '../../contexts/PlayerWindowContext';
+import { Track } from '../../types/music.types';
 import styles from './PlayerWindow.module.css';
+import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 
 // Константа для обложки по умолчанию
 const DEFAULT_COVER_URL = '/api/music/cover/default.png';
+
+// Навигационные компоненты
+const IconBack = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 18l-6-6 6-6"/>
+  </svg>
+);
+
+const IconForward = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 18l6-6-6-6"/>
+  </svg>
+);
 
 // Простые SVG компоненты для иконок (с более тонкими линиями)
 const IconShuffle = () => (
@@ -53,6 +68,17 @@ const IconRepeat = () => (
   </svg>
 );
 
+const IconRepeatOne = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 1l4 4-4 4"></path>
+    <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+    <path d="M7 23l-4-4 4-4"></path>
+    <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+    <path d="M12 17V7"></path>
+    <path d="M12 7h2"></path>
+  </svg>
+);
+
 const IconVolumeX = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -78,6 +104,34 @@ const IconVolumeHigh = () => (
 
 const ACTIVE_PLAYER_STORAGE_KEY = 'master_player';
 
+// Иконка для активного трека
+const IconPlayingNow = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <polygon points="10 8 16 12 10 16 10 8"></polygon>
+  </svg>
+);
+
+// Добавляем иконку для очереди
+const IconQueue = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="8" y1="6" x2="21" y2="6"></line>
+    <line x1="8" y1="12" x2="21" y2="12"></line>
+    <line x1="8" y1="18" x2="21" y2="18"></line>
+    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+  </svg>
+);
+
+// Добавляем иконку для возврата к плееру
+const IconBackToPlayer = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <polygon points="10 8 16 12 10 16 10 8"></polygon>
+  </svg>
+);
+
 // Компонент для отображения очереди воспроизведения
 interface QueueViewProps {
     queue: any[];
@@ -94,6 +148,22 @@ const QueueView: React.FC<QueueViewProps> = ({
     onBackToPlayer,
     onRemoveTrack
 }) => {
+    // Референс для автоматической прокрутки до активного трека
+    const activeItemRef = useRef<HTMLDivElement>(null);
+    
+    // Прокручиваем к активному треку при монтировании
+    useEffect(() => {
+        if (activeItemRef.current) {
+            // Небольшая задержка для надежности
+            setTimeout(() => {
+                activeItemRef.current?.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }, 300);
+        }
+    }, []);
+
     return (
         <div className={styles.queueView}>
             <h2 className={styles.queueTitle}>
@@ -101,55 +171,89 @@ const QueueView: React.FC<QueueViewProps> = ({
                 <span className={styles.queueCount}>{queue.length} треков</span>
             </h2>
             
-            <div className={styles.queueList}>
-                {queue.map((track, index) => {
-                    const isActive = currentTrack && track.id === currentTrack.id;
-                    
-                    return (
-                        <div 
-                            key={track.id}
-                            className={`${styles.queueItem} ${isActive ? styles.queueItemActive : ''}`}
-                            onClick={() => onTrackSelect(index)}
-                        >
-                            <div className={styles.queueItemMain}>
-                                <img 
-                                    src={track.coverUrl || '/default-cover.png'} 
-                                    alt={track.title} 
-                                    className={styles.queueItemCover}
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).src = '/default-cover.png';
-                                    }}
-                                />
-                                <div className={styles.queueItemInfo}>
-                                    <div className={styles.queueItemTitle}>{track.title}</div>
-                                    <div className={styles.queueItemArtist}>{track.artist}</div>
+            {queue.length === 0 ? (
+                <div className={styles.queueNoTracks}>
+                    Очередь воспроизведения пуста
+                </div>
+            ) : (
+                <div className={styles.queueList}>
+                    {queue.map((track, index) => {
+                        const isActive = currentTrack && track.id === currentTrack.id;
+                        
+                        return (
+                            <div 
+                                key={track.id}
+                                className={`${styles.queueItem} ${isActive ? styles.queueItemActive : ''}`}
+                                onClick={() => onTrackSelect(index)}
+                                ref={isActive ? activeItemRef : null}
+                            >
+                                <div className={styles.queueItemMain}>
+                                    <img 
+                                        src={track.coverUrl || DEFAULT_COVER_URL} 
+                                        alt={track.title} 
+                                        className={styles.queueItemCover}
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = DEFAULT_COVER_URL;
+                                        }}
+                                    />
+                                    <div className={styles.queueItemInfo}>
+                                        <div className={styles.queueItemTitle}>
+                                            {track.title}
+                                            {isActive && (
+                                                <span className={styles.queueNowPlaying}>
+                                                    <IconPlayingNow />
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className={styles.queueItemArtist}>{track.artist}</div>
+                                    </div>
+                                </div>
+
+                                <div className={styles.queueItemControls}>
+                                    <button 
+                                        className={styles.queueItemRemove}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRemoveTrack(track.id);
+                                        }}
+                                        title="Удалить из очереди"
+                                    >
+                                        <span>×</span>
+                                    </button>
                                 </div>
                             </div>
-
-                            <div className={styles.queueItemControls}>
-                                <button 
-                                    className={styles.queueItemRemove}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onRemoveTrack(track.id);
-                                    }}
-                                    title="Удалить из очереди"
-                                >
-                                    <span>×</span>
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             <div className={styles.backToPlayerButton}>
                 <button onClick={onBackToPlayer}>
-                    Вернуться к плееру
+                    <IconBackToPlayer />
+                    <span>Вернуться к плееру</span>
                 </button>
             </div>
         </div>
     );
+};
+
+// Компонент для предварительной загрузки изображений
+const ImagePreloader: React.FC<{ src: string; onLoad?: () => void }> = ({ src, onLoad }) => {
+  useEffect(() => {
+    if (!src) return;
+    
+    const img = new Image();
+    img.src = src;
+    img.onload = () => {
+      if (onLoad) onLoad();
+    };
+    
+    return () => {
+      img.onload = null;
+    };
+  }, [src, onLoad]);
+  
+  return null;
 };
 
 const PlayerWindow: React.FC = () => {
@@ -160,6 +264,7 @@ const PlayerWindow: React.FC = () => {
         audio,
         tracks,
         currentTrack,
+        currentTrackIndex,
         getTrackCover,
         togglePlay,
         nextTrack,
@@ -174,7 +279,9 @@ const PlayerWindow: React.FC = () => {
         shuffleMode,
         toggleShuffle,
         setCurrentTrackIndex,
-        removeTrackFromQueue
+        removeTrackFromQueue,
+        setRepeatMode,
+        shuffledQueue
     } = usePlayer();
     
     // Используем новый контекст отдельного окна плеера
@@ -196,6 +303,23 @@ const PlayerWindow: React.FC = () => {
     const [prevTrackCover, setPrevTrackCover] = useState<string | null>(null);
     const [nextTrackCover, setNextTrackCover] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [preloadedImages, setPreloadedImages] = useState<Record<string, boolean>>({});
+    // Кеш для информации о соседних треках
+    const [neighborTracks, setNeighborTracks] = useState<{
+        prev: number | null;
+        next: number | null;
+    }>({ prev: null, next: null });
+    // Добавляем состояние для хранения информации о соседних треках
+    const [neighborTrackInfo, setNeighborTrackInfo] = useState<{
+        prev: { title: string; artist: string } | null;
+        next: { title: string; artist: string } | null;
+    }>({ prev: null, next: null });
+    const [isAnimatingNext, setIsAnimatingNext] = useState(false);
+    const [isAnimatingPrev, setIsAnimatingPrev] = useState(false);
+    const [pulsePlayButton, setPulsePlayButton] = useState(false);
+    const [pulseShuffleButton, setPulseShuffleButton] = useState(false);
+    const [pulseRepeatButton, setPulseRepeatButton] = useState(false);
+    const [isTransitioning, setIsTransitioning] = useState(false);
 
     // Устанавливаем флаг открытия окна плеера при загрузке компонента
     useEffect(() => {
@@ -245,10 +369,82 @@ const PlayerWindow: React.FC = () => {
     useEffect(() => {
         // При первом рендере пытаемся стать мастер-плеером, но только один раз
         if (!isMasterPlayer && !becameMasterRef.current) {
-            becomeMasterPlayer();
+            const result = becomeMasterPlayer();
             becameMasterRef.current = true;
+            console.log('Окно плеера стало мастером:', result);
         }
     }, [isMasterPlayer, becomeMasterPlayer]);
+
+    // Восстанавливаем состояние из localStorage при загрузке
+    useEffect(() => {
+        try {
+            // Проверяем, есть ли сохраненное состояние
+            const savedTrackJSON = localStorage.getItem('player_current_track');
+            const savedPosition = localStorage.getItem('player_current_position');
+            const savedVolume = localStorage.getItem('player_current_volume');
+            const savedIsPlaying = localStorage.getItem('player_is_playing');
+            
+            if (savedTrackJSON) {
+                console.log('Найдены сохраненные данные для восстановления состояния плеера');
+                
+                // Восстанавливаем трек
+                const savedTrack = JSON.parse(savedTrackJSON) as Track;
+                
+                // Проверяем, есть ли трек уже в списке
+                const trackIndex = tracks.findIndex(t => t.id === savedTrack.id);
+                
+                if (trackIndex !== -1) {
+                    // Трек уже есть в списке, просто выбираем его
+                    console.log('Трек уже в списке, индекс:', trackIndex);
+                    setCurrentTrackIndex(trackIndex);
+                } else {
+                    // Добавляем трек в список
+                    console.log('Добавляем трек в список');
+                    playTrack(savedTrack);
+                }
+                
+                // Восстанавливаем позицию воспроизведения
+                if (savedPosition && audio) {
+                    const position = parseFloat(savedPosition);
+                    console.log('Восстанавливаем позицию:', position);
+                    audio.currentTime = position;
+                    seekTo(position);
+                }
+                
+                // Восстанавливаем громкость
+                if (savedVolume && audio) {
+                    const vol = parseFloat(savedVolume);
+                    console.log('Восстанавливаем громкость:', vol);
+                    setVolumeState(vol);
+                    setVolume(vol);
+                    audio.volume = vol;
+                }
+                
+                // Восстанавливаем состояние воспроизведения
+                if (savedIsPlaying === 'true') {
+                    console.log('Восстанавливаем воспроизведение');
+                    setIsPlaying(true);
+                    // Небольшая задержка для гарантии готовности аудио
+                    setTimeout(() => {
+                        if (audio) {
+                            audio.muted = false;
+                            audio.play().catch(err => {
+                                console.error('Ошибка при восстановлении воспроизведения:', err);
+                            });
+                        }
+                    }, 300);
+                }
+                
+                // Очищаем localStorage после восстановления
+                localStorage.removeItem('player_current_track');
+                localStorage.removeItem('player_current_position');
+                localStorage.removeItem('player_current_volume');
+                localStorage.removeItem('player_is_playing');
+            }
+        } catch (error) {
+            console.error('Ошибка при восстановлении состояния плеера:', error);
+        }
+    }, [audio, playTrack, seekTo, setVolume, tracks, setCurrentTrackIndex, setIsPlaying]);
 
     // Загружаем начальный объем
     useEffect(() => {
@@ -358,35 +554,73 @@ const PlayerWindow: React.FC = () => {
         }
     }, [currentTrack, tracks, playTrack]);
 
-    // Обновление обложек при изменении текущего трека или очереди
+    // Обновляем эффект для предзагрузки и кеширования обложек соседних треков
     useEffect(() => {
-        if (!currentTrack || tracks.length === 0) return;
+        if (!currentTrack || tracks.length <= 1) return;
         
-        // Находим индекс текущего трека в очереди
-        const currentIndex = tracks.findIndex(
-            (track) => track.id === currentTrack.id
-        );
+        // Функция для получения индекса соседнего трека с учетом режима перемешивания
+        const getNeighborIndex = (offset: number): number => {
+            if (shuffleMode && shuffledQueue.length > 0) {
+                // Находим текущий индекс в перемешанной очереди
+                const currentShuffleIndex = shuffledQueue.indexOf(currentTrackIndex);
+                if (currentShuffleIndex === -1) return -1;
+                
+                // Получаем индекс соседнего трека в перемешанной очереди
+                const targetShuffleIndex = (currentShuffleIndex + offset + shuffledQueue.length) % shuffledQueue.length;
+                // Возвращаем индекс трека в оригинальной очереди
+                return shuffledQueue[targetShuffleIndex];
+            } else {
+                // Обычный режим: просто вычисляем соседний индекс
+                return (currentTrackIndex + offset + tracks.length) % tracks.length;
+            }
+        };
         
-        // Если индекс найден, определяем предыдущий и следующий треки
-        if (currentIndex !== -1) {
-            // Предыдущий трек (с учетом цикличности при активном режиме repeat)
-            const prevIndex = currentIndex > 0 
-                ? currentIndex - 1 
-                : (repeatMode !== 'none' ? tracks.length - 1 : -1);
+        // Получаем индексы соседних треков
+        const prevIndex = getNeighborIndex(-1);
+        const nextIndex = getNeighborIndex(1);
+        
+        // Обновляем информацию о соседних треках
+        setNeighborTracks({ prev: prevIndex, next: nextIndex });
+        
+        // Загружаем обложки и информацию о соседних треках
+        if (prevIndex !== -1 && tracks[prevIndex]) {
+            const prevTrack = tracks[prevIndex];
+            setPrevTrackCover(prevTrack.coverUrl || DEFAULT_COVER_URL);
+            setNeighborTrackInfo(prev => ({
+                ...prev,
+                prev: { title: prevTrack.title, artist: prevTrack.artist }
+            }));
             
-            // Следующий трек (с учетом цикличности при активном режиме repeat)
-            const nextIndex = currentIndex < tracks.length - 1 
-                ? currentIndex + 1 
-                : (repeatMode !== 'none' ? 0 : -1);
-            
-            // Устанавливаем обложки, если треки существуют
-            setPrevTrackCover(prevIndex !== -1 ? 
-                tracks[prevIndex].coverUrl || '/default-cover.png' : null);
-            
-            setNextTrackCover(nextIndex !== -1 ? 
-                tracks[nextIndex].coverUrl || '/default-cover.png' : null);
+            // Предзагружаем изображение
+            const img = new Image();
+            img.src = prevTrack.coverUrl || DEFAULT_COVER_URL;
+            img.onload = () => {
+                setPreloadedImages(prev => ({ ...prev, [prevTrack.coverUrl || DEFAULT_COVER_URL]: true }));
+            };
+        } else {
+            setPrevTrackCover(null);
+            setNeighborTrackInfo(prev => ({ ...prev, prev: null }));
         }
-    }, [currentTrack, tracks, repeatMode]);
+        
+        if (nextIndex !== -1 && tracks[nextIndex]) {
+            const nextTrack = tracks[nextIndex];
+            setNextTrackCover(nextTrack.coverUrl || DEFAULT_COVER_URL);
+            setNeighborTrackInfo(prev => ({
+                ...prev,
+                next: { title: nextTrack.title, artist: nextTrack.artist }
+            }));
+            
+            // Предзагружаем изображение
+            const img = new Image();
+            img.src = nextTrack.coverUrl || DEFAULT_COVER_URL;
+            img.onload = () => {
+                setPreloadedImages(prev => ({ ...prev, [nextTrack.coverUrl || DEFAULT_COVER_URL]: true }));
+            };
+        } else {
+            setNextTrackCover(null);
+            setNeighborTrackInfo(prev => ({ ...prev, next: null }));
+        }
+    }, [currentTrack, currentTrackIndex, tracks, shuffleMode, shuffledQueue]);
 
     // Форматирование времени
     const formatTime = (time: number) => {
@@ -458,7 +692,86 @@ const PlayerWindow: React.FC = () => {
         }
     };
 
-    // Обработчики кнопок управления плеером
+    // Модифицируем функции навигации для мгновенного обновления обложек и добавления анимаций
+    const handleNextTrack = () => {
+        // Всегда сначала становимся мастером, а затем выполняем действие
+        if (!isMasterPlayer) {
+            const success = becomeMasterPlayer();
+            if (!success) return; // Если не удалось стать мастером, прекращаем выполнение
+        }
+        
+        // Если трек играет, временно останавливаем для плавного перехода
+        const wasPlaying = isPlaying;
+        if (wasPlaying && audio) {
+            audio.pause();
+        }
+        
+        // Добавляем класс для анимации переходов
+        const coverContainer = document.querySelector(`.${styles.coverContainer}`);
+        if (coverContainer) {
+            coverContainer.classList.add(styles.slideNext);
+            
+            // Удаляем класс после завершения анимации
+            setTimeout(() => {
+                coverContainer.classList.remove(styles.slideNext);
+            }, 400);
+        }
+        
+        // Подготавливаем следующий трек (предзагрузка обложки)
+        if (neighborTracks.next !== null) {
+            // Смещаем обложки: текущая -> предыдущая, следующая -> текущая
+            const currCoverUrl = coverUrl !== DEFAULT_COVER_URL ? coverUrl : null;
+            const nextCoverUrl = nextTrackCover;
+            
+            // Обновляем обложки асинхронно (перед фактическим переключением)
+            if (nextCoverUrl) setCoverUrl(nextCoverUrl);
+            if (currCoverUrl) setPrevTrackCover(currCoverUrl);
+        }
+        
+        // Переходим к следующему треку
+        nextTrack();
+    };
+
+    const handlePrevTrack = () => {
+        // Всегда сначала становимся мастером, а затем выполняем действие
+        if (!isMasterPlayer) {
+            const success = becomeMasterPlayer();
+            if (!success) return; // Если не удалось стать мастером, прекращаем выполнение
+        }
+        
+        // Если трек играет, временно останавливаем для плавного перехода
+        const wasPlaying = isPlaying;
+        if (wasPlaying && audio) {
+            audio.pause();
+        }
+        
+        // Добавляем класс для анимации переходов
+        const coverContainer = document.querySelector(`.${styles.coverContainer}`);
+        if (coverContainer) {
+            coverContainer.classList.add(styles.slidePrev);
+            
+            // Удаляем класс после завершения анимации
+            setTimeout(() => {
+                coverContainer.classList.remove(styles.slidePrev);
+            }, 400);
+        }
+        
+        // Подготавливаем предыдущий трек (предзагрузка обложки)
+        if (neighborTracks.prev !== null) {
+            // Смещаем обложки: текущая -> следующая, предыдущая -> текущая
+            const currCoverUrl = coverUrl !== DEFAULT_COVER_URL ? coverUrl : null;
+            const prevCoverUrl = prevTrackCover;
+            
+            // Обновляем обложки асинхронно (перед фактическим переключением)
+            if (prevCoverUrl) setCoverUrl(prevCoverUrl);
+            if (currCoverUrl) setNextTrackCover(currCoverUrl);
+        }
+        
+        // Переходим к предыдущему треку
+        prevTrack();
+    };
+
+    // Улучшенный обработчик для переключения воспроизведения с анимацией
     const handleTogglePlay = () => {
         // Всегда сначала становимся мастером
         if (!isMasterPlayer) {
@@ -470,6 +783,15 @@ const PlayerWindow: React.FC = () => {
         if (!audio) {
             togglePlay(); // Резервный вариант
             return;
+        }
+        
+        // Добавим анимацию кнопки при клике
+        const playButton = document.querySelector(`.${styles.playButton}`);
+        if (playButton) {
+            playButton.classList.add(styles.buttonPulse);
+            setTimeout(() => {
+                playButton.classList.remove(styles.buttonPulse);
+            }, 300);
         }
         
         try {
@@ -522,38 +844,43 @@ const PlayerWindow: React.FC = () => {
         }
     };
 
-    const handleNextTrack = () => {
-        // Всегда сначала становимся мастером, а затем выполняем действие
-        if (!isMasterPlayer) {
-            const success = becomeMasterPlayer();
-            if (!success) return; // Если не удалось стать мастером, прекращаем выполнение
+    // Обработчики кнопок управления плеером с использованием оптимизированной обработки
+    const handleToggleRepeat = () => {
+        // Анимация кнопки
+        const repeatButton = document.querySelector(`.${styles.repeatButton}`);
+        if (repeatButton) {
+            repeatButton.classList.add(styles.buttonRotate);
+            setTimeout(() => {
+                repeatButton.classList.remove(styles.buttonRotate);
+            }, 400);
         }
         
-        // Если трек играет, временно останавливаем для плавного перехода
-        const wasPlaying = isPlaying;
-        if (wasPlaying && audio) {
-            audio.pause();
-        }
-        
-        // Переходим к следующему треку
-        nextTrack();
+        // Вызываем переключение режима
+        toggleRepeat();
     };
 
-    const handlePrevTrack = () => {
-        // Всегда сначала становимся мастером, а затем выполняем действие
+    // Улучшенный обработчик для переключения режима перемешивания
+    const handleToggleShuffle = () => {
+        // Всегда сначала становимся мастером плеера
         if (!isMasterPlayer) {
             const success = becomeMasterPlayer();
-            if (!success) return; // Если не удалось стать мастером, прекращаем выполнение
+            if (!success) return;
         }
         
-        // Если трек играет, временно останавливаем для плавного перехода
-        const wasPlaying = isPlaying;
-        if (wasPlaying && audio) {
-            audio.pause();
+        // Анимация кнопки
+        const shuffleButton = document.querySelector(`.${styles.controlButton}[title*="Перемешивание"]`);
+        if (shuffleButton) {
+            shuffleButton.classList.add(styles.buttonRotate);
+            setTimeout(() => {
+                shuffleButton.classList.remove(styles.buttonRotate);
+            }, 400);
         }
         
-        // Переходим к предыдущему треку
-        prevTrack();
+        // Вызываем переключение режима перемешивания
+        toggleShuffle();
+        
+        // Дополнительная обработка и обратная связь
+        console.log(`[PlayerWindow] Режим перемешивания ${!shuffleMode ? 'включен' : 'выключен'}`);
     };
 
     // Обработчик изменения громкости через прямой доступ
@@ -576,19 +903,6 @@ const PlayerWindow: React.FC = () => {
         setVolume(newVolume);
     };
 
-    // Обработчики кнопок управления плеером с использованием оптимизированной обработки
-    const handleToggleRepeat = () => {
-        optimizeOperation(() => {
-            toggleRepeat();
-        });
-    };
-
-    const handleToggleShuffle = () => {
-        optimizeOperation(() => {
-            toggleShuffle();
-        });
-    };
-
     // Обработчик ошибки загрузки обложки для треков в очереди
     const handleQueueCoverError = (trackId: number) => {
         setCoverErrors(prev => ({ ...prev, [trackId]: true }));
@@ -607,9 +921,54 @@ const PlayerWindow: React.FC = () => {
         removeTrackFromQueue(trackId);
     };
 
-    // Переключение отображения очереди
+    // Улучшенное переключение отображения очереди с анимацией
     const toggleQueueView = () => {
-        setShowQueue(!showQueue);
+        if (isTransitioning) return; // Предотвращаем двойные переключения во время анимации
+        
+        setIsTransitioning(true);
+        
+        // Получаем контейнер для анимации
+        const contentContainer = document.querySelector(`.${styles.playerContent}`);
+        
+        if (!showQueue) {
+            // Переход к очереди
+            if (contentContainer) {
+                contentContainer.classList.add(styles.viewTransitionOut);
+                
+                setTimeout(() => {
+                    setShowQueue(true);
+                    contentContainer.classList.remove(styles.viewTransitionOut);
+                    contentContainer.classList.add(styles.viewTransitionIn);
+                    
+                    setTimeout(() => {
+                        contentContainer.classList.remove(styles.viewTransitionIn);
+                        setIsTransitioning(false);
+                    }, 400);
+                }, 300); // Задержка для анимации исчезновения
+            } else {
+                setShowQueue(true);
+                setTimeout(() => setIsTransitioning(false), 400);
+            }
+        } else {
+            // Переход к плееру
+            if (contentContainer) {
+                contentContainer.classList.add(styles.viewTransitionOut);
+                
+                setTimeout(() => {
+                    setShowQueue(false);
+                    contentContainer.classList.remove(styles.viewTransitionOut);
+                    contentContainer.classList.add(styles.viewTransitionIn);
+                    
+                    setTimeout(() => {
+                        contentContainer.classList.remove(styles.viewTransitionIn);
+                        setIsTransitioning(false);
+                    }, 400);
+                }, 300); // Задержка для анимации исчезновения
+            } else {
+                setShowQueue(false);
+                setTimeout(() => setIsTransitioning(false), 400);
+            }
+        }
     };
 
     // Обработчик событий аудио для избежания перезагрузки
@@ -709,6 +1068,26 @@ const PlayerWindow: React.FC = () => {
         }
     }, [audio, currentTrack, isPlaying]);
 
+    // Обработчики для кликов по соседним обложкам
+    const handlePrevCoverClick = () => {
+        if (neighborTracks.prev !== null) {
+            // При клике на обложку предыдущего трека, перемещаем пользователя 
+            // сразу к предыдущему треку, игнорируя правило 3 секунд
+            // Для этого сначала перематываем текущий трек до момента менее 3 секунд
+            if (audio && audio.currentTime >= 3) {
+                audio.currentTime = 0;
+            }
+            // Затем вызываем стандартный обработчик для перехода к предыдущему треку
+            handlePrevTrack();
+        }
+    };
+    
+    const handleNextCoverClick = () => {
+        if (neighborTracks.next !== null) {
+            handleNextTrack();
+        }
+    };
+
     // Отображаем загрузку, если нет трека
     if (!currentTrack) {
         return (
@@ -725,16 +1104,19 @@ const PlayerWindow: React.FC = () => {
                 <div
                     className={styles.playerBackground}
                     style={{
-                        backgroundImage: `url(${currentTrack.coverUrl || '/default-cover.png'})`,
+                        backgroundImage: `url(${currentTrack.coverUrl || DEFAULT_COVER_URL})`,
                     }}
                 />
             )}
 
             {/* Заголовок окна */}
             <div className={styles.windowHeader}>
-                <h1 className={styles.windowTitle}>
-                    Музыкальный плеер
-                    {isMasterPlayer && (
+                <h1 
+                    className={`${styles.windowTitle} ${isTransitioning ? styles.titleTransition : ''}`}
+                    key={showQueue ? 'queue-title' : 'player-title'}
+                >
+                    {showQueue ? "Очередь воспроизведения" : "Музыкальный плеер"}
+                    {isMasterPlayer && !showQueue && (
                         <span className={styles.masterBadge}> (Основной)</span>
                     )}
                 </h1>
@@ -742,8 +1124,10 @@ const PlayerWindow: React.FC = () => {
                     <button
                         className={styles.queueButton}
                         onClick={toggleQueueView}
+                        title="Показать очередь воспроизведения"
                     >
-                        Очередь ({tracks.length})
+                        <IconQueue />
+                        <span>Очередь ({tracks.length})</span>
                     </button>
                 )}
             </div>
@@ -757,7 +1141,7 @@ const PlayerWindow: React.FC = () => {
                         </div>
                     </div>
                 ) : showQueue ? (
-                    // Вид очереди воспроизведения
+                    // Вид очереди воспроизведения с анимацией
                     <QueueView
                         queue={tracks}
                         currentTrack={currentTrack}
@@ -772,40 +1156,76 @@ const PlayerWindow: React.FC = () => {
                             <>
                                 {/* Карусель обложек */}
                                 <div className={styles.coverCarousel}>
-                                    {prevTrackCover && (
-                                        <div className={styles.sideTrackCover + ' ' + styles.prevTrackCover}>
-                                            <img
-                                                src={prevTrackCover}
-                                                alt="Предыдущий трек"
-                                                className={styles.sideTrackImage}
-                                            />
-                                        </div>
-                                    )}
+                                    <div 
+                                        className={`${styles.sideTrackCover} ${styles.prevTrackCover} ${prevTrackCover ? styles.hasImage : styles.noImage}`}
+                                        onClick={handlePrevCoverClick}
+                                        title="Предыдущий трек"
+                                    >
+                                        {prevTrackCover && (
+                                            <>
+                                                <img
+                                                    src={prevTrackCover}
+                                                    alt="Предыдущий трек"
+                                                    className={`${styles.sideTrackImage} ${preloadedImages[prevTrackCover] ? styles.loaded : styles.loading}`}
+                                                    onLoad={(e) => {
+                                                        // Добавляем класс loaded после загрузки
+                                                        (e.target as HTMLImageElement).classList.remove(styles.loading);
+                                                        (e.target as HTMLImageElement).classList.add(styles.loaded);
+                                                        setPreloadedImages(prev => ({ ...prev, [prevTrackCover]: true }));
+                                                    }}
+                                                />
+                                                {neighborTrackInfo.prev && (
+                                                    <div className={styles.sideTrackInfo}>
+                                                        <div className={styles.sideTrackTitle}>{neighborTrackInfo.prev.title}</div>
+                                                        <div className={styles.sideTrackArtist}>{neighborTrackInfo.prev.artist}</div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
                                     
-                                    <div className={styles.coverContainer}>
+                                    <div className={`${styles.coverContainer} ${isAnimatingNext ? styles.slideNext : ''} ${isAnimatingPrev ? styles.slidePrev : ''}`}>
                                         <img
                                             src={
                                                 currentTrack.coverUrl ||
-                                                "/default-cover.png"
+                                                DEFAULT_COVER_URL
                                             }
                                             alt={`${currentTrack.title} обложка`}
                                             className={styles.coverImage}
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).src =
-                                                    "/default-cover.png";
+                                                    DEFAULT_COVER_URL;
                                             }}
                                         />
                                     </div>
                                     
-                                    {nextTrackCover && (
-                                        <div className={styles.sideTrackCover + ' ' + styles.nextTrackCover}>
-                                            <img
-                                                src={nextTrackCover}
-                                                alt="Следующий трек"
-                                                className={styles.sideTrackImage}
-                                            />
-                                        </div>
-                                    )}
+                                    <div 
+                                        className={`${styles.sideTrackCover} ${styles.nextTrackCover} ${nextTrackCover ? styles.hasImage : styles.noImage}`}
+                                        onClick={handleNextCoverClick}
+                                        title="Следующий трек"
+                                    >
+                                        {nextTrackCover && (
+                                            <>
+                                                <img
+                                                    src={nextTrackCover}
+                                                    alt="Следующий трек"
+                                                    className={`${styles.sideTrackImage} ${preloadedImages[nextTrackCover] ? styles.loaded : styles.loading}`}
+                                                    onLoad={(e) => {
+                                                        // Добавляем класс loaded после загрузки
+                                                        (e.target as HTMLImageElement).classList.remove(styles.loading);
+                                                        (e.target as HTMLImageElement).classList.add(styles.loaded);
+                                                        setPreloadedImages(prev => ({ ...prev, [nextTrackCover]: true }));
+                                                    }}
+                                                />
+                                                {neighborTrackInfo.next && (
+                                                    <div className={styles.sideTrackInfo}>
+                                                        <div className={styles.sideTrackTitle}>{neighborTrackInfo.next.title}</div>
+                                                        <div className={styles.sideTrackArtist}>{neighborTrackInfo.next.artist}</div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Информация о треке */}
@@ -850,7 +1270,7 @@ const PlayerWindow: React.FC = () => {
                                                     : styles.modeButton
                                             }`}
                                             onClick={handleToggleShuffle}
-                                            title="Перемешать"
+                                            title={shuffleMode ? "Перемешивание включено" : "Перемешивание выключено"}
                                         >
                                             <IconShuffle />
                                         </button>
@@ -884,15 +1304,23 @@ const PlayerWindow: React.FC = () => {
                                             <IconSkipNext />
                                         </button>
                                         <button
-                                            className={`${styles.controlButton} ${
-                                                repeatMode
-                                                    ? styles.activeMode
-                                                    : styles.modeButton
-                                            }`}
                                             onClick={handleToggleRepeat}
-                                            title="Повтор"
+                                            className={`${styles.controlButton} ${
+                                                repeatMode !== 'none' ? styles.activeMode : styles.modeButton
+                                            }`}
+                                            title={
+                                                repeatMode === 'none'
+                                                    ? "Повтор выключен"
+                                                    : repeatMode === 'all'
+                                                    ? "Повтор всех треков"
+                                                    : "Повтор текущего трека"
+                                            }
                                         >
-                                            <IconRepeat />
+                                            {repeatMode === 'one' ? (
+                                                <IconRepeatOne />
+                                            ) : (
+                                                <IconRepeat />
+                                            )}
                                         </button>
                                     </div>
 

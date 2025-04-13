@@ -14,23 +14,41 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
+    padding: 12px 20px;
     border-bottom: 1px solid #e0e0e0;
-    background-color: #f8f8f8;
+    background-color: rgba(248, 248, 248, 0.8);
+    backdrop-filter: blur(10px);
     z-index: 10;
+    transition: all 0.3s ease;
 }
 
 .windowTitle {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 600;
     margin: 0;
     color: #232323;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.windowTitle:hover {
+    transform: translateX(5px);
+}
+
+.titleTransition {
+    animation: titleSlide 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes titleSlide {
+    0% { transform: translateY(-10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
 }
 
 .masterBadge {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #2c6ecb;
     font-weight: normal;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards 0.3s;
 }
 
 .playerContent {
@@ -38,12 +56,15 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 30px;
+    justify-content: flex-start;
+    padding: 20px 20px 30px;
     position: relative;
-    gap: 28px;
+    gap: 20px;
     overflow: auto;
     scrollbar-width: none;
+    transition: opacity 0.3s ease, transform 0.3s ease, filter 0.3s ease;
+    will-change: opacity, transform, filter;
+    perspective: 1000px;
 }
 
 .playerContent::-webkit-scrollbar {
@@ -52,64 +73,76 @@
 
 .coverContainer {
     position: relative;
-    width: 280px;
-    height: 280px;
+    width: 240px;
+    height: 240px;
     border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    animation: rotateFade 0.5s ease;
+    box-shadow: none;
+    position: relative;
     z-index: 2;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    margin-top: 10px;
 }
 
 .coverContainer:hover {
-    transform: scale(1.03);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+    transform: scale(1.04) translateY(-5px);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.25);
 }
 
 .coverImage {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.5s ease;
+    display: block;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .coverContainer:hover .coverImage {
-    transform: scale(1.08);
+    transform: scale(1.1) rotate(2deg);
 }
 
 .trackInfo {
     text-align: center;
     width: 80%;
     max-width: 400px;
-    animation: fadeIn 0.5s ease;
+    animation: fadeInUp 0.5s ease;
+    margin-top: -5px;
 }
 
 .trackTitle {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
     color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.3s ease;
 }
 
 .trackArtist {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: #555;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.3s ease;
 }
 
 .customPlayerControls {
     width: 90%;
-    max-width: 500px;
+    max-width: 450px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
+    margin-top: -5px;
 }
 
 .playerButtons {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 16px;
     align-items: center;
 }
 
@@ -121,39 +154,54 @@
     align-items: center;
     justify-content: center;
     color: #333;
-    padding: 12px;
+    padding: 10px;
     border-radius: 50%;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .controlButton:hover {
     background-color: rgba(0, 0, 0, 0.05);
-    transform: scale(1.1);
+    transform: scale(1.15);
 }
 
 .controlButton:active {
-    transform: scale(0.95);
+    transform: scale(0.9);
 }
 
 .playButton {
-    width: 60px;
-    height: 60px;
+    width: 54px;
+    height: 54px;
     background-color: #f0f0f0;
     border-radius: 50%;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .playButton:hover {
     background-color: #e8e8e8;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    transform: scale(1.12) translateY(-2px);
+}
+
+.playButton:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .modeButton {
     color: #777;
+    transition: color 0.3s ease, transform 0.3s ease;
 }
 
 .activeMode {
     color: #2c6ecb;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
 .progressControls {
@@ -164,10 +212,11 @@
 }
 
 .timeText {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #777;
-    min-width: 45px;
+    min-width: 40px;
     text-align: center;
+    transition: color 0.3s ease;
 }
 
 .progressSlider {
@@ -179,6 +228,11 @@
     outline: none;
     position: relative;
     cursor: pointer;
+    transition: height 0.2s ease;
+}
+
+.progressSlider:hover {
+    height: 6px;
 }
 
 .progressSlider::-webkit-slider-thumb {
@@ -190,10 +244,17 @@
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: scale(0);
+}
+
+.progressSlider:hover::-webkit-slider-thumb {
+    opacity: 1;
+    transform: scale(1);
 }
 
 .progressSlider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
+    transform: scale(1.3);
 }
 
 .progressSlider::-moz-range-thumb {
@@ -204,10 +265,15 @@
     cursor: pointer;
     border: none;
     transition: all 0.2s;
+    opacity: 0;
+}
+
+.progressSlider:hover::-moz-range-thumb {
+    opacity: 1;
 }
 
 .progressSlider::-moz-range-thumb:hover {
-    transform: scale(1.2);
+    transform: scale(1.3);
 }
 
 .progressSlider::before {
@@ -219,6 +285,11 @@
     background-color: #2c6ecb;
     border-radius: 2px;
     pointer-events: none;
+    transition: width 0.1s linear, height 0.2s ease;
+}
+
+.progressSlider:hover::before {
+    height: 6px;
 }
 
 .volumeControl {
@@ -226,319 +297,296 @@
     align-items: center;
     gap: 10px;
     width: 80%;
-    max-width: 200px;
+    max-width: 180px;
     margin: 0 auto;
+    transition: opacity 0.3s ease;
+    opacity: 0.7;
+}
+
+.volumeControl:hover {
+    opacity: 1;
 }
 
 .volumeIcon {
     color: #555;
     min-width: 20px;
+    transition: transform 0.2s ease;
+}
+
+.volumeControl:hover .volumeIcon {
+    transform: scale(1.1);
 }
 
 .volumeSlider {
     -webkit-appearance: none;
     width: 100%;
-    height: 4px;
+    height: 3px;
     border-radius: 2px;
     background: #e0e0e0;
     outline: none;
     position: relative;
     cursor: pointer;
+    transition: height 0.2s ease;
+}
+
+.volumeSlider:hover {
+    height: 5px;
 }
 
 .volumeSlider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: #2c6ecb;
     cursor: pointer;
     transition: all 0.2s;
+    opacity: 0;
+}
+
+.volumeSlider:hover::-webkit-slider-thumb {
+    opacity: 1;
 }
 
 .volumeSlider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
+    transform: scale(1.3);
 }
 
 .volumeSlider::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: #2c6ecb;
     cursor: pointer;
     border: none;
     transition: all 0.2s;
+    opacity: 0;
+}
+
+.volumeSlider:hover::-moz-range-thumb {
+    opacity: 1;
 }
 
 .volumeSlider::-moz-range-thumb:hover {
-    transform: scale(1.2);
+    transform: scale(1.3);
 }
 
 .volumeSlider::before {
     content: '';
     position: absolute;
-    height: 4px;
+    height: 3px;
     left: 0;
     width: var(--volume-width, 0%);
     background-color: #2c6ecb;
     border-radius: 2px;
     pointer-events: none;
+    transition: width 0.1s linear, height 0.2s ease;
+}
+
+.volumeSlider:hover::before {
+    height: 5px;
 }
 
 .playingAnimation {
     position: absolute;
-    bottom: 15px;
-    right: 15px;
+    bottom: 12px;
+    right: 12px;
     display: flex;
     align-items: flex-end;
     height: 20px;
     gap: 2px;
     animation: fadeIn 0.5s ease;
+    z-index: 5;
 }
 
 .playingAnimation span {
     display: block;
     width: 3px;
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(44, 110, 203, 0.6);
     border-radius: 3px;
-    animation: audioWave 0.8s infinite ease-in-out alternate;
+    animation: audioWave 1.2s infinite ease-in-out alternate;
+    transform-origin: bottom;
 }
 
-.playingAnimation span:nth-child(1) { height: 10px; animation-delay: -0.7s; }
-.playingAnimation span:nth-child(2) { height: 16px; animation-delay: -0.6s; }
-.playingAnimation span:nth-child(3) { height: 12px; animation-delay: -0.5s; }
-.playingAnimation span:nth-child(4) { height: 18px; animation-delay: -0.4s; }
-.playingAnimation span:nth-child(5) { height: 10px; animation-delay: -0.3s; }
-.playingAnimation span:nth-child(6) { height: 16px; animation-delay: -0.2s; }
-.playingAnimation span:nth-child(7) { height: 8px; animation-delay: -0.1s; }
+.playingAnimation span:nth-child(1) { height: 10px; animation-delay: -0.9s; }
+.playingAnimation span:nth-child(2) { height: 16px; animation-delay: -0.8s; }
+.playingAnimation span:nth-child(3) { height: 12px; animation-delay: -0.7s; }
+.playingAnimation span:nth-child(4) { height: 18px; animation-delay: -0.6s; }
+.playingAnimation span:nth-child(5) { height: 10px; animation-delay: -0.5s; }
+.playingAnimation span:nth-child(6) { height: 16px; animation-delay: -0.4s; }
+.playingAnimation span:nth-child(7) { height: 8px; animation-delay: -0.3s; }
 
 @keyframes audioWave {
-    0% { transform: scaleY(0.6); }
+    0% { transform: scaleY(0.4); }
+    50% { transform: scaleY(0.8); }
     100% { transform: scaleY(1.2); }
 }
 
 .queueButton {
-    background-color: #f0f0f0;
+    background-color: rgba(240, 240, 240, 0.7);
     border: none;
     border-radius: 20px;
-    padding: 8px 16px;
-    font-size: 0.9rem;
+    padding: 6px 14px;
+    font-size: 0.85rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     color: #333;
     font-weight: 500;
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
 }
 
 .queueButton:hover {
-    background-color: #e3e3e3;
+    background-color: rgba(227, 227, 227, 0.9);
+    transform: translateX(-5px);
 }
 
-.queueView {
-    width: 100%;
-    max-width: 600px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    animation: slideInUp 0.3s ease;
+.queueButton span {
+    transition: transform 0.3s ease;
 }
 
-.queueTitle {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #333;
-    margin: 0;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
+.queueButton:hover span {
+    transform: translateX(2px);
 }
 
-.queueCount {
-    font-size: 0.9rem;
-    color: #777;
-    font-weight: 400;
-}
-
-.queueList {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-height: 50vh;
-    overflow-y: auto;
-    padding-right: 10px;
-}
-
-.queueList::-webkit-scrollbar {
-    width: 4px;
-}
-
-.queueList::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.queueList::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 4px;
-}
-
-.queueItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    border-radius: 8px;
-    background-color: #f8f8f8;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.queueItem:hover {
-    background-color: #f0f0f0;
-    transform: translateX(5px);
-}
-
-.queueItemActive {
-    background-color: #e7f0fd;
-    border-left: 3px solid #2c6ecb;
-}
-
-.queueItemActive:hover {
-    background-color: #dcebff;
-}
-
-.queueItemMain {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.queueItemCover {
-    width: 50px;
-    height: 50px;
-    border-radius: 6px;
-    object-fit: cover;
-}
-
-.queueItemInfo {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.queueItemTitle {
-    font-weight: 600;
-    color: #333;
-    font-size: 0.95rem;
-}
-
-.queueItemArtist {
-    color: #777;
-    font-size: 0.8rem;
-}
-
-.queueItemControls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.queueItemRemove {
-    background: transparent;
-    border: none;
-    color: #999;
-    cursor: pointer;
-    padding: 5px;
+.queueButton::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150%;
+    height: 150%;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 50%;
-    transition: all 0.2s ease;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    transition: transform 0.5s ease, opacity 0.5s ease;
 }
 
-.queueItemRemove:hover {
-    color: #ff3b30;
-    background-color: rgba(255, 59, 48, 0.1);
+.queueButton:active::after {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    transition: transform 0s ease, opacity 0.2s ease;
 }
 
-.queuePlayingIndicator {
-    display: flex;
-    align-items: flex-end;
-    height: 16px;
-    gap: 2px;
-}
-
-.queuePlayingIndicator span {
-    display: block;
-    width: 2px;
-    background-color: #2c6ecb;
-    border-radius: 2px;
-    animation: audioWave 0.8s infinite ease-in-out alternate;
-}
-
-.queuePlayingIndicator span:nth-child(1) { height: 8px; animation-delay: -0.4s; }
-.queuePlayingIndicator span:nth-child(2) { height: 14px; animation-delay: -0.2s; }
-.queuePlayingIndicator span:nth-child(3) { height: 6px; animation-delay: 0s; }
-
-.backToPlayerButton {
-    margin-top: 20px;
-    text-align: center;
-}
-
-.backToPlayerButton button {
-    background-color: transparent;
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    padding: 8px 20px;
-    color: #555;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.backToPlayerButton button:hover {
-    background-color: #f0f0f0;
-    border-color: #ccc;
-}
-
-.loadingContainer {
-    height: 100vh;
-    width: 100%;
+/* Карусель обложек */
+.coverCarousel {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #ffffff;
-}
-
-.loadingText {
-    font-size: 1.2rem;
-    color: #333;
-    animation: pulse 1.5s infinite ease-in-out;
-}
-
-@keyframes pulse {
-    0% { opacity: 0.5; }
-    50% { opacity: 1; }
-    100% { opacity: 0.5; }
-}
-
-.infoText {
-    position: absolute;
-    bottom: 10px;
-    text-align: center;
-    font-size: 0.8rem;
-    color: #aaa;
+    position: relative;
     width: 100%;
-    padding: 5px;
+    padding: 10px 0;
+    overflow: hidden;
+    perspective: 1000px;
 }
 
+.sideTrackCover {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: all 0.25s ease;
+    opacity: 0.8;
+    position: relative;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.prevTrackCover {
+    margin-right: -20px;
+    transform: translateX(-5px);
+    filter: brightness(0.9);
+}
+
+.nextTrackCover {
+    margin-left: -20px;
+    transform: translateX(5px);
+    filter: brightness(0.9);
+}
+
+.sideTrackImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: all 0.3s ease;
+    will-change: transform, opacity;
+}
+
+.prevTrackCover:hover {
+    transform: translateX(0);
+    opacity: 1;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+    z-index: 3;
+    filter: brightness(1);
+}
+
+.nextTrackCover:hover {
+    transform: translateX(0);
+    opacity: 1;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+    z-index: 3;
+    filter: brightness(1);
+}
+
+/* Состояния загрузки */
+.loading {
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.loaded {
+    opacity: 1;
+    transform: scale(1);
+    animation: fadeInScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes fadeInScale {
+    from { 
+        opacity: 0; 
+        transform: scale(0.9);
+    }
+    to { 
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.hasImage {
+    visibility: visible;
+    opacity: 0.65;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.noImage {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(-30px) scale(0.8);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.nextTrackCover.noImage {
+    transform: translateX(30px) scale(0.8);
+}
+
+/* Анимации */
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-@keyframes slideInUp {
+@keyframes fadeInUp {
     from { 
         opacity: 0; 
-        transform: translateY(20px);
+        transform: translateY(15px);
     }
     to { 
         opacity: 1;
@@ -546,77 +594,10 @@
     }
 }
 
-.playerBackground {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    filter: blur(80px);
-    opacity: 0.15;
-    z-index: -1;
-    transition: background-image 1s ease;
-}
-
-.coverCarousel {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    position: relative;
-    padding: 0 20px;
-}
-
-.sideTrackCover {
-    width: 120px;
-    height: 120px;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    opacity: 0.6;
-    transition: all 0.3s ease;
-    transform-origin: center;
-}
-
-.sideTrackCover:hover {
-    opacity: 0.8;
-    transform: scale(1.05);
-}
-
-.prevTrackCover {
-    margin-right: -30px;
-    transform: translateX(10px) scale(0.8) rotate(-8deg);
-    z-index: 1;
-}
-
-.nextTrackCover {
-    margin-left: -30px;
-    transform: translateX(-10px) scale(0.8) rotate(8deg);
-    z-index: 1;
-}
-
-.sideTrackImage {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.prevTrackCover:hover {
-    transform: translateX(5px) scale(0.85) rotate(-5deg);
-}
-
-.nextTrackCover:hover {
-    transform: translateX(-5px) scale(0.85) rotate(5deg);
-}
-
 @keyframes slideInRight {
     from {
         opacity: 0;
-        transform: translateX(-40px);
+        transform: translateX(-30px);
     }
     to {
         opacity: 1;
@@ -627,7 +608,7 @@
 @keyframes slideInLeft {
     from {
         opacity: 0;
-        transform: translateX(40px);
+        transform: translateX(30px);
     }
     to {
         opacity: 1;
@@ -635,13 +616,482 @@
     }
 }
 
-@keyframes rotateFade {
-    from {
-        opacity: 0;
-        transform: rotate(-12deg) scale(0.7);
-    }
-    to {
+/* Фон плеера */
+.playerBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(100px) saturate(180%);
+    opacity: 0.12;
+    z-index: -1;
+    transition: all 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: scale(1.1);
+    animation: pulseBackground 15s infinite alternate ease-in-out;
+}
+
+@keyframes pulseBackground {
+    0% { transform: scale(1.05); }
+    100% { transform: scale(1.15); }
+}
+
+/* Анимация нажатия кнопки */
+.buttonPulse {
+    animation: buttonPulseAnim 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes buttonPulseAnim {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+
+/* Анимация вращения кнопки */
+.buttonRotate {
+    animation: buttonRotateAnim 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes buttonRotateAnim {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(180deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Анимации переходов между треками */
+.slideNext {
+    animation: slideNextAnim 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideNextAnim {
+    0% { 
+        transform: translateX(0); 
         opacity: 1;
-        transform: rotate(0) scale(1);
     }
+    50% { 
+        transform: translateX(-20px);
+        opacity: 0.5;
+    }
+    51% {
+        transform: translateX(20px);
+        opacity: 0.5;
+    }
+    100% { 
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.slidePrev {
+    animation: slidePrevAnim 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slidePrevAnim {
+    0% { 
+        transform: translateX(0); 
+        opacity: 1;
+    }
+    50% { 
+        transform: translateX(20px);
+        opacity: 0.5;
+    }
+    51% {
+        transform: translateX(-20px);
+        opacity: 0.5;
+    }
+    100% { 
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Дополнительные стили для hover-эффектов */
+.repeatButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.repeatButton:hover {
+    transform: rotate(30deg);
+}
+
+/* Добавляем стили для информации о соседних треках */
+.sideTrackInfo {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    font-size: 0.7rem;
+    text-align: center;
+    pointer-events: none;
+    transform: translateY(100%);
+}
+
+.sideTrackCover:hover .sideTrackInfo {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.sideTrackTitle {
+    font-weight: bold;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sideTrackArtist {
+    opacity: 0.8;
+    font-size: 0.65rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Стили для отображения очереди воспроизведения */
+.queueView {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeInUp 0.5s ease;
+}
+
+.queueTitle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1.5rem;
+    margin: 0;
+    color: #333;
+}
+
+.queueCount {
+    font-size: 0.9rem;
+    color: #777;
+    font-weight: normal;
+    background: rgba(240, 240, 240, 0.7);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.queueList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+}
+
+.queueList::-webkit-scrollbar {
+    width: 6px;
+}
+
+.queueList::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.queueList::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 20px;
+}
+
+.queueItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.queueItem:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.queueItemActive {
+    background-color: rgba(44, 110, 203, 0.1);
+    border-left: 3px solid #2c6ecb;
+    animation: activeItemPulse 2s infinite ease-in-out;
+}
+
+@keyframes activeItemPulse {
+    0% { background-color: rgba(44, 110, 203, 0.1); }
+    50% { background-color: rgba(44, 110, 203, 0.2); }
+    100% { background-color: rgba(44, 110, 203, 0.1); }
+}
+
+.queueItemActive:hover {
+    background-color: rgba(44, 110, 203, 0.15);
+}
+
+.queueItemMain {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+}
+
+.queueItemCover {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    object-fit: cover;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.queueItemInfo {
+    overflow: hidden;
+}
+
+.queueItemTitle {
+    font-weight: 600;
+    margin-bottom: 2px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queueItemArtist {
+    font-size: 0.85rem;
+    color: #777;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queueItemControls {
+    display: flex;
+    gap: 8px;
+}
+
+.queueItemDrag, .queueItemRemove {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.queueItemDrag:hover, .queueItemRemove:hover {
+    color: #333;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.queueItemRemove span {
+    font-size: 1.4rem;
+    line-height: 0.8;
+}
+
+.backToPlayerButton {
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.backToPlayerButton button {
+    background-color: rgba(240, 240, 240, 0.7);
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease, background-color 0.2s ease;
+    color: #333;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.backToPlayerButton button:hover {
+    background-color: rgba(227, 227, 227, 0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.backToPlayerButton button span {
+    transition: transform 0.3s ease;
+}
+
+.backToPlayerButton button:hover span {
+    transform: translateX(2px);
+}
+
+.backToPlayerButton button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150%;
+    height: 150%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.backToPlayerButton button:active::after {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    transition: transform 0s ease, opacity 0.2s ease;
+}
+
+.queueNoTracks {
+    text-align: center;
+    padding: 40px 0;
+    color: #777;
+}
+
+/* Добавляем анимацию для текущего трека в очереди */
+.queueItemActiveIndicator {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 5px;
+}
+
+.queueItemActiveIndicator span {
+    display: block;
+    width: 2px;
+    background-color: #2c6ecb;
+    border-radius: 2px;
+    height: 10px;
+}
+
+.queueNowPlaying {
+    display: flex;
+    align-items: center;
+    color: #2c6ecb;
+    margin-left: 8px;
+    animation: pulseItem 2s infinite ease-in-out;
+}
+
+@keyframes pulseItem {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* Анимации перехода между представлениями */
+.viewTransitionOut {
+    animation: fadeOut 0.3s ease forwards;
+    pointer-events: none;
+    filter: blur(3px);
+}
+
+.viewTransitionIn {
+    animation: fadeInUp 0.4s ease forwards;
+    filter: blur(0);
+}
+
+@keyframes fadeOut {
+    0% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    100% { opacity: 0; transform: translateY(-30px); filter: blur(3px); }
+}
+
+@keyframes fadeInUp {
+    0% { 
+        opacity: 0; 
+        transform: translateY(30px);
+        filter: blur(3px);
+    }
+    100% { 
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+/* Улучшенная анимация для плавного перехода */
+.playerContent {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    will-change: opacity, transform;
+    position: relative;
+    perspective: 1000px;
+}
+
+/* Анимация для кнопки возврата к плееру */
+.backToPlayerButton button {
+    transition: all 0.3s ease, background-color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.backToPlayerButton button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150%;
+    height: 150%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.backToPlayerButton button:active::after {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    transition: transform 0s ease, opacity 0.2s ease;
+}
+
+/* Улучшенная анимация для кнопки очереди */
+.queueButton {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.queueButton::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150%;
+    height: 150%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.queueButton:active::after {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    transition: transform 0s ease, opacity 0.2s ease;
 } 

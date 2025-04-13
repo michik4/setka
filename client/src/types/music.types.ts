@@ -6,6 +6,13 @@ interface Track {
     coverUrl: string;
     audioUrl: string;
     playCount: number;
+    source?: {
+        type: string;
+        postId?: number;
+        authorId?: number;
+        authorName?: string;
+        // Другие возможные поля, характеризующие источник
+    };
 }
 
 export type { Track };

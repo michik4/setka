@@ -36,12 +36,16 @@
 .userActions {
     display: flex;
     align-items: center;
-    gap: 20px;
+}
+
+.playerControls {
+    display: flex;
+    align-items: center;
+    margin-right: 15px;
 }
 
 .miniPlayerWrapper {
     display: flex;
-    align-items: center;
 }
 
 .userInfo {

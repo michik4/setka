@@ -5,18 +5,19 @@
     margin-top: 1rem;
 }
 
-/* Стиль трека полностью соответствующий стилю в MusicPage */
+/* Более компактные стили треков */
 .auOrderTrack {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px;
-    border-radius: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
     background-color: rgba(255, 255, 255, 0.7);
     transition: all 0.2s ease;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     overflow: hidden;
+    margin-bottom: 4px;
 }
 
 .auOrderTrack:hover {
@@ -44,9 +45,9 @@
 
 .auOrderTrackImage {
     position: relative;
-    width: 50px;
-    height: 50px;
-    border-radius: 6px;
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
     overflow: hidden;
     flex-shrink: 0;
 }
@@ -67,7 +68,7 @@
 }
 
 .auOrderTitle {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 500;
     color: #2a5885;
     white-space: nowrap;
@@ -77,7 +78,7 @@
 }
 
 .auOrderArtist {
-    font-size: 13px;
+    font-size: 12px;
     color: #818c99;
     white-space: nowrap;
     overflow: hidden;
@@ -92,9 +93,9 @@
 }
 
 .auOrderTrackDuration {
-    font-size: 13px;
+    font-size: 12px;
     color: #818c99;
-    min-width: 35px;
+    min-width: 30px;
     text-align: right;
 }
 
@@ -228,26 +229,101 @@
     }
 }
 
-/* Стили для расширенного режима */
+/* Стили для расширенного режима - делаем компактнее */
 .expandedMode {
-    margin-top: 20px;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
 }
 
 .expandedMode .auOrderTrack {
-    background-color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 6px;
+    padding: 8px 10px;
 }
 
-/* Фиксированные размеры для обложки даже в расширенном режиме */
 .expandedMode .auOrderTrackImage {
-    width: 50px;
-    height: 50px;
-    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
 }
 
-.expandedMode .auOrderTrackImage img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.expandedMode .auOrderTrackInfo {
+    gap: 3px;
+}
+
+.expandedMode .auOrderTitle {
+    font-size: 13px;
+}
+
+.expandedMode .auOrderArtist {
+    font-size: 12px;
+}
+
+.expandedMode .auOrderTrackDuration {
+    font-size: 12px;
+    min-width: 35px;
+}
+
+.expandedMode .deleteButton {
+    width: 26px;
+    height: 26px;
+    opacity: 0.6;
+}
+
+/* Адаптивность для музыкальной страницы */
+@media (max-width: 768px) {
+    .expandedMode {
+        max-height: none;
+    }
+    
+    .expandedMode .auOrderTrackImage {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .expandedMode .auOrderTitle {
+        font-size: 16px;
+    }
+    
+    .expandedMode .auOrderArtist {
+        font-size: 14px;
+    }
+}
+
+/* Анимация для отображения текущего проигрываемого трека */
+.activeTrack .playingIcon span:nth-child(1) {
+    animation: sound 0.8s infinite alternate;
+    animation-delay: 0s;
+}
+
+.activeTrack .playingIcon span:nth-child(2) {
+    animation: sound 0.8s infinite alternate;
+    animation-delay: 0.2s;
+}
+
+.activeTrack .playingIcon span:nth-child(3) {
+    animation: sound 0.8s infinite alternate;
+    animation-delay: 0.4s;
+}
+
+.activeTrack .playingIcon span:nth-child(4) {
+    animation: sound 0.8s infinite alternate;
+    animation-delay: 0.3s;
+}
+
+.activeTrack .playingIcon span:nth-child(5) {
+    animation: sound 0.8s infinite alternate;
+    animation-delay: 0.1s;
+}
+
+@keyframes sound {
+    0% {
+        opacity: 0.35;
+        height: 3px;
+    }
+    100% {
+        opacity: 1;
+        height: 15px;
+    }
 }
 
 
