@@ -1114,4 +1114,17 @@
     background: #4a76a8;
     cursor: pointer;
     border: none;
+}
+
+.uploadOptionsList {
+    list-style: disc;
+    margin-left: 20px;
+    margin-top: 10px;
+    text-align: left;
+    font-size: 14px;
+    color: var(--text-color-secondary);
+}
+
+.uploadOptionsList li {
+    margin-bottom: 8px;
 } 

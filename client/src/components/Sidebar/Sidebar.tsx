@@ -50,6 +50,16 @@ const Sidebar: React.FC = () => {
           </Link>
         </li>
         <li className={styles.navItem}>
+          <Link to="/groups" className={`${styles.navLink} ${isActive('/groups') ? styles.active : ''}`}>
+            <div className={styles.navIcon}>
+              <svg fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
+                <path d="M6.5 6a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm0-1.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm7 1.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm0-1.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm-7 4.5a3.5 3.5 0 0 0-3.5 3.5c0 .64.16 1.23.43 1.76a.5.5 0 0 0 .87-.49A2.5 2.5 0 0 1 6.5 11 2.5 2.5 0 0 1 9 13.5c0 .17-.02.34-.05.5h2.1a3.5 3.5 0 0 0-.05-.5c0-1.94 1.56-3.5 3.5-3.5a3.5 3.5 0 0 0 3.5 3.5c.17 0 .33-.02.5-.05v-1.05c-.2.06-.4.1-.6.1a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5c.2 0 .4.04.6.1v-1.05a3.5 3.5 0 0 0-4 3.45c0 .17.02.33.05.5h-2.1c.03-.17.05-.33.05-.5a3.5 3.5 0 0 0-3.5-3.5Z"/>
+              </svg>
+            </div>
+            <span>Сообщества</span>
+          </Link>
+        </li>
+        <li className={styles.navItem}>
           <Link to="/music" className={`${styles.navLink} ${isActive('/music') ? styles.active : ''}`}>
             <div className={styles.navIcon}>
               <svg fill="currentColor" width="20" height="20" viewBox="0 0 20 20">

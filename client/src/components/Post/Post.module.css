@@ -210,29 +210,56 @@
 
 /* Стили для треков */
 .tracks {
-    margin-top: 12px;
-    padding: 8px;
-    border-radius: 8px;
-    background-color: #f5f5f5;
+    margin: 12px 0;
+    border-radius: 12px;
+    background-color: #f7f8fa;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    flex-wrap: nowrap !important;
 }
 
+/* Расширенные стили для контейнера треков */
 .trackItem {
-    display: flex;
+    display: flex !important;
     align-items: center;
-    margin-bottom: 8px;
-    padding: 8px;
-    border-radius: 6px;
-    background-color: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 8px 10px;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    width: 100% !important;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    flex-wrap: nowrap !important;
+    flex-direction: row !important;
+}
+
+.trackItem:last-child {
+    border-bottom: none;
+}
+
+.trackItem:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.trackItem.playing {
+    background-color: rgba(74, 118, 168, 0.08);
+}
+
+.trackItem.playing .trackTitle {
+    color: #4a76a8;
 }
 
 .trackCover {
     position: relative;
-    width: 56px;
-    height: 56px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
     margin-right: 12px;
     border-radius: 4px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .trackCoverImage {
@@ -250,61 +277,114 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(0, 0, 0, 0.4);
+    background-color: rgba(0, 0, 0, 0.5);
     color: white;
     border: none;
     cursor: pointer;
     font-size: 18px;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, background-color 0.2s;
 }
 
 .trackCover:hover .playButton {
     opacity: 1;
 }
 
+.playButton:hover {
+    background-color: rgba(0, 0, 0, 0.65);
+}
+
 .trackInfo {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0; /* Предотвращает переполнение контейнера */
 }
 
 .trackTitle {
     font-weight: 500;
-    font-size: 14px;
-    margin-bottom: 4px;
+    font-size: 13px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .trackArtist {
     font-size: 12px;
-    color: #616161;
-    margin-bottom: 4px;
+    color: #71757b;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .trackDuration {
     font-size: 11px;
-    color: #9e9e9e;
+    color: #939699;
+    display: flex;
+    align-items: center;
+}
+
+.playCount {
+    margin-left: 4px;
+    color: #939699;
 }
 
 /* Стили для редактирования треков */
 .editTracks {
     margin-top: 12px;
-    padding: 8px;
-    border-radius: 8px;
-    background-color: #f5f5f5;
+    padding: 12px;
+    border-radius: 10px;
+    background-color: #f7f8fa;
+    border: 1px solid #e7e8ec;
 }
 
 .trackDeleteBtn {
     background-color: #f44336;
     color: white;
     border: none;
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 16px;
-    margin-left: 8px;
+    font-size: 14px;
+    margin-left: 10px;
+    transition: background-color 0.2s;
+}
+
+.trackDeleteBtn:hover {
+    background-color: #d32f2f;
+}
+
+.albums {
+    margin: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .trackCover {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        margin-right: 10px;
+    }
+
+    .trackTitle {
+        font-size: 12px;
+    }
+
+    .trackArtist {
+        font-size: 11px;
+    }
+    
+    .trackDuration {
+        font-size: 10px;
+    }
 } 

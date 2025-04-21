@@ -56,7 +56,7 @@ router.get('/:userId', authenticateSession, handleRequest(wallController.getWall
 router.post('/', authenticateSession, handleRequest(wallController.createWallPost.bind(wallController)));
 
 // Новый эндпоинт для создания поста на стене с поддержкой загрузки файлов
-router.post('/posts', authenticateSession, upload.array('photos', 4), handleRequest(wallController.createWallPost.bind(wallController)));
+router.post('/posts', authenticateSession, upload.array('photos', 20), handleRequest(wallController.createWallPost.bind(wallController)));
 
 // Удаление записи со стены
 router.delete('/:postId', authenticateSession, handleRequest(wallController.deleteWallPost.bind(wallController)));

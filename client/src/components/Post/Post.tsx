@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { Post as PostType } from '../../types/post.types';
 import { Photo } from '../../types/post.types';
 import { Track } from '../../types/music.types';
+import { Album } from '../../types/album.types';
 import { PhotoGrid } from '../PhotoGrid/PhotoGrid';
+import { AlbumGrid } from '../AlbumGrid/AlbumGrid';
 import { ImageUploader } from '../ImageUploader/ImageUploader';
 import { ImageSelector } from '../ImageSelector/ImageSelector';
 import { useAuth } from '../../contexts/AuthContext';
@@ -336,6 +338,26 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         }
     }, [post.tracks]);
 
+    // Функция для правильного склонения слов в зависимости от числа
+    const getProperWordForm = (count: number, forms: [string, string, string]): string => {
+        const remainder100 = Math.abs(count) % 100;
+        const remainder10 = remainder100 % 10;
+        
+        if (remainder100 > 10 && remainder100 < 20) {
+            return forms[2];
+        }
+        
+        if (remainder10 > 1 && remainder10 < 5) {
+            return forms[1];
+        }
+        
+        if (remainder10 === 1) {
+            return forms[0];
+        }
+        
+        return forms[2];
+    };
+
     return (
         <div className={styles.post}>
             <div className={styles.header}>
@@ -394,6 +416,9 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                                     <div className={styles.trackInfo}>
                                         <div className={styles.trackTitle}>{track.title}</div>
                                         <div className={styles.trackArtist}>{track.artist}</div>
+                                        {track.duration && (
+                                            <div className={styles.trackDuration}>{track.duration}</div>
+                                        )}
                                     </div>
                                     <button
                                         className={styles.trackDeleteBtn}
@@ -458,12 +483,28 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                             onPhotoClick={handlePhotoClick}
                         />
                     )}
+                    
+                    {/* Отображение альбомов в посте */}
+                    {post.albums && post.albums.length > 0 && (
+                        <div className={styles.albums}>
+                            {post.albums.map(album => (
+                                <AlbumGrid
+                                    key={album.id}
+                                    album={album}
+                                />
+                            ))}
+                        </div>
+                    )}
 
                     {/* Отображение треков в посте */}
                     {post.tracks && post.tracks.length > 0 && (
-                        <div className={styles.tracks}>
+                        <div className={styles.tracks} style={{ display: 'flex', flexDirection: 'column' }}>
                             {post.tracks.map(track => (
-                                <div key={track.id} className={styles.trackItem}>
+                                <div 
+                                    key={track.id} 
+                                    className={`${styles.trackItem} ${playerCurrentTrack?.id === track.id && playerIsPlaying ? styles.playing : ''}`}
+                                    style={{ display: 'flex', width: '100%' }}
+                                >
                                     <div className={styles.trackCover}>
                                         <img 
                                             src={track.coverUrl} 
@@ -495,7 +536,14 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                                     <div className={styles.trackInfo}>
                                         <div className={styles.trackTitle}>{track.title}</div>
                                         <div className={styles.trackArtist}>{track.artist}</div>
-                                        <div className={styles.trackDuration}>{track.duration}</div>
+                                        <div className={styles.trackDuration}>
+                                            {track.duration}
+                                            {track.playCount > 0 && (
+                                                <span className={styles.playCount}>
+                                                    • {track.playCount} {getProperWordForm(track.playCount, ['прослушивание', 'прослушивания', 'прослушиваний'])}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}

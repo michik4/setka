@@ -142,6 +142,21 @@ export class MusicController {
     async uploadTrack(req: any, audioFile: Express.Multer.File, coverFile: Express.Multer.File | null): Promise<MusicTrack> {
         try {
             console.log('[MusicController] Обработка загрузки трека:', audioFile.originalname);
+            console.log('[MusicController] Информация о файле:', {
+                путь: audioFile.path,
+                размер: audioFile.size,
+                тип: audioFile.mimetype,
+                поле: audioFile.fieldname
+            });
+            
+            // Проверка доступности директории для записи
+            const dir = path.dirname(audioFile.path);
+            try {
+                fs.accessSync(dir, fs.constants.W_OK);
+                console.log(`[MusicController] Директория ${dir} доступна для записи`);
+            } catch (accessError) {
+                console.error(`[MusicController] Директория ${dir} НЕ доступна для записи:`, accessError);
+            }
             
             // Проверка формата файла
             const acceptedFormats = ['.mp3', '.wav', '.ogg', '.m4a', '.flac'];
@@ -152,9 +167,9 @@ export class MusicController {
             }
             
             // Проверка максимального размера файла (25 МБ)
-            const maxFileSize = 25 * 1024 * 1024;
+            const maxFileSize = 25 * 1024 * 2048;
             if (audioFile.size > maxFileSize) {
-                throw new Error(`Файл слишком большой: ${Math.round(audioFile.size / (1024 * 1024))} МБ. Максимальный размер: 25 МБ`);
+                throw new Error(`Файл слишком большой: ${Math.round(audioFile.size / (1024 * 2048))} МБ. Максимальный размер: 25 МБ`);
             }
             
             // Определяем, нужно ли извлекать метаданные

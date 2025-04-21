@@ -6,7 +6,7 @@ import { Track as DemoTrack, getDemoTracks } from './demoTracks';
 import AuPlayerWrap from '../components/AuPlayer/wrap/AuPlayWrap';
 import AuOrder from '../components/AuPlayer/AuOrder';
 import { usePlayer } from '../contexts/PlayerContext';
-import UploadAudio from '../components/UploadAudio';
+import UploadAudio, { MultiUploadAudio } from '../components/UploadAudio';
 // Получаем URL API из переменных окружения
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || '/api/media';
@@ -436,6 +436,37 @@ export const MusicPage: React.FC = () => {
         }));
     };
 
+    // Обработчик для множественной загрузки треков
+    const handleTracksUploaded = (newTracks: any[]) => {
+        console.log(`[Music] Добавлено ${newTracks.length} новых треков`);
+        
+        // Конвертируем в формат Track
+        const convertedTracks: Track[] = newTracks.map(track => ({
+            id: track.id || 0,
+            title: track.title || 'Неизвестный трек',
+            artist: track.artist || 'Неизвестный исполнитель',
+            duration: track.duration || '0:00',
+            coverUrl: track.coverUrl || '/api/music/cover/default.png',
+            audioUrl: track.filename ? `${API_URL}/music/file/${track.filename}` : '',
+            playCount: track.playCount || 0
+        }));
+        
+        // Добавляем треки в начало списка
+        setTracks(prev => [...convertedTracks, ...prev]);
+        
+        // Обновляем информацию о пагинации
+        setPagination(prev => ({
+            ...prev,
+            total: prev.total + convertedTracks.length,
+            pages: Math.ceil((prev.total + convertedTracks.length) / prev.limit)
+        }));
+        
+        // Добавляем их в очередь плеера
+        if (convertedTracks.length > 0) {
+            setQueueTracks(prev => [...convertedTracks, ...prev]);
+        }
+    };
+
     // Вкладка "Моя музыка"
     const renderMyMusicTab = () => {
         return (
@@ -467,7 +498,11 @@ export const MusicPage: React.FC = () => {
                     ) : tracks.length === 0 ? (
                         <div className={styles.emptyState}>
                             <p>У вас пока нет загруженных треков</p>
-                            <p>Нажмите на кнопку "+" в правом нижнем углу, чтобы добавить новый трек</p>
+                            <p>Вы можете загрузить музыку двумя способами:</p>
+                            <ul className={styles.uploadOptionsList}>
+                                <li>Нажмите на кнопку "+" в правом нижнем углу, чтобы добавить один трек</li>
+                                <li>Нажмите на кнопку "Загрузить музыку" для множественной загрузки треков</li>
+                            </ul>
                         </div>
                     ) : (
                         <div className={styles.trackList}>
@@ -739,6 +774,9 @@ export const MusicPage: React.FC = () => {
 
                 {/* Добавляем компонент загрузки аудио */}
                 <UploadAudio onTrackUploaded={handleTrackUploaded} />
+                
+                {/* Добавляем компонент множественной загрузки музыки */}
+                <MultiUploadAudio onTracksUploaded={handleTracksUploaded} />
 
                 {/* Аудио плеер - передаем флаг expandedMode */}
                 <div className={styles.playerContainer}>

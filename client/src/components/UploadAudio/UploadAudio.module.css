@@ -260,4 +260,212 @@
 .uploadButtonIcon {
     width: 24px;
     height: 24px;
+}
+
+/* Стили для множественной загрузки */
+.multiUploadButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.multiUploadModal {
+    max-width: 700px;
+    max-height: 90vh;
+}
+
+.dropZone {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.dropZone:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(var(--primary-rgb), 0.05);
+}
+
+.dropZoneLabel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    color: var(--text-color-secondary);
+}
+
+.dropZoneLabel svg {
+    opacity: 0.7;
+    margin-bottom: 8px;
+}
+
+.dropZoneLabel span {
+    font-size: 16px;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.dropZoneHint {
+    font-size: 14px !important;
+    color: var(--text-color-secondary) !important;
+    font-weight: normal !important;
+    margin-top: 4px;
+}
+
+.selectedFilesWrap {
+    margin-bottom: 20px;
+    background-color: var(--background-color-secondary);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.selectedFilesTitle {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.selectedFilesList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.selectedFile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+}
+
+.selectedFile:last-child {
+    border-bottom: none;
+}
+
+.selectedFileName {
+    flex: 1;
+    margin-right: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.selectedFileSize {
+    color: var(--text-color-secondary);
+    margin-right: 10px;
+    white-space: nowrap;
+}
+
+.removeFileBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--text-color-secondary);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.removeFileBtn:hover {
+    background-color: rgba(255, 0, 0, 0.1);
+    color: var(--error-color);
+}
+
+.uploadResults {
+    margin: 20px 0;
+}
+
+.uploadResultsTitle {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.uploadResultsList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.uploadResultItem {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.uploadResultItem:last-child {
+    border-bottom: none;
+}
+
+.uploadResultItem.success {
+    background-color: rgba(0, 128, 0, 0.05);
+}
+
+.uploadResultItem.error {
+    background-color: rgba(255, 0, 0, 0.05);
+}
+
+.resultFileName {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.resultStatus {
+    font-size: 13px;
+    color: var(--text-color-secondary);
+}
+
+.uploadResultItem.success .resultStatus {
+    color: var(--success-color);
+}
+
+.uploadResultItem.error .resultStatus {
+    color: var(--error-color);
+}
+
+.resetButton {
+    background-color: var(--background-color-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 10px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 15px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.resetButton:hover {
+    background-color: var(--background-color);
+    border-color: var(--primary-color);
 } 

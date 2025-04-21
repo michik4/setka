@@ -4,13 +4,17 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { Repository, DeepPartial } from 'typeorm'
 import { Photo } from '../entities/photo.entity'
 import { Post } from '../entities/post.entity'
+import { AppDataSource } from '../db/db_connect'
 
 @Injectable()
 export class UserService {
-    constructor(
-        private userRepository: Repository<User>,
-        private photoRepository: Repository<Photo>
-    ) {}
+    private userRepository: Repository<User>;
+    private photoRepository: Repository<Photo>;
+
+    constructor() {
+        this.userRepository = AppDataSource.getRepository(User);
+        this.photoRepository = AppDataSource.getRepository(Photo);
+    }
 
     async createUser(userData: DeepPartial<User>) {
         console.log('Создание пользователя:', { email: userData.email })

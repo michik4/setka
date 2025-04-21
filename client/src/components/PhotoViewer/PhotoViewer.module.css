@@ -344,6 +344,8 @@
     padding: 70px 15px 15px;
     overflow-y: auto;
     transition: transform 0.3s ease, opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Заголовок очереди с кнопками переключения режима */

@@ -15,6 +15,7 @@ import { TrackSelector } from '../TrackSelector';
 interface CreatePostFormProps {
     onSuccess?: () => void;
     wallOwnerId?: number;
+    groupId?: number;
 }
 
 interface AttachmentBase {
@@ -39,7 +40,7 @@ interface TrackAttachment extends AttachmentBase {
 
 type Attachment = PhotoAttachment | AlbumAttachment | TrackAttachment;
 
-export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallOwnerId }) => {
+export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallOwnerId, groupId }) => {
     const { user } = useAuth();
     const [content, setContent] = useState('');
     const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -142,8 +143,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
 
             // Проверяем количество уже прикрепленных фотографий
             const currentPhotoCount = attachments.filter(a => a.type === 'photo').length;
-            if (currentPhotoCount >= 4) {
-                handleUploadError('Нельзя прикрепить больше 4 фотографий к посту');
+            if (currentPhotoCount >= 20) {
+                handleUploadError('Нельзя прикрепить больше 20 фотографий к посту');
                 return;
             }
 
@@ -198,8 +199,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const handleTrackUploaded = (track: Track) => {
         // Проверяем количество уже прикрепленных треков
         const currentTrackCount = attachments.filter(a => a.type === 'track').length;
-        if (currentTrackCount >= 1) {
-            setError('Нельзя прикрепить больше 1 трека к посту');
+        if (currentTrackCount >= 10) {
+            setError('Нельзя прикрепить больше 10 треков к посту');
             return;
         }
 
@@ -230,8 +231,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         const currentPhotoCount = attachments.filter(a => a.type === 'photo').length;
         const totalPhotos = currentPhotoCount + photos.length;
         
-        if (totalPhotos > 4) {
-            setError('Нельзя прикрепить больше 4 фотографий к посту');
+        if (totalPhotos > 20) {
+            setError('Нельзя прикрепить больше 20 фотографий к посту');
             return;
         }
 
@@ -302,7 +303,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
             return;
         }
 
-        if (!content.trim() && attachments.length === 0) {
+        // Проверяем наличие контента или вложений
+        if (!content && attachments.length === 0) {
             setError('Добавьте текст или выберите медиа');
             return;
         }
@@ -311,45 +313,53 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         setError(null);
 
         try {
-            // Извлекаем ID треков
-            const trackAttachments = attachments.filter((a): a is TrackAttachment => a.type === 'track');
-            const trackIds = trackAttachments.map(a => a.id);
-            
-            console.log('Треки для отправки:', trackAttachments);
-            console.log('ID треков для отправки:', trackIds);
-            
-            const endpoint = wallOwnerId ? '/wall' : '/posts';
-            const body = {
-                content: content.trim(),
-                photoIds: attachments
-                    .filter((a): a is PhotoAttachment => a.type === 'photo')
-                    .map(a => a.id),
-                albumIds: attachments
-                    .filter((a): a is AlbumAttachment => a.type === 'album')
-                    .map(a => a.id),
-                trackIds: trackIds,
+            console.log('Отправка поста с данными:', {
+                content: content,
+                attachments: attachments.map(a => ({ type: a.type, id: a.id })),
                 authorId: user.id,
-                ...(wallOwnerId && { wallOwnerId })
+                ...(wallOwnerId && { wallOwnerId }),
+                ...(groupId && { groupId })
+            });
+
+            // Подготавливаем данные для отправки
+            const photoIds = attachments.filter((a): a is PhotoAttachment => a.type === 'photo').map(a => a.id);
+            const albumIds = attachments.filter((a): a is AlbumAttachment => a.type === 'album').map(a => a.id);
+            const trackIds = attachments.filter((a): a is TrackAttachment => a.type === 'track').map(a => a.id);
+
+            // Превращаем массивы в JSON строки
+            const photoIdsJson = JSON.stringify(photoIds);
+            const albumIdsJson = JSON.stringify(albumIds);
+            const trackIdsJson = JSON.stringify(trackIds);
+
+            console.log('Подготовленные данные для отправки:', {
+                photoIds: photoIdsJson,
+                albumIds: albumIdsJson,
+                trackIds: trackIdsJson
+            });
+
+            // Создаем объект данных для отправки
+            const postData = {
+                content: content,
+                photoIds: photoIdsJson,
+                albumIds: albumIdsJson,
+                trackIds: trackIdsJson,
+                authorId: user.id,
+                ...(wallOwnerId && { wallOwnerId }),
+                ...(groupId && { groupId })
             };
 
-            console.log('Отправка данных поста:', JSON.stringify(body, null, 2));
-            
-            // Добавляем трек напрямую в запрос, для гарантии
-            const requestBody: any = {...body};
-            if (trackIds.length > 0) {
-                console.log(`Добавляем трек ${trackIds[0]} напрямую в запрос`);
-                requestBody.trackId = trackIds[0];
-            }
+            console.log('Итоговые данные поста перед отправкой:', postData);
 
-            const response = await api.post(endpoint, requestBody);
+            // Отправляем запрос
+            const response = await api.post('/posts', postData);
             console.log('Ответ сервера при создании поста:', response);
             
             setContent('');
             setAttachments([]);
             onSuccess?.();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Ошибка при создании поста:', err);
-            setError(err instanceof Error ? err.message : 'Произошла ошибка');
+            setError(err.message || 'Произошла ошибка при публикации поста');
         } finally {
             setIsSubmitting(false);
         }
@@ -368,19 +378,22 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const handleTracksSelected = (tracks: Track[]) => {
         // Проверяем количество уже прикрепленных треков
         const currentTrackCount = attachments.filter(a => a.type === 'track').length;
-        if (currentTrackCount >= 1 || tracks.length > 1) {
-            setError('Нельзя прикрепить больше 1 трека к посту');
+        const totalTracks = currentTrackCount + tracks.length;
+        
+        if (totalTracks > 10) {
+            setError('Нельзя прикрепить больше 10 треков к посту');
             setShowTrackSelector(false);
             return;
         }
 
-        // Добавляем выбранный трек
+        // Добавляем выбранные треки
         if (tracks.length > 0) {
-            const track = tracks[0];
-            const newAttachment: TrackAttachment = { type: 'track', id: track.id, data: track };
+            const newAttachments = tracks.map(track => {
+                return { type: 'track' as const, id: track.id, data: track };
+            });
             
-            // Обновляем состояние с новым вложением
-            setAttachments(prev => [...prev, newAttachment]);
+            // Обновляем состояние с новыми вложениями
+            setAttachments(prev => [...prev, ...newAttachments]);
             
             // Устанавливаем состояние expanded, чтобы показать прикрепления
             setIsExpanded(true);
@@ -423,7 +436,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                     value={content}
                     onChange={handleTextareaChange}
                     onFocus={handleTextareaFocus}
-                    placeholder={wallOwnerId ? "Напишите что-нибудь на стене..." : "Что у вас нового?"}
+                    placeholder={wallOwnerId ? "Напишите что-нибудь на стене..." : (groupId ? "Написать от имени сообщества..." : "Что у вас нового?")}
                     rows={isExpanded ? 4 : 1}
                 />
             </div>
@@ -588,7 +601,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                         userId={user.id}
                         onSelect={handleTracksSelected}
                         onCancel={() => setShowTrackSelector(false)}
-                        multiple={false}
+                        multiple={true}
                     />
                 </div>
             )}
@@ -608,7 +621,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                                 {(photoAttachments.length > 0 && (albumAttachments.length > 0 || trackAttachments.length > 0)) && ', '}
                                 {albumAttachments.length > 0 && `${albumAttachments.length} альбом${albumAttachments.length > 1 ? 'а' : ''}`}
                                 {(albumAttachments.length > 0 && trackAttachments.length > 0) && ', '}
-                                {trackAttachments.length > 0 && `${trackAttachments.length} трек`}
+                                {trackAttachments.length > 0 && `${trackAttachments.length} трек${trackAttachments.length > 1 ? 'а' : ''}`}
                             </>
                         )}
                     </span>

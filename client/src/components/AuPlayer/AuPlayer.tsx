@@ -353,7 +353,7 @@ const AuPlayer = () => {
     const openInNewWindow = useCallback(() => {
         // Определяем размеры окна
         const width = 550;
-        const height = 630;
+        const height = 650;
         const left = window.screenX + (window.outerWidth - width) / 2;
         const top = window.screenY + (window.outerHeight - height) / 2;
 

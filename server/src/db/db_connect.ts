@@ -11,6 +11,8 @@ import { WallPost } from "../entities/wall.entity"
 import { Like } from "../entities/like.entity"
 import { MusicTrack } from "../entities/music.entity"
 import { Album } from "../entities/album.entity"
+import { Group } from "../entities/group.entity"
+import { PostAlbum } from "../entities/post_album.entity"
 import { AddUserStatus1710000000000 } from "../migrations/1710000000000-AddUserStatus"
 import { AddUserAvatar1710000000001 } from "../migrations/1710000000001-AddUserAvatar"
 import { AddWallPostIdToPhotos1710000000002 } from "../migrations/1710000000002-AddWallPostIdToPhotos"
@@ -18,6 +20,7 @@ import { ChangePhotoRelations1710000000003 } from "../migrations/1710000000003-C
 import { AddPhotoExtensionAndIsDeleted1709123456789 } from "../migrations/1709123456789-AddPhotoExtensionAndIsDeleted"
 import { CreateMusicTable1680078632000 } from "../migrations/1680078632000-CreateMusicTable"
 import { CreatePostsTracks1680078633000 } from "../migrations/1680078633000-CreatePostsTracks"
+import { CreateGroups1743000000000 } from "../migrations/1743000000000-CreateGroups"
 
 // Загружаем переменные окружения
 dotenv.config()
@@ -30,10 +33,10 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USERNAME || "postgres",
     password: process.env.DB_PASSWORD || "postgres",
     database: process.env.DB_NAME || "setka",
-    synchronize: true,
+    synchronize: false,
     dropSchema: false,
     logging: process.env.NODE_ENV !== "production",
-    entities: [User, Post, Photo, Session, Chat, Message, WallPost, Like, Album, MusicTrack],
+    entities: [User, Post, Photo, Session, Chat, Message, WallPost, Like, Album, MusicTrack, Group, PostAlbum],
     migrations: [
         AddUserStatus1710000000000,
         AddUserAvatar1710000000001,
@@ -41,7 +44,8 @@ export const AppDataSource = new DataSource({
         ChangePhotoRelations1710000000003,
         AddPhotoExtensionAndIsDeleted1709123456789,
         CreateMusicTable1680078632000,
-        CreatePostsTracks1680078633000
+        CreatePostsTracks1680078633000,
+        CreateGroups1743000000000
     ],
     subscribers: [],
     migrationsTableName: "migrations"

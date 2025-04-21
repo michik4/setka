@@ -10,10 +10,7 @@ import { AuthenticatedRequest } from '../types/express'
 import multer from 'multer'
 
 const router = Router()
-const userService = new UserService(
-    AppDataSource.getRepository(User),
-    AppDataSource.getRepository(Photo)
-)
+const userService = new UserService()
 const userController = new UserController(userService)
 
 // Публичные маршруты

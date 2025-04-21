@@ -54,10 +54,7 @@ export class WebSocketService {
       console.log('Метод запроса:', req.method);
     });
 
-    this.userService = new UserService(
-      AppDataSource.getRepository(User),
-      AppDataSource.getRepository(Photo)
-    );
+    this.userService = new UserService();
     this.setupSocketHandlers();
   }
 

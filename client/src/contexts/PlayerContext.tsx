@@ -72,7 +72,7 @@ export interface PlayerContextProps {
 const PlayerContext = createContext<PlayerContextProps | undefined>(undefined);
 
 // URL API
-const API_URL = process.env.REACT_APP_API_URL || 'https://rich-socks-dance.loca.lt/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 // Глобальная переменная для хранения состояния проигрывания
 interface PlayerState {

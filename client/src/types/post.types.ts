@@ -1,4 +1,5 @@
 import { Track } from './music.types';
+import { Album } from './album.types';
 
 export interface User {
     id: number;
@@ -36,6 +37,7 @@ export interface Post {
     authorId: number;
     wallOwnerId?: number;
     photos: Photo[];
+    albums?: Album[];
     tracks?: Track[];
     likesCount: number;
     commentsCount: number;

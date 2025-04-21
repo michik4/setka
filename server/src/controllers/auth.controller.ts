@@ -13,10 +13,7 @@ export class AuthController {
     private sessionService: SessionService;
 
     constructor() {
-        this.userService = new UserService(
-            AppDataSource.getRepository(User),
-            AppDataSource.getRepository(Photo)
-        );
+        this.userService = new UserService();
         this.sessionService = new SessionService();
     }
 

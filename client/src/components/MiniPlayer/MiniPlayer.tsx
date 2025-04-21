@@ -156,7 +156,7 @@ const MiniPlayer: React.FC = () => {
         const newWindow = window.open(
             '/player',
             'playerWindow',
-            'width=550,height=630,resizable=yes,scrollbars=no,status=no,location=no,toolbar=no,menubar=no'
+            'width=550,height=650,resizable=yes,scrollbars=no,status=no,location=no,toolbar=no,menubar=no'
         );
         
         if (newWindow) {

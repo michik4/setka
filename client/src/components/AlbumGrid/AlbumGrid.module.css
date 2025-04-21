@@ -1,9 +1,33 @@
+.albumContainer {
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f9f9f9;
+    border: 1px solid #e7e8ec;
+}
+
+.albumHeader {
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e7e8ec;
+    background: #fff;
+}
+
+.albumTitle {
+    font-weight: 500;
+    font-size: 14px;
+    color: #2a5885;
+}
+
+.albumCount {
+    font-size: 13px;
+    color: #818c99;
+}
+
 .photoGrid {
     display: grid;
     gap: 2px;
-    margin: 10px 0;
-    border-radius: 6px;
-    overflow: hidden;
     max-width: 100%;
 }
 
@@ -113,14 +137,8 @@
     grid-row: 1;
 }
 
-/* Скрываем фотографии после пятой */
-.manyPhotos .photoWrapper:nth-child(n+6) {
-    display: none;
-}
-
-/* Добавляем индикатор количества дополнительных фотографий если их больше 5 */
-.manyPhotos .photoWrapper:nth-child(5)::after {
-    content: "+" attr(data-remaining);
+/* Индикатор дополнительных фотографий */
+.morePhotos {
     position: absolute;
     top: 0;
     left: 0;
@@ -136,48 +154,11 @@
     z-index: 1;
 }
 
-/* Меню фотографии */
-.photoMenu {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: none;
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 4px;
-    padding: 4px;
-}
-
-.photoWrapper:hover .photoMenu {
-    display: block;
-}
-
-.menuButton {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 4px 8px;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    transition: background-color 0.2s;
-}
-
-.menuButton:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-}
-
-.deleteButton {
-    color: #ff5c5c;
-}
-
 /* Адаптивность для мобильных устройств */
 @media (max-width: 768px) {
     .photoGrid {
         max-width: 100%;
-        gap: 2px;
+        gap: 1px;
     }
 
     .singlePhoto,
@@ -187,37 +168,4 @@
     .manyPhotos {
         max-height: 350px;
     }
-}
-
-.deleteButton {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.4);
-    border: none;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.2s;
-    z-index: 2;
-}
-
-.deleteButton::before {
-    content: "×";
-    font-size: 20px;
-    line-height: 1;
-}
-
-.photoWrapper:hover .deleteButton {
-    opacity: 1;
-}
-
-.deleteButton:hover {
-    background: rgba(0, 0, 0, 0.6);
-}
+} 

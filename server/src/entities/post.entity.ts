@@ -3,6 +3,9 @@ import { User } from "./user.entity";
 import { Photo } from "./photo.entity";
 import { WallPost } from "./wall.entity";
 import { MusicTrack } from "./music.entity";
+import { Group } from "./group.entity";
+import { Album } from "./album.entity";
+import { PostAlbum } from "./post_album.entity";
 
 @Entity("posts")
 export class Post {
@@ -17,6 +20,12 @@ export class Post {
 
     @Column()
     authorId: number;
+
+    @ManyToOne(() => Group, group => group.posts, { nullable: true })
+    group: Group;
+
+    @Column({ nullable: true })
+    groupId: number;
 
     @OneToMany(() => WallPost, wallPost => wallPost.author)
     wallPosts: WallPost[];
@@ -34,6 +43,9 @@ export class Post {
         }
     })
     photos: Photo[];
+
+    @OneToMany(() => PostAlbum, postAlbum => postAlbum.post)
+    postAlbums: PostAlbum[];
 
     @ManyToMany(() => MusicTrack)
     @JoinTable({
@@ -66,4 +78,7 @@ export class Post {
 
     @UpdateDateColumn()
     updatedAt: Date;
+
+    // Свойство для хранения альбомов при загрузке из БД
+    albums: Album[];
 } 

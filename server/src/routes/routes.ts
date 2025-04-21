@@ -8,6 +8,7 @@ import photoRoutes from './photo.routes';
 import wallRoutes from './wall.routes';
 import albumRoutes from './album.routes';
 import musicRoutes from './music.routes';
+import groupRoutes from './group.routes';
 
 export const initializeRoutes = (app: Express) => {
     const router = Router();
@@ -44,6 +45,9 @@ export const initializeRoutes = (app: Express) => {
 
     router.use('/music', musicRoutes);
     console.log('Подключены маршруты музыки');
+
+    router.use('/groups', groupRoutes);
+    console.log('Подключены маршруты групп');
 
     // Подключаем все маршруты под префиксом /api
     app.use('/api', router);

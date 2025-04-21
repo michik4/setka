@@ -40,7 +40,14 @@ router.post('/', authenticateSession, (req: Request, res: Response) => {
     console.log('[Posts Routes] Body:', JSON.stringify(req.body, null, 2));
     console.log('[Posts Routes] Файлы:', req.files);
     console.log('[Posts Routes] Content-Type:', req.headers['content-type']);
+    console.log('[Posts Routes] Пользователь:', (req as AuthenticatedRequest).user?.id);
     console.log('==================================================');
+    
+    // Добавляем authorId из аутентифицированного пользователя, если его нет в req.body
+    if (!req.body.authorId && (req as AuthenticatedRequest).user) {
+        req.body.authorId = (req as AuthenticatedRequest).user.id;
+    }
+    
     initializeController().createPost(req, res);
 });
 

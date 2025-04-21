@@ -59,13 +59,17 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({
         onPhotoDelete?.(photo);
     };
 
+    // Количество дополнительных фотографий для отображения индикатора "+"
+    const remainingPhotos = photos.length > 5 ? photos.length - 5 : 0;
+
     return (
         <div className={`${styles.photoGrid} ${getGridClassName()}`}>
             {photos.map((photo, index) => (
                 <div 
                     key={photo.id} 
-                    className={`${styles.photoWrapper} ${index === 0 ? styles.firstPhoto : ''}`}
+                    className={`${styles.photoWrapper}`}
                     onClick={(e) => handlePhotoClick(e, photo, index)}
+                    data-remaining={remainingPhotos}
                 >
                     <ServerImage
                         path={photo.path}

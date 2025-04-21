@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         let uploadDir;
         
-        if (file.fieldname === 'audioFile') {
+        if (file.fieldname === 'audioFile' || file.fieldname === 'audioFiles') {
             uploadDir = path.join(__dirname, '../../uploads/music');
         } else if (file.fieldname === 'coverImage') {
             uploadDir = path.join(__dirname, '../../uploads/covers');
@@ -31,10 +31,14 @@ const storage = multer.diskStorage({
             fs.mkdirSync(uploadDir, { recursive: true });
         }
         
+        // Для отладки
+        console.log(`[Storage] Сохранение файла ${file.fieldname} (${file.originalname}) в директорию ${uploadDir}`);
+        
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
         const uniqueFileName = `${uuidv4()}${path.extname(file.originalname)}`;
+        console.log(`[Storage] Генерация имени файла: ${uniqueFileName} для ${file.originalname}`);
         cb(null, uniqueFileName);
     }
 });
@@ -46,7 +50,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
     
     console.log('[API Music] Получен файл:', file.originalname, file.mimetype);
     
-    if (file.fieldname === 'audioFile' && allowedAudioMimeTypes.includes(file.mimetype)) {
+    if ((file.fieldname === 'audioFile' || file.fieldname === 'audioFiles') && allowedAudioMimeTypes.includes(file.mimetype)) {
         cb(null, true);
     } else if (file.fieldname === 'coverImage' && allowedImageMimeTypes.includes(file.mimetype)) {
         cb(null, true);
@@ -60,7 +64,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
 const upload = multer({ 
     storage, 
     fileFilter, 
-    limits: { fileSize: 25 * 1024 * 1024 } // Ограничение размера файла в 25 МБ
+    limits: { fileSize: 100 * 1024 * 1024 } // Ограничение размера файла в 100 МБ
 });
 
 // Тестовый маршрут для проверки API
@@ -166,20 +170,20 @@ router.post('/upload', authenticateSession, upload.fields([
 router.post('/upload/multiple', authenticateSession, multer({
     storage: storage,
     fileFilter: fileFilter,
-    limits: { fileSize: 25 * 1024 * 1024 }
+    limits: { fileSize: 100 * 1024 * 1024 }
 }).fields([
-    { name: 'audioFile', maxCount: 100 }, // Увеличиваем до 100 файлов одновременно
+    { name: 'audioFiles', maxCount: 100 }, // Увеличиваем до 100 файлов одновременно и меняем имя поля на 'audioFiles'
     { name: 'coverImage', maxCount: 1 }
 ]), async (req: any, res) => {
     try {
         console.log('[Music] Получен запрос на множественную загрузку файлов');
         
-        if (!req.files || !req.files.audioFile || req.files.audioFile.length === 0) {
+        if (!req.files || !req.files.audioFiles || req.files.audioFiles.length === 0) {
             console.error('[Music] Аудиофайлы не найдены в запросе');
             return res.status(400).json({ message: 'Аудиофайлы не найдены в запросе' });
         }
         
-        const audioFiles = req.files.audioFile;
+        const audioFiles = req.files.audioFiles;
         const coverFile = req.files.coverImage ? req.files.coverImage[0] : null;
         
         console.log(`[Music] Загружено ${audioFiles.length} файлов`);
@@ -198,39 +202,104 @@ router.post('/upload/multiple', authenticateSession, multer({
         const results = [];
         const errors = [];
         
-        // Обрабатываем файлы последовательно для экономии памяти
+        // Обрабатываем файлы последовательно
         for (const audioFile of audioFiles) {
             try {
                 console.log(`[Music] Обработка файла: ${audioFile.originalname}`);
                 
-                // Проверка наличия дубликата по имени файла
+                // Извлекаем метаданные из файла
+                const metadata = await musicController.extractMetadata(audioFile.path);
+                
+                // Создаем название трека на основе метаданных или имени файла
+                const trackTitle = metadata.title !== 'Неизвестный трек' 
+                    ? metadata.title 
+                    : path.parse(audioFile.originalname).name;
+                
+                // Проверка наличия дубликата по названию и исполнителю
                 const existingTrack = await musicRepository.findOne({
                     where: { 
                         userId: req.user.id,
-                        title: path.parse(audioFile.originalname).name // Используем имя файла для проверки
+                        title: trackTitle,
+                        artist: metadata.artist
                     }
                 });
                 
                 if (existingTrack) {
-                    console.log(`[Music] Трек с похожим названием уже существует: ${existingTrack.title}`);
+                    console.log(`[Music] Трек "${trackTitle}" от исполнителя "${metadata.artist}" уже существует`);
                     errors.push({
                         success: false,
                         originalName: audioFile.originalname,
-                        error: 'Трек с таким названием уже существует в вашей коллекции'
+                        error: `Трек "${trackTitle}" от исполнителя "${metadata.artist}" уже существует в вашей коллекции`
                     });
+                    
+                    // Удаляем загруженный файл, чтобы не занимать место
+                    try {
+                        fs.unlinkSync(audioFile.path);
+                    } catch (unlinkError) {
+                        console.error(`[Music] Ошибка при удалении дубликата файла: ${unlinkError}`);
+                    }
+                    
                     continue; // Пропускаем этот файл и переходим к следующему
                 }
                 
-                // Используем метод контроллера для обработки загрузки
-                const track = await musicController.uploadTrack(req, audioFile, coverFile);
+                // Сохраняем обложку, если она есть в метаданных
+                let coverUrl = coverFile 
+                    ? `/api/music/cover/${coverFile.filename}`
+                    : null;
+                
+                if (!coverUrl && metadata.picture) {
+                    const savedCoverFileName = await musicController.saveCoverFromMetadata(
+                        metadata.picture,
+                        audioFile.originalname
+                    );
+                    
+                    if (savedCoverFileName) {
+                        coverUrl = `/api/music/cover/${savedCoverFileName}`;
+                    }
+                }
+                
+                // Создаем объект с данными трека
+                const trackData = {
+                    title: trackTitle,
+                    artist: metadata.artist,
+                    duration: metadata.duration,
+                    filename: audioFile.filename,
+                    filepath: `/api/media/music/${audioFile.filename}`,
+                    coverUrl: coverUrl || '/api/music/cover/default.png',
+                    userId: req.user.id,
+                    playCount: 0
+                };
+                
+                // Сохраняем информацию о треке в БД
+                const track = musicRepository.create(trackData);
+                await musicRepository.save(track);
+                
+                console.log(`[Music] Трек "${trackTitle}" успешно создан в БД с ID: ${track.id}`);
                 
                 results.push({
                     success: true,
                     track,
-                    originalName: audioFile.originalname
+                    originalName: audioFile.originalname,
+                    metadata: {
+                        title: metadata.title,
+                        artist: metadata.artist,
+                        duration: metadata.duration,
+                        year: metadata.year,
+                        genre: metadata.genre,
+                        albumTitle: metadata.albumTitle
+                    }
                 });
             } catch (error: any) {
                 console.error(`[Music] Ошибка при обработке файла ${audioFile.originalname}:`, error);
+                
+                // Пытаемся удалить файл в случае ошибки
+                try {
+                    if (fs.existsSync(audioFile.path)) {
+                        fs.unlinkSync(audioFile.path);
+                    }
+                } catch (unlinkError) {
+                    console.error(`[Music] Ошибка при удалении файла после ошибки: ${unlinkError}`);
+                }
                 
                 errors.push({
                     success: false,

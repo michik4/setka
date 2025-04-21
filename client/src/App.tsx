@@ -13,6 +13,8 @@ import { UserPage } from './pages/UserPage/UserPage';
 import { PhotosPage } from './pages/PhotosPage';
 import { AlbumPage } from './pages/AlbumPage';
 import { MusicPage } from './pages/MusicPage';
+import { GroupsPage } from './pages/GroupsPage/GroupsPage';
+import { GroupPage } from './pages/GroupPage/GroupPage';
 import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/Header/Header';
 import Sidebar from './components/Sidebar/Sidebar';
@@ -144,7 +146,7 @@ const App: React.FC = () => {
     const handleNewWindowClick = () => {
       // Открываем новое окно через открытие ссылки
       const width = 550;
-      const height = 630;
+      const height = 650;
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
       
@@ -247,6 +249,22 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <MusicPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/groups"
+              element={
+                <ProtectedRoute>
+                  <GroupsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/groups/:id"
+              element={
+                <ProtectedRoute>
+                  <GroupPage />
                 </ProtectedRoute>
               }
             />

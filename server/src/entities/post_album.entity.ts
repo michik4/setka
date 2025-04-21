@@ -1,18 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique, PrimaryColumn } from 'typeorm';
 import { Post } from './post.entity';
 import { Album } from './album.entity';
 import { WallPost } from './wall.entity';
 
 @Entity()
-@Unique(['postId', 'albumId'])
 export class PostAlbum {
-    @PrimaryGeneratedColumn()
-    id: number;
-
-    @Column()
+    @PrimaryColumn()
     postId: number;
 
-    @Column()
+    @PrimaryColumn()
     albumId: number;
 
     @ManyToOne(() => Post, { onDelete: 'CASCADE', nullable: true })

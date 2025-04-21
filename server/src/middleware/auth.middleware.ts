@@ -6,10 +6,7 @@ import { User } from '../entities/user.entity';
 import { Photo } from '../entities/photo.entity';
 import { AuthenticatedRequest } from '../types/auth.types';
 
-const userService = new UserService(
-    AppDataSource.getRepository(User),
-    AppDataSource.getRepository(Photo)
-);
+const userService = new UserService();
 const sessionService = new SessionService();
 
 export { AuthenticatedRequest };
