@@ -5,11 +5,24 @@ import { Post } from '../types/post.types';
 import { Photo } from '../types/photo.types';
 import { Album } from '../types/album.types';
 import { Track, MusicAlbum } from '../types/music.types';
+import { tokenService } from '../utils/api';
+
+// Функция для добавления Authorization заголовка
+const addAuthHeader = (): HeadersInit => {
+    const token = tokenService.getToken();
+    const headers: HeadersInit = {};
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
+};
 
 export const groupService = {
     async getAllGroups(limit: number = 10, offset: number = 0): Promise<{ items: Group[], total: number }> {
         const response = await fetch(`${API_URL}/groups?limit=${limit}&offset=${offset}`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -21,7 +34,7 @@ export const groupService = {
     
     async searchGroups(query: string, limit: number = 10, offset: number = 0): Promise<{ items: Group[], total: number }> {
         const response = await fetch(`${API_URL}/groups/search?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -33,7 +46,7 @@ export const groupService = {
     
     async getUserGroups(): Promise<Group[]> {
         const response = await fetch(`${API_URL}/groups/user`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -45,7 +58,7 @@ export const groupService = {
     
     async getGroupById(id: number): Promise<Group> {
         const response = await fetch(`${API_URL}/groups/${id}`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -57,7 +70,7 @@ export const groupService = {
     
     async getGroupBySlug(slug: string): Promise<Group> {
         const response = await fetch(`${API_URL}/groups/slug/${slug}`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -71,9 +84,9 @@ export const groupService = {
         const response = await fetch(`${API_URL}/groups`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...addAuthHeader()
             },
-            credentials: 'include',
             body: JSON.stringify(data)
         });
         
@@ -88,9 +101,9 @@ export const groupService = {
         const response = await fetch(`${API_URL}/groups/${id}`, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...addAuthHeader()
             },
-            credentials: 'include',
             body: JSON.stringify(data)
         });
         
@@ -104,7 +117,7 @@ export const groupService = {
     async deleteGroup(id: number): Promise<void> {
         const response = await fetch(`${API_URL}/groups/${id}`, {
             method: 'DELETE',
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -114,7 +127,7 @@ export const groupService = {
     
     async getGroupMembers(id: number): Promise<User[]> {
         const response = await fetch(`${API_URL}/groups/${id}/members`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -126,7 +139,7 @@ export const groupService = {
     
     async getGroupAdmins(id: number): Promise<User[]> {
         const response = await fetch(`${API_URL}/groups/${id}/admins`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -139,7 +152,7 @@ export const groupService = {
     async joinGroup(id: number): Promise<void> {
         const response = await fetch(`${API_URL}/groups/${id}/join`, {
             method: 'POST',
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -150,7 +163,7 @@ export const groupService = {
     async leaveGroup(id: number): Promise<void> {
         const response = await fetch(`${API_URL}/groups/${id}/leave`, {
             method: 'POST',
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -162,9 +175,9 @@ export const groupService = {
         const response = await fetch(`${API_URL}/groups/${groupId}/admins`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...addAuthHeader()
             },
-            credentials: 'include',
             body: JSON.stringify({ userId })
         });
         
@@ -177,9 +190,9 @@ export const groupService = {
         const response = await fetch(`${API_URL}/groups/${groupId}/admins`, {
             method: 'DELETE',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...addAuthHeader()
             },
-            credentials: 'include',
             body: JSON.stringify({ userId })
         });
         
@@ -191,7 +204,7 @@ export const groupService = {
     async removeMember(groupId: number, userId: number): Promise<void> {
         const response = await fetch(`${API_URL}/groups/${groupId}/members/${userId}`, {
             method: 'DELETE',
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -203,9 +216,9 @@ export const groupService = {
         const response = await fetch(`${API_URL}/groups/${groupId}/ban`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...addAuthHeader()
             },
-            credentials: 'include',
             body: JSON.stringify({ userId })
         });
         
@@ -216,7 +229,7 @@ export const groupService = {
     
     async getGroupPosts(groupId: number, limit: number = 10, offset: number = 0): Promise<Post[]> {
         const response = await fetch(`${API_URL}/groups/${groupId}/posts?limit=${limit}&offset=${offset}`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -233,9 +246,9 @@ export const groupService = {
         const response = await fetch(`${API_URL}/posts`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...addAuthHeader()
             },
-            credentials: 'include',
             body: JSON.stringify({
                 content,
                 groupId
@@ -251,7 +264,7 @@ export const groupService = {
     
     async getUserAdminGroups(userId: number): Promise<Group[]> {
         const response = await fetch(`${API_URL}/groups/user/${userId}/admin`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -265,7 +278,7 @@ export const groupService = {
     
     async getGroupMediaPhotos(groupId: number, limit: number = 20, offset: number = 0): Promise<{ items: Photo[], total: number }> {
         const response = await fetch(`${API_URL}/groups/${groupId}/media/photos?limit=${limit}&offset=${offset}`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -277,7 +290,7 @@ export const groupService = {
     
     async getGroupMediaAlbums(groupId: number, limit: number = 20, offset: number = 0): Promise<{ items: Album[], total: number }> {
         const response = await fetch(`${API_URL}/groups/${groupId}/media/albums?limit=${limit}&offset=${offset}`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -289,7 +302,7 @@ export const groupService = {
     
     async getGroupMediaTracks(groupId: number, limit: number = 20, offset: number = 0): Promise<{ items: Track[], total: number }> {
         const response = await fetch(`${API_URL}/groups/${groupId}/media/tracks?limit=${limit}&offset=${offset}`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {
@@ -301,7 +314,7 @@ export const groupService = {
     
     async getGroupMediaMusicAlbums(groupId: number, limit: number = 20, offset: number = 0): Promise<{ items: MusicAlbum[], total: number }> {
         const response = await fetch(`${API_URL}/groups/${groupId}/media/music-albums?limit=${limit}&offset=${offset}`, {
-            credentials: 'include'
+            headers: addAuthHeader()
         });
         
         if (!response.ok) {

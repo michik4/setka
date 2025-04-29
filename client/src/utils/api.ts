@@ -4,6 +4,23 @@ interface FetchOptions extends RequestInit {
     body?: any;
 }
 
+// Функции для работы с токеном
+const TOKEN_KEY = 'auth_token';
+
+export const tokenService = {
+    getToken: (): string | null => {
+        return localStorage.getItem(TOKEN_KEY);
+    },
+    
+    setToken: (token: string): void => {
+        localStorage.setItem(TOKEN_KEY, token);
+    },
+    
+    removeToken: (): void => {
+        localStorage.removeItem(TOKEN_KEY);
+    }
+};
+
 export const api = {
     async fetch(endpoint: string, options: FetchOptions = {}) {
         const url = `${API_URL}${endpoint}`;
@@ -11,7 +28,6 @@ export const api = {
             url,
             method: options.method || 'GET',
             body: options.body,
-            cookies: document.cookie
         });
 
         const headers = new Headers(options.headers);
@@ -19,11 +35,17 @@ export const api = {
         if (!(options.body instanceof FormData)) {
             headers.set('Content-Type', 'application/json');
         }
+        
+        // Добавляем токен в заголовок Authorization если он есть
+        const token = tokenService.getToken();
+        if (token) {
+            headers.set('Authorization', `Bearer ${token}`);
+        }
 
         const config: RequestInit = {
             ...options,
             headers,
-            credentials: 'include',
+            // Удаляем credentials: 'include', так как теперь используем токены, а не куки
         };
 
         if (options.body && !(options.body instanceof FormData)) {

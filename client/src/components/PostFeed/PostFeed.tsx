@@ -4,6 +4,7 @@ import { Post } from '../Post/Post';
 import styles from './PostFeed.module.css';
 import { API_URL } from '../../config';
 import { useInfiniteScroll } from '../../utils/useInfiniteScroll';
+import { tokenService } from '../../utils/api';
 
 interface PostFeedProps {
     showOnlySubscribedGroups?: boolean;
@@ -21,14 +22,22 @@ export const PostFeed: React.FC<PostFeedProps> = ({ showOnlySubscribedGroups = f
             
             const url = `${baseUrl}?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`;
             
+            // Получаем токен
+            const token = tokenService.getToken();
+            const headers: HeadersInit = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
+            
+            // Добавляем токен в заголовки, если он есть
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
             console.log(`Отправка запроса на получение постов ${url}...`);
             const response = await fetch(url, {
                 method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include'
+                headers
             });
 
             if (!response.ok) {

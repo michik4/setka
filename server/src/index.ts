@@ -169,10 +169,12 @@ const startServer = async () => {
     }
 
     const PORT = process.env.PORT || 3000
-    server.listen(PORT, () => {
-      console.log(`Сервер запущен на порту ${PORT}`)
-      console.log(`WebSocket сервер доступен на ws://localhost:${PORT}`)
-      console.log(`REST API доступен на http://localhost:${PORT}`)
+    // Изменяем адрес с умолчания на 0.0.0.0 (все IP)
+    const HOST = config.HOST
+    server.listen(Number(PORT), HOST, () => {
+      console.log(`Сервер запущен на ${HOST}:${PORT}`)
+      console.log(`WebSocket сервер доступен на ws://${HOST === '0.0.0.0' ? 'IP-адрес-сервера' : HOST}:${PORT}`)
+      console.log(`REST API доступен на http://${HOST === '0.0.0.0' ? 'IP-адрес-сервера' : HOST}:${PORT}`)
       console.log(`CORS разрешен для ${config.CLIENT_URL}`)
     })
   } catch (error) {

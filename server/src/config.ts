@@ -1,6 +1,7 @@
 export const config = {
-    CLIENT_URL: /*process.env.CLIENT_URL || */ 'http://localhost:3001',
+    CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3001',
     PORT: process.env.PORT || 3000,
+    HOST: process.env.HOST || '0.0.0.0',
     DB_HOST: process.env.DB_HOST || 'localhost',
     DB_PORT: process.env.DB_PORT || 5432,
     DB_USERNAME: process.env.DB_USERNAME || 'postgres',

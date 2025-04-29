@@ -1,4 +1,4 @@
-import { api } from '../utils/api';
+import { api, tokenService } from '../utils/api';
 import { Track } from '../types/music.types';
 import { API_URL } from '../config/constants';
 
@@ -52,10 +52,19 @@ export class MusicService {
     // Загрузка нового трека
     static async uploadTrack(formData: FormData): Promise<Track> {
         try {
+            // Получаем токен
+            const token = tokenService.getToken();
+            const headers: HeadersInit = {};
+            
+            // Добавляем токен в заголовки, если он есть
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
             const response = await fetch(`${API_URL}${this.API_ENDPOINT}/upload`, {
                 method: 'POST',
                 body: formData,
-                credentials: 'include'
+                headers
             });
             
             if (!response.ok) {

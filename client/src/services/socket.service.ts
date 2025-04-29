@@ -1,4 +1,5 @@
 import { io, Socket, ManagerOptions, SocketOptions } from 'socket.io-client';
+import { tokenService } from '../utils/api';
 
 // Логируем все переменные окружения для отладки
 console.log('Переменные окружения:', {
@@ -46,10 +47,15 @@ class SocketService {
         
         this.connectionPromise = new Promise<Socket>((resolve, reject) => {
             try {
+                // Получаем JWT токен для авторизации
+                const token = tokenService.getToken();
+                const auth = token ? { token } : {};
+                
                 this.socket = io(WS_URL, {
                     transports: ['websocket'],
                     reconnection: true,
                     reconnectionAttempts: this.MAX_RECONNECT_ATTEMPTS,
+                    auth // Добавляем токен в параметры при инициализации
                 });
 
                 this.socket.on('connect', () => {
@@ -113,8 +119,13 @@ class SocketService {
                 return;
             }
             
+            // Получаем токен для проверки
+            const token = tokenService.getToken();
+            
             console.log('Отправляем запрос на аутентификацию для пользователя:', userId);
-            socket.emit('auth', userId);
+            
+            // Отправляем и userId и токен для полной аутентификации
+            socket.emit('auth', { userId, token });
         } catch (error) {
             console.error('Ошибка при аутентификации:', error);
             throw error;

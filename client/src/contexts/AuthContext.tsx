@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { socketService } from '../services/socket.service';
-import { api } from '../utils/api';
+import { api, tokenService } from '../utils/api';
 import { AuthUser } from '../types/user.types';
 
 interface AuthContextType {
@@ -30,6 +30,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Проверяем сессию при загрузке приложения
     useEffect(() => {
         const checkSession = async () => {
+            // Если нет токена, то не делаем запрос на проверку сессии
+            if (!tokenService.getToken()) {
+                setUser(null);
+                setLoading(false);
+                return;
+            }
+            
             try {
                 const response = await api.get('/auth/me');
                 setUser(response);
@@ -41,6 +48,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             } catch (err) {
                 console.error('Ошибка при проверке сессии:', err);
+                // Если произошла ошибка (например, токен просрочен), удаляем его
+                tokenService.removeToken();
                 setUser(null);
             } finally {
                 setLoading(false);
@@ -60,15 +69,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setError(null);
 
         try {
-            const response = await api.post('/users', {
+            const response = await api.post('/auth/register', {
                 firstName,
                 lastName,
                 email,
                 password
             });
 
-            // После успешной регистрации выполняем вход
-            await login(email, password);
+            // Сохраняем токен
+            if (response.token) {
+                tokenService.setToken(response.token);
+            }
+            
+            setUser(response.user);
+            
+            // После успешной регистрации устанавливаем пользователя и подключаем WebSocket
+            if (response.user) {
+                await socketService.connectAndWait();
+                await socketService.authenticate(response.user.id);
+            }
         } catch (error: any) {
             setError(error.message || 'Ошибка при регистрации');
             throw error;
@@ -88,11 +107,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 password
             });
 
-            setUser(response);
+            // Сохраняем токен
+            if (response.token) {
+                tokenService.setToken(response.token);
+            }
+            
+            // Удаляем token из объекта user, чтобы не хранить его в состоянии
+            const { token, ...userData } = response;
+            setUser(userData);
             
             // После успешного входа подключаем WebSocket
             await socketService.connectAndWait();
-            await socketService.authenticate(response.id);
+            await socketService.authenticate(userData.id);
         } catch (error: any) {
             setError(error.message || 'Ошибка при входе');
             throw error;
@@ -107,6 +133,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         try {
             await api.post('/auth/logout', {});
+            // Удаляем токен
+            tokenService.removeToken();
             setUser(null);
             
             // Отключаем WebSocket при выходе
