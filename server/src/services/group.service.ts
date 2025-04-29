@@ -35,17 +35,63 @@ export class GroupService {
     }
 
     async getGroupById(id: number): Promise<Group | null> {
-        return this.groupRepository.findOne({
+        const group = await this.groupRepository.findOne({
             where: { id },
             relations: ['creator', 'avatar', 'cover']
         });
+        
+        if (group) {
+            // Получаем количество участников
+            const membersCount = await AppDataSource
+                .createQueryBuilder()
+                .select('COUNT(gm.userId)', 'count')
+                .from('group_members', 'gm')
+                .where('gm.groupId = :groupId', { groupId: group.id })
+                .getRawOne()
+                .then(result => parseInt(result.count, 10) || 0);
+            
+            // Получаем количество постов
+            const postsCount = await this.postRepository
+                .createQueryBuilder('post')
+                .where('post.groupId = :groupId', { groupId: group.id })
+                .getCount();
+            
+            // Устанавливаем значения
+            group.membersCount = membersCount;
+            group.postsCount = postsCount;
+        }
+        
+        return group;
     }
 
     async getGroupBySlug(slug: string): Promise<Group | null> {
-        return this.groupRepository.findOne({
+        const group = await this.groupRepository.findOne({
             where: { slug },
             relations: ['creator', 'avatar', 'cover']
         });
+        
+        if (group) {
+            // Получаем количество участников
+            const membersCount = await AppDataSource
+                .createQueryBuilder()
+                .select('COUNT(gm.userId)', 'count')
+                .from('group_members', 'gm')
+                .where('gm.groupId = :groupId', { groupId: group.id })
+                .getRawOne()
+                .then(result => parseInt(result.count, 10) || 0);
+            
+            // Получаем количество постов
+            const postsCount = await this.postRepository
+                .createQueryBuilder('post')
+                .where('post.groupId = :groupId', { groupId: group.id })
+                .getCount();
+            
+            // Устанавливаем значения
+            group.membersCount = membersCount;
+            group.postsCount = postsCount;
+        }
+        
+        return group;
     }
 
     async updateGroup(id: number, groupData: Partial<Group>): Promise<Group | null> {
@@ -59,19 +105,41 @@ export class GroupService {
     }
 
     async getGroupMembers(groupId: number): Promise<User[]> {
-        const group = await this.groupRepository.findOne({
-            where: { id: groupId },
-            relations: ['members']
-        });
-        return group?.members || [];
+        try {
+            // Вернемся к более простому запросу, но добавим связь с аватарами
+            const group = await this.groupRepository.findOne({
+                where: { id: groupId },
+                relations: ['members', 'members.avatar']
+            });
+            
+            const members = group?.members || [];
+            console.log('Загружено участников группы:', members.length);
+            console.log('С аватарами:', members.filter(m => m.avatar).length);
+            
+            return members;
+        } catch (error) {
+            console.error('Ошибка при загрузке участников группы:', error);
+            return [];
+        }
     }
 
     async getGroupAdmins(groupId: number): Promise<User[]> {
-        const group = await this.groupRepository.findOne({
-            where: { id: groupId },
-            relations: ['admins']
-        });
-        return group?.admins || [];
+        try {
+            // Вернемся к более простому запросу, но добавим связь с аватарами
+            const group = await this.groupRepository.findOne({
+                where: { id: groupId },
+                relations: ['admins', 'admins.avatar']
+            });
+            
+            const admins = group?.admins || [];
+            console.log('Загружено администраторов группы:', admins.length);
+            console.log('С аватарами:', admins.filter(a => a.avatar).length);
+            
+            return admins;
+        } catch (error) {
+            console.error('Ошибка при загрузке администраторов группы:', error);
+            return [];
+        }
     }
 
     async addMember(groupId: number, userId: number): Promise<boolean> {
@@ -157,8 +225,50 @@ export class GroupService {
         
         if (!group || !group.admins) return false;
         
-        // Удаляем из администраторов
+        const user = await this.userRepository.findOneBy({ id: userId });
+        if (!user) return false;
+        
         group.admins = group.admins.filter((admin: User) => admin.id !== userId);
+        await this.groupRepository.save(group);
+        
+        return true;
+    }
+
+    async banMember(groupId: number, userId: number): Promise<boolean> {
+        const group = await this.groupRepository.findOne({
+            where: { id: groupId },
+            relations: ['members', 'admins', 'bannedUsers']
+        });
+        
+        if (!group) return false;
+        
+        const user = await this.userRepository.findOneBy({ id: userId });
+        if (!user) return false;
+        
+        // Проверяем, что пользователь является участником
+        const isMember = group.members && group.members.some((member: User) => member.id === userId);
+        
+        // Если пользователь участник, удаляем его из участников
+        if (isMember) {
+            group.members = group.members.filter((member: User) => member.id !== userId);
+        }
+        
+        // Если пользователь админ, удаляем его из админов
+        if (group.admins) {
+            group.admins = group.admins.filter((admin: User) => admin.id !== userId);
+        }
+        
+        // Добавляем пользователя в список забаненных
+        if (!group.bannedUsers) {
+            group.bannedUsers = [];
+        }
+        
+        // Проверяем, не забанен ли пользователь уже
+        const isBanned = group.bannedUsers.some((bannedUser: User) => bannedUser.id === userId);
+        
+        if (!isBanned) {
+            group.bannedUsers.push(user);
+        }
         
         await this.groupRepository.save(group);
         return true;
@@ -194,12 +304,36 @@ export class GroupService {
     }
 
     async getAllGroups(limit: number = 10, offset: number = 0): Promise<[Group[], number]> {
-        return this.groupRepository.findAndCount({
+        const [groups, count] = await this.groupRepository.findAndCount({
             relations: ['creator', 'avatar'],
             order: { createdAt: 'DESC' },
             take: limit,
             skip: offset
         });
+        
+        // Для каждой группы подсчитываем количество участников и администраторов
+        for (const group of groups) {
+            // Получаем количество участников
+            const membersCount = await AppDataSource
+                .createQueryBuilder()
+                .select('COUNT(gm.userId)', 'count')
+                .from('group_members', 'gm')
+                .where('gm.groupId = :groupId', { groupId: group.id })
+                .getRawOne()
+                .then(result => parseInt(result.count, 10) || 0);
+            
+            // Получаем количество постов
+            const postsCount = await this.postRepository
+                .createQueryBuilder('post')
+                .where('post.groupId = :groupId', { groupId: group.id })
+                .getCount();
+            
+            // Устанавливаем значения
+            group.membersCount = membersCount;
+            group.postsCount = postsCount;
+        }
+        
+        return [groups, count];
     }
 
     async getUserGroups(userId: number): Promise<Group[]> {
@@ -211,16 +345,81 @@ export class GroupService {
         if (!userExists) return [];
         
         // Получаем группы, в которых пользователь является участником через связь ManyToMany
-        return this.groupRepository.createQueryBuilder('group')
+        const groups = await this.groupRepository.createQueryBuilder('group')
             .innerJoinAndSelect('group.members', 'member', 'member.id = :userId', { userId })
             .leftJoinAndSelect('group.creator', 'creator')
             .leftJoinAndSelect('group.avatar', 'avatar')
             .orderBy('group.createdAt', 'DESC')
             .getMany();
+            
+        // Для каждой группы подсчитываем количество участников и постов
+        for (const group of groups) {
+            // Получаем количество участников
+            const membersCount = await AppDataSource
+                .createQueryBuilder()
+                .select('COUNT(gm.userId)', 'count')
+                .from('group_members', 'gm')
+                .where('gm.groupId = :groupId', { groupId: group.id })
+                .getRawOne()
+                .then(result => parseInt(result.count, 10) || 0);
+            
+            // Получаем количество постов
+            const postsCount = await this.postRepository
+                .createQueryBuilder('post')
+                .where('post.groupId = :groupId', { groupId: group.id })
+                .getCount();
+            
+            // Устанавливаем значения
+            group.membersCount = membersCount;
+            group.postsCount = postsCount;
+        }
+        
+        return groups;
+    }
+
+    async getUserAdminGroups(userId: number): Promise<Group[]> {
+        // Проверяем существование пользователя
+        const userExists = await this.userRepository.findOne({
+            where: { id: userId }
+        });
+        
+        if (!userExists) return [];
+        
+        // Получаем группы, в которых пользователь является администратором
+        const groups = await this.groupRepository.createQueryBuilder('group')
+            .innerJoinAndSelect('group.admins', 'admin', 'admin.id = :userId', { userId })
+            .leftJoinAndSelect('group.creator', 'creator')
+            .leftJoinAndSelect('group.avatar', 'avatar')
+            .orderBy('group.createdAt', 'DESC')
+            .getMany();
+            
+        // Для каждой группы подсчитываем количество участников и постов
+        for (const group of groups) {
+            // Получаем количество участников
+            const membersCount = await AppDataSource
+                .createQueryBuilder()
+                .select('COUNT(gm.userId)', 'count')
+                .from('group_members', 'gm')
+                .where('gm.groupId = :groupId', { groupId: group.id })
+                .getRawOne()
+                .then(result => parseInt(result.count, 10) || 0);
+            
+            // Получаем количество постов
+            const postsCount = await this.postRepository
+                .createQueryBuilder('post')
+                .where('post.groupId = :groupId', { groupId: group.id })
+                .getCount();
+            
+            // Устанавливаем значения
+            group.membersCount = membersCount;
+            group.postsCount = postsCount;
+        }
+        
+        return groups;
     }
 
     async searchGroups(query: string, limit: number = 10, offset: number = 0): Promise<[Group[], number]> {
-        return this.groupRepository.findAndCount({
+        const [groups, count] = await this.groupRepository.findAndCount({
             where: [
                 { name: new RegExp(query, 'i').toString() },
                 { slug: new RegExp(query, 'i').toString() }
@@ -230,5 +429,68 @@ export class GroupService {
             take: limit,
             skip: offset
         });
+        
+        // Для каждой группы подсчитываем количество участников и постов
+        for (const group of groups) {
+            // Получаем количество участников
+            const membersCount = await AppDataSource
+                .createQueryBuilder()
+                .select('COUNT(gm.userId)', 'count')
+                .from('group_members', 'gm')
+                .where('gm.groupId = :groupId', { groupId: group.id })
+                .getRawOne()
+                .then(result => parseInt(result.count, 10) || 0);
+            
+            // Получаем количество постов
+            const postsCount = await this.postRepository
+                .createQueryBuilder('post')
+                .where('post.groupId = :groupId', { groupId: group.id })
+                .getCount();
+            
+            // Устанавливаем значения
+            group.membersCount = membersCount;
+            group.postsCount = postsCount;
+        }
+        
+        return [groups, count];
+    }
+
+    // Добавляем методы для работы с музыкальными альбомами группы
+    async getGroupMusicAlbums(groupId: number, limit: number = 20, offset: number = 0) {
+        try {
+            // Получаем музыкальные альбомы из базы данных
+            const musicAlbums = await AppDataSource.getRepository('music_albums')
+                .createQueryBuilder('album')
+                .where('album.groupId = :groupId', { groupId })
+                .leftJoinAndSelect('album.tracks', 'track')
+                .orderBy('album.createdAt', 'DESC')
+                .take(limit)
+                .skip(offset)
+                .getMany();
+            
+            return musicAlbums.map(album => {
+                // Добавляем количество треков
+                album.tracksCount = album.tracks ? album.tracks.length : 0;
+                return album;
+            });
+        } catch (error) {
+            console.error('Ошибка при получении музыкальных альбомов группы:', error);
+            return [];
+        }
+    }
+
+    async getGroupMusicAlbumsCount(groupId: number): Promise<number> {
+        try {
+            // Получаем количество музыкальных альбомов группы
+            const count = await AppDataSource.getRepository('music_albums')
+                .createQueryBuilder('album')
+                .where('album.groupId = :groupId', { groupId })
+                .getCount();
+            
+            return count;
+        } catch (error) {
+            console.error('Ошибка при получении количества музыкальных альбомов группы:', error);
+            return 0;
+        }
     }
 } 

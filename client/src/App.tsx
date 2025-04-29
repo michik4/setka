@@ -13,14 +13,31 @@ import { UserPage } from './pages/UserPage/UserPage';
 import { PhotosPage } from './pages/PhotosPage';
 import { AlbumPage } from './pages/AlbumPage';
 import { MusicPage } from './pages/MusicPage';
+import { MusicAlbumPage } from './pages/MusicAlbumPage';
 import { GroupsPage } from './pages/GroupsPage/GroupsPage';
 import { GroupPage } from './pages/GroupPage/GroupPage';
+import { TestModePage } from './pages/TestModePage';
+import { UserSettingsPage } from './pages/UserSettingsPage/UserSettingsPage';
+import { FriendsPage } from './pages/FriendsPage';
+import MessagesPage from './pages/MessagesPage';
 import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/Header/Header';
 import Sidebar from './components/Sidebar/Sidebar';
-import { PlayerProvider } from './contexts/PlayerContext';
+import RightSidebar from './components/RightSidebar/RightSidebar';
+import { PlayerProvider, usePlayer } from './contexts/PlayerContext';
 import { PlayerWindowProvider } from './contexts/PlayerWindowContext';
+import { TestFeaturesProvider } from './contexts/TestFeaturesContext';
+import { SidebarModulesProvider } from './contexts/SidebarModulesContext';
+import { NotificationProvider } from './contexts/notification.context';
+import { MessengerProvider } from './contexts/MessengerContext';
+import { useTestFeatures } from './contexts/TestFeaturesContext';
 import PlayerPage from './pages/Player';
+import ContentMiniPlayer from './components/ContentMiniPlayer/ContentMiniPlayer';
+import { GroupEditPage } from './pages/GroupEditPage/GroupEditPage';
+import { GroupMembersPage } from './pages/GroupPage/GroupMembersPage';
+import NotificationList from './components/Notifications';
+import { QueueProvider } from './contexts/QueueContext';
+import { AboutPage } from './pages/AboutPage/AboutPage';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -90,15 +107,66 @@ const PlayerPageContainer: React.FC = () => {
   );
 };
 
-const App: React.FC = () => {
+// Компонент для условного отображения мини-плеера в контенте
+const ResponsiveMiniPlayer: React.FC = () => {
+  const [showInContent, setShowInContent] = useState(false);
+
+  useEffect(() => {
+    // Функция для обновления состояния при изменении размера окна
+    const handleResize = () => {
+      setShowInContent(window.innerWidth <= 1280);
+    };
+
+    // Проверка при загрузке
+    handleResize();
+
+    // Добавляем обработчик события изменения размера окна
+    window.addEventListener('resize', handleResize);
+
+    // Удаляем обработчик при размонтировании компонента
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  if (!showInContent) {
+    return null;
+  }
+
+  return <ContentMiniPlayer />;
+};
+
+// Компонент для кнопки переключения видимости правого сайдбара
+const ToggleSidebarButton: React.FC<{ onClick: () => void, isVisible: boolean }> = ({ onClick, isVisible }) => {
+  const { currentTrack, isPlaying } = usePlayer();
+  
+  return (
+    <div className="toggle-sidebar-container">
+      {currentTrack && isPlaying && <div className="playing-indicator"></div>}
+      <button className="toggle-sidebar-btn" onClick={onClick} title={isVisible ? "Скрыть панель" : "Показать панель"}>
+        {isVisible ? '→' : '←'}
+      </button>
+    </div>
+  );
+};
+
+// Внутренний компонент App без контекста
+const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
+  const { isPlayerWindowEnabled, isMessengerEnabled } = useTestFeatures();
   const [playerWindowOpen, setPlayerWindowOpen] = useState<boolean>(false);
+  const [rightSidebarVisible, setRightSidebarVisible] = useState<boolean>(true);
 
   // Проверяем, находимся ли мы на странице плеера
   const isPlayerPage = window.location.pathname === '/player';
 
   // Добавляем прослушиватель для обнаружения открытия плеера в отдельном окне
   useEffect(() => {
+    // Если функция плеера в отдельном окне не включена, то не регистрируем обработчики
+    if (!isPlayerWindowEnabled) {
+      return;
+    }
+
     // Добавляем обработчик события хранилища для коммуникации между окнами
     const handleStorageEvent = (event: StorageEvent) => {
       if (event.key === 'player_window_opened') {
@@ -172,18 +240,14 @@ const App: React.FC = () => {
       });
       clearInterval(checkInterval);
     };
-  }, []);
+  }, [isPlayerWindowEnabled]);
 
   // Если мы на странице плеера, показываем только плеер
   if (isPlayerPage) {
     return (
-      <BrowserRouter>
-        <PlayerProvider>
-          <Routes>
-            <Route path="/player" element={<PlayerPageContainer />} />
-          </Routes>
-        </PlayerProvider>
-      </BrowserRouter>
+      <Routes>
+        <Route path="/player" element={<PlayerPageContainer />} />
+      </Routes>
     );
   }
 
@@ -193,15 +257,10 @@ const App: React.FC = () => {
     }
 
     return (
-      <div className="main">
+      <div className={`main ${!rightSidebarVisible ? 'sidebar-hidden' : ''}`}>
         <Sidebar />
         <div className="content">
-          {playerWindowOpen && (
-            <div className="player-window-notification">
-              Плеер открыт в отдельном окне
-              <div className="notification-indicator"></div>
-            </div>
-          )}
+          <ResponsiveMiniPlayer />
           <Routes>
             <Route path="/" element={<Navigate to="/feed" replace />} />
             <Route
@@ -217,6 +276,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <UserPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <UserSettingsPage />
                 </ProtectedRoute>
               }
             />
@@ -253,6 +320,30 @@ const App: React.FC = () => {
               }
             />
             <Route
+              path="/music/albums/*"
+              element={
+                <ProtectedRoute>
+                  <MusicAlbumPage key="musicAlbums" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/friends"
+              element={
+                <ProtectedRoute>
+                  <FriendsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/friends/:userId"
+              element={
+                <ProtectedRoute>
+                  <FriendsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/groups"
               element={
                 <ProtectedRoute>
@@ -268,20 +359,94 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/groups/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <GroupEditPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/groups/:id/members"
+              element={
+                <ProtectedRoute>
+                  <GroupMembersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/groups/:id/admins"
+              element={
+                <ProtectedRoute>
+                  <GroupMembersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/test-features"
+              element={
+                <ProtectedRoute>
+                  <TestModePage />
+                </ProtectedRoute>
+              }
+            />
+            {isMessengerEnabled && (
+              <Route
+                path="/messages"
+                element={
+                  <ProtectedRoute>
+                    <MessagesPage />
+                  </ProtectedRoute>
+                }
+              />
+            )}
+            <Route
+              path="/about"
+              element={
+                <ProtectedRoute>
+                  <AboutPage />
+                </ProtectedRoute> 
+              }
+            />
           </Routes>
         </div>
+        <div className={rightSidebarVisible ? 'right-sidebar' : 'right-sidebar right-sidebar-hidden'}>
+          <RightSidebar />
+        </div>
+        <ToggleSidebarButton 
+          onClick={() => setRightSidebarVisible(!rightSidebarVisible)} 
+          isVisible={rightSidebarVisible} 
+        />
       </div>
     );
   };
 
   return (
+    <div className="app">
+      <Header />
+      {renderContent()}
+    </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
     <BrowserRouter>
-      <PlayerProvider>
-        <div className="app">
-          <Header />
-          {renderContent()}
-        </div>
-      </PlayerProvider>
+      <NotificationProvider>
+        <QueueProvider>
+          <PlayerProvider>
+            <TestFeaturesProvider>
+              <SidebarModulesProvider>
+                <MessengerProvider>
+                  <AppContent />
+                  <NotificationList />
+                </MessengerProvider>
+              </SidebarModulesProvider>
+            </TestFeaturesProvider>
+          </PlayerProvider>
+        </QueueProvider>
+      </NotificationProvider>
     </BrowserRouter>
   );
 };

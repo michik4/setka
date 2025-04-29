@@ -1,5 +1,4 @@
 .container {
-    padding: 20px;
     max-width: 900px;
     margin: 0 auto;
 }
@@ -13,15 +12,15 @@
 
 .title {
     font-size: 16px;
-    color: #000;
+    color: var(--vseti-color-text-primary);
     margin: 0;
     font-weight: 500;
 }
 
 .createAlbumButton {
     padding: 8px 16px;
-    background: var(--vk-color-header);
-    color: white;
+    background: var(--vseti-color-header);
+    color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     border-radius: 6px;
     font-size: 13px;
@@ -30,7 +29,7 @@
 }
 
 .createAlbumButton:hover {
-    background: #3d6898;
+    background: var(--vseti-color-blue-light);
 }
 
 .createAlbumSection {
@@ -39,7 +38,7 @@
 
 .sectionTitle {
     font-size: 14px;
-    color: #626d7a;
+    color: var(--vseti-color-text-muted);
     margin: 0 0 15px;
     font-weight: 500;
 }
@@ -97,9 +96,9 @@
 .albumTitle {
     font-size: 14px;
     font-weight: 500;
-    color: #000;
+    color: var(--vseti-color-text-primary);
     margin-bottom: 4px;
-    white-space: nowrap;
+    var(--vseti-color-var(--vseti-color-white))-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -148,13 +147,13 @@
 .loading {
     text-align: center;
     padding: 20px;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
 }
 
 .spinner {
     width: 24px;
     height: 24px;
-    border: 2px solid var(--vk-color-header);
+    border: 2px solid var(--vseti-color-header);
     border-top-color: transparent;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -170,19 +169,19 @@
 .error {
     padding: 20px;
     text-align: center;
-    background: #fff;
+    background: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
     border-radius: 8px;
-    box-shadow: 0 1px 0 0 #d3d9de, 0 0 0 1px #e7e8ec;
-    color: #e64646;
+    box-shadow: 0 1px 0 0 var(--vseti-color-shadow-light), 0 0 0 1px var(--vseti-color-border-light);
+    color: var(--vseti-color-error);
 }
 
 .empty {
     padding: 40px;
     text-align: center;
-    background: #fff;
+    background: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
     border-radius: 8px;
-    box-shadow: 0 1px 0 0 #d3d9de, 0 0 0 1px #e7e8ec;
-    color: #818c99;
+    box-shadow: 0 1px 0 0 var(--vseti-color-shadow-light), 0 0 0 1px var(--vseti-color-border-light);
+    color: var(--vseti-color-text-tertiary);
 }
 
 .yearSection {
@@ -191,11 +190,11 @@
 
 .yearTitle {
     font-size: 14px;
-    color: #626d7a;
+    color: var(--vseti-color-text-muted);
     margin: 0 0 15px;
     font-weight: 500;
     padding-left: 10px;
-    border-left: 2px solid var(--vk-color-header);
+    border-left: 2px solid var(--vseti-color-header);
 }
 
 @media (max-width: 768px) {

@@ -1,7 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn, ManyToMany } from "typeorm"
 import { Photo } from "./photo.entity"
 import { Post } from "./post.entity"
 import { MusicTrack } from "./music.entity"
+import { FriendRequest } from "./friend-request.entity"
+import { Friend } from "./friend.entity"
+import { Message } from "./message.entity"
+import { Conversation } from "./conversation.entity"
 
 @Entity('users')
 export class User {
@@ -47,4 +51,24 @@ export class User {
 
     @OneToMany(() => MusicTrack, track => track.user)
     musicTracks: MusicTrack[]
+
+    // Связи для друзей
+    @OneToMany(() => FriendRequest, request => request.sender)
+    sentFriendRequests: FriendRequest[]
+
+    @OneToMany(() => FriendRequest, request => request.receiver)
+    receivedFriendRequests: FriendRequest[]
+
+    @OneToMany(() => Friend, friend => friend.user)
+    friends: Friend[]
+
+    @OneToMany(() => Friend, friend => friend.friend)
+    friendOf: Friend[]
+
+    // Связи для мессенджера
+    @OneToMany(() => Message, message => message.sender)
+    sentMessages: Message[]
+
+    @ManyToMany(() => Conversation, conversation => conversation.participants)
+    conversations: Conversation[]
 } 

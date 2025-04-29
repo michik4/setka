@@ -1,0 +1,837 @@
+/* Модальное окно */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modalContent {
+    box-sizing: border-box;
+    background-color: var(--vseti-color-card);
+    border-radius: 8px;
+    padding: 24px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.modalContent h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--text-color-primary);
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+/* Формы */
+.formGroup {
+    
+    margin-bottom: 16px;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color-primary);
+}
+
+.formGroup input[type="text"],
+.formGroup textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px;
+    background-color: var(--bg-color-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-color-primary);
+    font-size: 1rem;
+}
+
+.formGroup input[type="file"] {
+    display: block;
+    margin-top: 8px;
+    color: var(--text-color-secondary);
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.checkboxLabel input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* Кнопки в форме */
+.formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.cancelButton,
+.createButton {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.cancelButton {
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color-secondary);
+}
+
+.cancelButton:hover:not(:disabled) {
+    background-color: var(--bg-color-tertiary);
+}
+
+.createButton {
+    background-color: var(--primary-color);
+    border: none;
+    color: white;
+}
+
+.createButton:hover:not(:disabled) {
+    background-color: var(--primary-color-hover);
+}
+
+.cancelButton:disabled,
+.createButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Предварительный просмотр обложки */
+.coverUpload {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.coverPreview {
+    width: 100px;
+    height: 100px;
+    margin-right: 16px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.coverPreview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.coverUploadControls {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 200px;
+}
+
+.coverUploadControls input[type="file"] {
+    margin-bottom: 10px;
+}
+
+/* Список треков */
+.tracksList {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-color-tertiary);
+    padding: 8px;
+}
+
+/* Новые стили для выбора треков */
+.tracksHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.addTracksButton {
+    background-color: var(--vseti-color-light-button);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.addTracksButton:hover {
+    background-color: var(--vseti-color-header);
+}
+
+.selectedTracksList {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-color-tertiary);
+    padding: 8px;
+}
+
+.selectedTrackItem {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--vseti-color-card-item);
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+
+.selectedTrackItem:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.trackCover {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.trackCover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.removeTrackButton {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--vseti-color-text-tertiary);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    height: 24px;
+    width: 24px;
+}
+
+.removeTrackButton:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--vseti-color-error);
+}
+
+.noTracksMessage {
+    padding: 15px;
+    text-align: center;
+    color: var(--vseti-color-text-secondary);
+    font-style: italic;
+}
+
+.trackItem {
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.trackItem:last-child {
+    border-bottom: none;
+}
+
+.trackInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.trackTitle {
+    font-weight: 500;
+    color: var(--text-color-primary);
+}
+
+.trackArtist {
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
+}
+
+/* Сообщения об ошибках */
+.error {
+    color: var(--vseti-color-error);
+    background-color: rgba(255, 0, 0, 0.1);
+    padding: 10px;
+    margin-bottom: 16px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+/* Карточка альбома */
+.albumCard {
+    background-color: var(--vseti-color-card);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.albumCard:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.albumCover {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.albumCard:hover .albumCover {
+    transform: scale(1.05);
+}
+
+.albumInfo {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.albumTitle {
+    margin: 0 0 6px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.albumTracks {
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+}
+
+.albumTracks svg {
+    margin-right: 6px;
+    color: var(--vseti-color-light-button);
+}
+
+/* Сетка альбомов */
+.albumsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-gap: 25px;
+}
+
+.privateIndicator {
+    display: inline-block;
+    background-color: var(--vseti-color-light-button);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    vertical-align: middle;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Страница альбома */
+.albumPage {
+    margin-top: 20px;
+    width: 100%;
+}
+
+.albumHeader {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 32px;
+    background-color: var(--vseti-color-card);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.albumHeaderFlex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.albumHeaderCover {
+    width: 180px;
+    height: 180px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.albumHeaderCover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+}
+
+.albumHeaderCover:hover img {
+    transform: scale(1.05);
+}
+
+.albumHeaderInfo {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.albumHeaderTitle {
+    margin: 0;
+    font-size: 2rem;
+    color: var(--text-color-primary);
+    font-weight: 700;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.albumHeaderDescription {
+    margin: 16px 0;
+    color: var(--text-color-secondary);
+    line-height: 1.6;
+    font-size: 1.05rem;
+}
+
+.albumStats {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 8px 0 24px;
+    color: var(--vseti-color-text-tertiary);
+    font-size: 0.95rem;
+    gap: 20px;
+}
+
+.albumStats span {
+    display: flex;
+    align-items: center;
+}
+
+.albumStats svg {
+    margin-right: 8px;
+}
+
+.albumActions {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.actionButton {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.actionButton svg {
+    margin-right: 8px;
+}
+
+.primaryButton {
+    background-color: var(--vseti-color-light-button);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+.primaryButton:hover:not(:disabled) {
+    background-color: var(--vseti-color-header);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24, 167, 95, 0.3);
+}
+
+.primaryButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.secondaryButton {
+    background-color: transparent;
+    border: 2px solid var(--border-color);
+    color: var(--text-color-secondary);
+}
+
+.secondaryButton:hover {
+    background-color: var(--bg-color-tertiary);
+    border-color: var(--vseti-color-text-tertiary);
+    color: var(--vseti-color-text-primary);
+}
+
+.dangerButton {
+    background-color: transparent;
+    border: 2px solid var(--vseti-color-error);
+    color: var(--vseti-color-error);
+}
+
+.dangerButton:hover {
+    background-color: var(--vseti-color-error);
+    color: white;
+}
+
+.tracksSection {
+    margin-top: 32px;
+}
+
+.tracksSection h2 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: var(--vseti-color-text-primary);
+    font-weight: 600;
+}
+
+.tracksList {
+    background-color: var(--vseti-color-card);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.inTable {
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+.inTable:last-child {
+    border-bottom: none;
+}
+
+/* Треки в таблице */
+.trackCoverCell {
+    width: 40px;
+    padding-right: 0 !important;
+}
+
+.trackCover {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.trackCover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.tracksTable {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background-color: var(--vseti-color-card);
+    table-layout: fixed;
+}
+
+.tracksTable th, 
+.tracksTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--vseti-color-border);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tracksTable th:first-child,
+.tracksTable td:first-child {
+    width: 40px;
+    text-align: center;
+}
+
+.tracksTable th:nth-child(2),
+.tracksTable td:nth-child(2) {
+    width: 40px;
+    padding: 0;
+}
+
+.tracksTable th:nth-child(3),
+.tracksTable td:nth-child(3) {
+    width: calc(50% - 80px);
+}
+
+.tracksTable th:nth-child(4), 
+.tracksTable td:nth-child(4) {
+    width: calc(30% - 80px);
+}
+
+.tracksTable th:nth-child(5),
+.tracksTable td:nth-child(5) {
+    width: 80px;
+    text-align: center;
+}
+
+.tracksTable th:last-child,
+.tracksTable td:last-child {
+    width: 90px;
+    text-align: right;
+}
+
+.emptyTracks {
+    background-color: var(--vseti-color-card);
+    border-radius: 12px;
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--vseti-color-text-tertiary);
+}
+
+.emptyTracks p {
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+}
+
+.uploadButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--vseti-color-light-button);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.uploadButton:hover {
+    background-color: var(--vseti-color-header);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24, 167, 95, 0.3);
+}
+
+/* Для страницы списка альбомов */
+.albumsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.albumsTitle {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--vseti-color-text-primary);
+}
+
+.createAlbumButton {
+    background-color: var(--vseti-color-light-button);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.createAlbumButton:hover {
+    background-color: var(--vseti-color-header);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24, 167, 95, 0.3);
+}
+
+/* Пустой список альбомов */
+.emptyState {
+    text-align: center;
+    padding: 60px 20px;
+    background-color: var(--vseti-color-card);
+    border-radius: 12px;
+    color: var(--vseti-color-text-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 32px;
+}
+
+.emptyState p {
+    margin-bottom: 24px;
+    font-size: 1.1rem;
+    max-width: 500px;
+    line-height: 1.6;
+}
+
+/* Индикатор загрузки */
+.loadingContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: var(--vseti-color-text-secondary);
+    font-size: 1.1rem;
+}
+
+.loadingContainer p {
+    margin-top: 16px;
+}
+
+/* Индикатор воспроизведения */
+.playingIndicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 10px;
+    position: relative;
+}
+
+.playingIndicator::before {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 12px;
+    background-color: var(--vseti-color-light-button);
+    border-radius: 2px;
+    animation: sound-wave-1 0.8s infinite ease-in-out alternate;
+    left: 0;
+}
+
+.playingIndicator::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 12px;
+    background-color: var(--vseti-color-light-button);
+    border-radius: 2px;
+    animation: sound-wave-2 0.8s infinite ease-in-out alternate 0.2s;
+    right: 0;
+}
+
+@keyframes sound-wave-1 {
+    0% {
+        height: 4px;
+        transform: translateY(4px);
+    }
+    100% {
+        height: 12px;
+        transform: translateY(0);
+    }
+}
+
+@keyframes sound-wave-2 {
+    0% {
+        height: 6px;
+        transform: translateY(3px);
+    }
+    100% {
+        height: 10px;
+        transform: translateY(1px);
+    }
+}
+
+/* Адаптивный дизайн */
+@media (max-width: 768px) {
+    .albumHeaderFlex {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .albumHeaderCover {
+        width: 160px;
+        height: 160px;
+        margin: 0 auto;
+    }
+    
+    .albumHeaderInfo {
+        width: 100%;
+        align-items: center;
+    }
+    
+    .albumHeaderTitle {
+        font-size: 1.8rem;
+        justify-content: center;
+    }
+    
+    .albumStats {
+        justify-content: center;
+    }
+    
+    .albumActions {
+        justify-content: center;
+    }
+    
+    .tracksTable th:nth-child(4),
+    .tracksTable td:nth-child(4) {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .albumHeader {
+        padding: 16px;
+    }
+    
+    .albumHeaderTitle {
+        font-size: 1.5rem;
+    }
+    
+    .tracksTable th:nth-child(5),
+    .tracksTable td:nth-child(5) {
+        display: none;
+    }
+    
+    .tracksTable th:nth-child(3),
+    .tracksTable td:nth-child(3) {
+        width: calc(100% - 120px);
+    }
+} 

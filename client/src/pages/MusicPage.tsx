@@ -7,6 +7,7 @@ import AuPlayerWrap from '../components/AuPlayer/wrap/AuPlayWrap';
 import AuOrder from '../components/AuPlayer/AuOrder';
 import { usePlayer } from '../contexts/PlayerContext';
 import UploadAudio, { MultiUploadAudio } from '../components/UploadAudio';
+import { Link } from 'react-router-dom';
 // Получаем URL API из переменных окружения
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || '/api/media';
@@ -32,7 +33,8 @@ interface PaginationInfo {
 // Перечисление для вкладок
 enum TabType {
     MyMusic = 'my-music',
-    Queue = 'queue'
+    Queue = 'queue',
+    Albums = 'albums'
 }
 
 export const MusicPage: React.FC = () => {
@@ -700,7 +702,7 @@ export const MusicPage: React.FC = () => {
 
     return (
         <div className={`${expandedView ? styles.expandedMode : ''}`}>
-        <div className={styles.container}>
+            <div className={styles.container}>
                 {playerTrack && (
                     <>
                         <div 
@@ -719,39 +721,39 @@ export const MusicPage: React.FC = () => {
                         />
                     </>
                 )}
-            <div className={styles.header}>
-                <h1 className={styles.title}>Музыка</h1>
-                <p className={styles.subtitle}>Слушайте и добавляйте в плейлисты</p>
-                    
-                    {/* Кнопка переключения режима отображения */}
-                    <button 
-                        className={styles.viewModeToggle}
-                        onClick={toggleViewMode}
-                        title={expandedView ? "Список треков" : "Расширенный плеер"}
-                    >
-                        {expandedView ? (
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
-                            </svg>
-                        ) : (
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
-                            </svg>
-                        )}
-                    </button>
-            </div>
-
-            {debugVisible && debugInfo && (
-                <div className={styles.debugPanel}>
-                    <div className={styles.debugHeader}>
-                        <h3>Отладочная информация</h3>
-                        <button onClick={() => setDebugVisible(false)}>Закрыть</button>
-                    </div>
-                    <pre className={styles.debugContent}>{debugInfo}</pre>
+                <div className={styles.header}>
+                    <h1 className={styles.title}>Музыка</h1>
+                    <p className={styles.subtitle}>Слушайте и добавляйте в плейлисты</p>
+                        
+                        {/* Кнопка переключения режима отображения */}
+                        <button 
+                            className={styles.viewModeToggle}
+                            onClick={toggleViewMode}
+                            title={expandedView ? "Список треков" : "Расширенный плеер"}
+                        >
+                            {expandedView ? (
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                    <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                                </svg>
+                            ) : (
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                                </svg>
+                            )}
+                        </button>
                 </div>
-            )}
 
-            <div className={styles.content}>
+                {debugVisible && debugInfo && (
+                    <div className={styles.debugPanel}>
+                        <div className={styles.debugHeader}>
+                            <h3>Отладочная информация</h3>
+                            <button onClick={() => setDebugVisible(false)}>Закрыть</button>
+                        </div>
+                        <pre className={styles.debugContent}>{debugInfo}</pre>
+                    </div>
+                )}
+
+                <div className={styles.content}>
                     <div className={styles.tabs}>
                         <button 
                             className={`${styles.tab} ${activeTab === TabType.MyMusic ? styles.tabActive : ''}`}
@@ -765,6 +767,9 @@ export const MusicPage: React.FC = () => {
                         >
                             Очередь {queueTracks.length > 0 ? `(${queueTracks.length})` : ''}
                         </button>
+                        <Link to="/music/albums" className={styles.tab}>
+                            Альбомы
+                        </Link>
                     </div>
 
                     <div className={styles.tabContent}>

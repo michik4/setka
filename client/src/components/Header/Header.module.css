@@ -1,12 +1,12 @@
 .header {
-    background-color: var(--vk-color-header);
-    height: 48px;
+    background-color: var(--vseti-color-header);
+    height: 60px;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 100;
-    box-shadow: 0 1px 0 0 #4a76a8;
+    box-shadow: 0 1px 0 0 var(--vseti-color-green-dark);
 }
 
 .container {
@@ -20,7 +20,7 @@
 }
 
 .logo {
-    color: #fff;
+    color: var(--vseti-color-text-primary);
     font-size: 20px;
     font-weight: bold;
     text-decoration: none;
@@ -55,7 +55,7 @@
 }
 
 .userName {
-    color: #fff;
+    color: var(--vseti-color-text-primary);
     font-size: 13px;
     font-weight: 500;
     text-decoration: none;
@@ -68,10 +68,67 @@
     background-color: rgba(0, 0, 0, 0.1);
 }
 
+.notificationButton {
+    background-color: transparent;
+    border: none;
+    color: var(--vseti-color-text-primary);
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.notificationButton:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    opacity: 1;
+}
+
+.notificationBadge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: var(--vseti-color-green);
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settingsButton {
+    background-color: transparent;
+    border: none;
+    color: var(--vseti-color-text-primary);
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settingsButton:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    opacity: 1;
+}
+
 .logoutButton {
     background-color: transparent;
     border: none;
-    color: #fff;
+    color: var(--vseti-color-text-primary);
     padding: 6px 8px;
     border-radius: 4px;
     cursor: pointer;

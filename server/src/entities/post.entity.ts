@@ -1,7 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, ManyToMany, JoinTable, OneToMany } from "typeorm";
 import { User } from "./user.entity";
 import { Photo } from "./photo.entity";
-import { WallPost } from "./wall.entity";
 import { MusicTrack } from "./music.entity";
 import { Group } from "./group.entity";
 import { Album } from "./album.entity";
@@ -27,8 +26,11 @@ export class Post {
     @Column({ nullable: true })
     groupId: number;
 
-    @OneToMany(() => WallPost, wallPost => wallPost.author)
-    wallPosts: WallPost[];
+    @Column({ nullable: true })
+    wallOwnerId: number;
+
+    @ManyToOne(() => User, { nullable: true })
+    wallOwner: User;
 
     @ManyToMany(() => Photo)
     @JoinTable({

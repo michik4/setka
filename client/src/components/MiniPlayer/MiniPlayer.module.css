@@ -1,315 +1,547 @@
+@import '../../App.css';
+
 .miniPlayer {
+    width: 100%;
+    max-width: 100%;
+    background-color: var(--vseti-color-card);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--vseti-color-border);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background-color: #fff;
-    color: #2a5885;
-    padding: 6px 10px;
-    border-radius: 6px;
-    min-width: 280px;
-    max-width: 320px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    flex-direction: column;
     position: relative;
-    border: 1px solid var(--vk-color-border);
+    z-index: 100;
+    overflow: visible;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+/* Основная секция плеера */
+.playerMain {
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    gap: 16px;
+    background-color: rgba(74, 118, 168, 0.03);
+    border-radius: var(--border-radius);
+}
+
+/* Информация о треке */
 .trackInfo {
     display: flex;
+    flex-direction: row;
     align-items: center;
-    flex-grow: 1;
-    overflow: hidden;
-    margin-right: 8px;
+    width: 100%;
+    gap: 12px;
 }
 
+/* Обложка трека */
 .coverImage {
-    width: 32px;
-    height: 32px;
-    border-radius: 4px;
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
     object-fit: cover;
-    margin-right: 8px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
 }
 
+/* Контейнер для деталей трека */
 .trackDetails {
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     min-width: 0;
+    flex: 1;
 }
 
+/* Заголовок трека */
 .trackTitle {
-    font-size: 0.8rem;
+    font-size: 14px;
     font-weight: 500;
-    white-space: nowrap;
+    color: var(--vseti-color-blue);
+    margin-bottom: 5px;
+    cursor: pointer;
+    width: 100%;
+    transition: color 0.2s ease;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #2a5885;
+    white-space: nowrap;
 }
 
+.trackTitle:hover {
+    color: var(--vseti-color-blue-light);
+}
+
+.trackTitle.expanded {
+    white-space: normal;
+    word-wrap: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-height: 36px;
+}
+
+/* Имя исполнителя */
 .trackArtist {
-    font-size: 0.7rem;
-    color: #818c99;
-    white-space: nowrap;
+    font-size: 12px;
+    color: var(--vseti-color-text-gray);
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
 }
 
+.trackArtist.expanded {
+    white-space: normal;
+    word-wrap: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-height: 28px;
+}
+
+/* Отображение времени */
+.timeDisplay {
+    font-size: 11px;
+    color: var(--vseti-color-text-muted);
+    margin-top: 5px;
+}
+
+/* Контролы плеера */
 .controls {
     display: flex;
+    flex-direction: row;
     align-items: center;
-    margin-right: 8px;
+    justify-content: space-between;
+    width: 100%;
 }
 
+/* Кнопка управления плеером */
 .controlButton {
     background: none;
     border: none;
-    color: #5181b8;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     cursor: pointer;
-    padding: 3px;
-    margin: 0 2px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.1s ease, color 0.2s ease;
+    color: var(--vseti-color-button);
+    transition: all 0.2s ease;
+    padding: 0;
 }
 
 .controlButton:hover {
-    color: #2a5885;
-    transform: scale(1.1);
+    color: var(--vseti-color-button-hover);
+    background-color: rgba(74, 118, 168, 0.08);
 }
 
+.controlButton.active {
+    color: var(--vseti-color-button-active);
+}
+
+/* Кнопка Play/Pause */
 .playButton {
-    background-color: rgba(81, 129, 184, 0.1);
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
+    width: 42px;
+    height: 42px;
+    background-color: rgba(74, 118, 168, 0.1);
 }
 
 .playButton:hover {
-    background-color: rgba(81, 129, 184, 0.2);
+    background-color: rgba(74, 118, 168, 0.2);
 }
 
-.rightControls {
+/* Контейнер для правых контролов */
+.otherControls {
     display: flex;
+    justify-content: center;
     align-items: center;
+    gap: 10px;
 }
 
-.toggleButton,
-.expandLink {
+/* Управление громкостью */
+.volumeControl {
+    position: relative;
+}
+
+/* Кнопка громкости */
+.volumeButton {
     background: none;
     border: none;
-    color: #5181b8;
-    cursor: pointer;
-    padding: 3px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.2s ease;
+    cursor: pointer;
+    color: var(--vseti-color-button);
+    transition: all 0.2s ease;
 }
 
-.toggleButton:hover,
-.expandLink:hover {
-    color: #2a5885;
+.volumeButton:hover {
+    color: var(--vseti-color-button-hover);
+    background-color: rgba(74, 118, 168, 0.08);
 }
 
-/* Стили для кнопки отдельного окна */
-.popupWindowButton {
-    position: relative;
-    margin-right: 4px;
-}
-
-.popupWindowButton:hover {
-    color: #f44336; /* Красный цвет для закрытия окна */
-}
-
-.progressBar {
-    width: 100%;
-    height: 3px;
-    background-color: #edeef0;
-    border-radius: 1.5px;
-    margin-top: 4px;
-    overflow: hidden;
-    position: relative;
-}
-
-.progressFilled {
-    height: 100%;
-    background: #5181b8;
-    border-radius: 1.5px;
-    transition: width 0.2s linear;
-}
-
-.expandPanel {
+/* Панель громкости */
+.volumePanel {
     position: absolute;
-    top: 100%;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px;
+    background-color: var(--vseti-color-card);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--vseti-color-border);
+    width: 120px;
+    display: none;
+    z-index: 101;
+}
+
+.volumeControlOpen .volumePanel {
+    display: block;
+}
+
+/* Слайдер громкости */
+.volumeSlider {
+    width: 100%;
+    height: 4px;
+    background-color: var(--vseti-color-background-gray);
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+}
+
+/* Заполненная часть слайдера громкости */
+.volumeFilled {
+    position: absolute;
+    top: 0;
     left: 0;
-    right: 0;
-    background-color: #fff;
-    border-radius: 0 0 6px 6px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    height: 100%;
+    background-color: var(--vseti-color-blue);
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+/* Ползунок громкости */
+.volumeHandle {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--vseti-color-blue);
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+}
+
+/* Дополнительная кнопка */
+.extraButton {
+    background: none;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--vseti-color-button);
+    transition: all 0.2s ease;
+}
+
+.extraButton:hover {
+    color: var(--vseti-color-button-hover);
+    background-color: rgba(74, 118, 168, 0.08);
+}
+
+.extraButton.active {
+    color: var(--vseti-color-button-active);
+}
+
+/* Секция прогрессбара */
+.progressSection {
+    padding: 0 15px 15px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Полоса прогресса */
+.progressBar {
+    height: 4px;
+    width: 100%;
+    background-color: var(--vseti-color-background-gray);
+    cursor: pointer;
+    transition: height 0.2s ease;
+    border-radius: 2px;
+    position: relative;
+}
+
+/* Заполненная часть прогрессбара */
+.progressFilled {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: var(--vseti-color-blue);
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+/* Ручка прогрессбара */
+.progressHandle {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--vseti-color-blue);
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.progressBar:hover {
+    height: 6px;
+}
+
+.progressBar:hover .progressHandle {
+    opacity: 1;
+}
+
+/* Панель очереди */
+.queuePanel {
     overflow: hidden;
     max-height: 0;
-    transition: max-height 0.3s ease, padding 0.3s ease;
-    z-index: 100;
-    border: 1px solid var(--vk-color-border);
-    border-top: none;
+    transition: max-height 0.3s ease;
+    border-top: 0px solid transparent;
+    background-color: var(--vseti-color-card);
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
 }
 
-.expanded .expandPanel {
+.queuePanelOpen {
     max-height: 300px;
-    padding: 8px;
     overflow-y: auto;
+    border-top: 1px solid var(--vseti-color-border);
+    padding: 12px;
 }
 
-.queueTitle {
-    font-size: 0.8rem;
-    font-weight: 500;
-    margin-bottom: 8px;
+/* Заголовок очереди */
+.queueHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #2a5885;
-    padding-bottom: 5px;
-    border-bottom: 1px solid #edeef0;
+    margin-bottom: 12px;
 }
 
-.trackQueue {
+.queueTitle {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vseti-color-blue);
+}
+
+.queueCount {
+    font-size: 12px;
+    color: var(--vseti-color-text-gray);
+}
+
+/* Список треков в очереди */
+.queueList {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 10px;
+    gap: 8px;
 }
 
+/* Элемент очереди */
 .queueItem {
     display: flex;
     align-items: center;
-    padding: 4px;
-    border-radius: 4px;
+    padding: 6px 8px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s;
 }
 
 .queueItem:hover {
-    background-color: var(--vk-color-hover);
+    background-color: rgba(74, 118, 168, 0.05);
 }
 
 .queueItemActive {
-    background-color: rgba(81, 129, 184, 0.1);
+    background-color: rgba(74, 118, 168, 0.1);
 }
 
+/* Обложка в элементе очереди */
 .queueItemImage {
-    width: 28px;
-    height: 28px;
-    border-radius: 3px;
-    margin-right: 6px;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    margin-right: 8px;
     object-fit: cover;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* Информация о треке в очереди */
 .queueItemInfo {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
 }
 
 .queueItemTitle {
-    font-size: 0.75rem;
+    font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #2a5885;
+    color: var(--vseti-color-text);
 }
 
 .queueItemArtist {
-    font-size: 0.7rem;
-    color: #818c99;
+    font-size: 11px;
+    color: var(--vseti-color-text-gray);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.volumeControls {
-    margin-top: 8px;
+/* Индикатор воспроизведения */
+.playingIndicator {
     display: flex;
-    align-items: center;
-    padding: 4px 0;
-    border-top: 1px solid #edeef0;
+    align-items: flex-end;
+    height: 12px;
+    justify-content: center;
+    gap: 2px;
+    margin-left: 5px;
 }
 
-.volumeIcon {
-    margin-right: 8px;
-    color: #5181b8;
+.playingIndicator span {
+    display: block;
+    width: 2px;
+    background-color: var(--vseti-color-blue);
+    border-radius: 1px;
+    animation: sound 1.2s linear infinite;
 }
 
-.volumeSlider {
-    flex: 1;
+.playingIndicator span:nth-child(1) {
+    height: 5px;
+    animation-delay: 0s;
 }
 
-.volumeSlider input[type="range"] {
-    width: 100%;
-    height: 3px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: #edeef0;
-    border-radius: 1.5px;
-    outline: none;
+.playingIndicator span:nth-child(2) {
+    height: 8px;
+    animation-delay: 0.3s;
 }
 
-.volumeSlider input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #5181b8;
-    cursor: pointer;
+.playingIndicator span:nth-child(3) {
+    height: 5px;
+    animation-delay: 0.6s;
 }
 
-.volumeSlider input[type="range"]::-moz-range-thumb {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #5181b8;
-    cursor: pointer;
-    border: none;
-}
-
-/* Адаптивные стили */
-@media (max-width: 768px) {
-    .miniPlayer {
-        min-width: 240px;
-        padding: 4px 8px;
+@keyframes sound {
+    0% {
+        height: 3px;
     }
+    50% {
+        height: 8px;
+    }
+    100% {
+        height: 3px;
+    }
+}
 
+/* Стили для бегущей строки */
+.marquee {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.marquee .content {
+    display: inline-block;
+    padding-left: 100%;
+    animation: marquee 15s linear infinite;
+}
+
+@keyframes marquee {
+    0% {
+        transform: translate(0, 0);
+    }
+    100% {
+        transform: translate(-100%, 0);
+    }
+}
+
+/* Медиа-запросы */
+@media (max-width: 768px) {
     .coverImage {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .controlButton {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .playButton {
+        width: 38px;
+        height: 38px;
+    }
+}
+
+@media (max-width: 480px) {
+    .playerMain {
+        padding: 12px;
+    }
+    
+    .controls {
+        padding: 0 10px;
+    }
+    
+    .coverImage {
+        width: 42px;
+        height: 42px;
+    }
+    
+    .trackTitle {
+        font-size: 13px;
+    }
+    
+    .controlButton {
         width: 28px;
         height: 28px;
     }
-
-    .trackTitle {
-        font-size: 0.75rem;
-    }
-
-    .trackArtist {
-        font-size: 0.65rem;
-    }
-
-    .controlButton svg {
-        width: 18px;
-        height: 18px;
-    }
-
+    
     .playButton {
-        width: 24px;
-        height: 24px;
+        width: 34px;
+        height: 34px;
+    }
+    
+    .volumeControl {
+        display: none;
     }
 }
 
-/* Для очень узких экранов - показываем только контролы */
-@media (max-width: 480px) {
-    .miniPlayer {
-        min-width: 140px;
-        max-width: 180px;
-    }
+.loadingIndicator {
+    color: var(--accent-color) !important;
+    animation: spin 1.2s linear infinite;
+}
 
-    .trackInfo {
-        display: none;
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
     }
 } 

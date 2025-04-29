@@ -1,55 +1,255 @@
 :root {
-    --vk-color-background: #edeef0;
-    --vk-color-header: #4a76a8;
-    --vk-color-text: #2a5885;
-    --vk-color-light-button: #5181b8;
-    --vk-color-hover: #e5ebf1;
-    --vk-color-border: #dce1e6;
+    /* Основные цвета */
+    --vseti-color-background: #201E1F;
+    --vseti-color-header: #18a75f;
+    --vseti-color-header-light: #329967;
+    --vseti-color-text: #e9ebee;
+    --vseti-color-light-button: #25c97a;
+    --vseti-color-hover: #2d333c;
+    --vseti-color-border: #373d47;
+    
+    /* Дополнительные цвета и оттенки */
+    --vseti-color-dark: #1a1f25;
+
+    --vseti-color-button: #fff;
+    --vseti-color-button-hover: #caffef;
+    --vseti-color-button-active: #25c97a;
+    
+    --vseti-color-card: #262c35;
+    --vseti-color-card-hover: #2d333c;
+    --vseti-color-card-active: #343b47;
+    --vseti-color-card-item: #2d333c;
+    --vseti-color-card-item-hover: #343b47;
+
+    --vseti-color-green-dark: #117a45;
+    --vseti-color-green-light: #2bd688;
+    --vseti-color-green-hover: rgba(24, 167, 95, 0.15);
+    --vseti-color-green-active: rgba(24, 167, 95, 0.25);
+
+    --vseti-color-text-dark: #1a1f25;
+    --vseti-color-text-primary: #e9ebee;
+    --vseti-color-text-secondary: #c4c9cf;
+    --vseti-color-text-tertiary: #a6acb3;
+    --vseti-color-text-muted: #6c7583;
+    --vseti-color-text-accent: #18a75f;
+    
+    --vseti-color-icon: #757b84;
+    --vseti-color-scrollbar: #3c444f;
+    --vseti-color-scrollbar-light: #c1c9d1;
+    --vseti-color-error: #e64646;
+    --vseti-color-error-hover: #e06060;
+    --vseti-color-success: #4CAF50;
+    
+    /* Цвета для компонентов */
+    --vseti-color-white: #fff;
+    --vseti-color-shadow-light: #d3d9de;
+    --vseti-color-border-light: #e7e8ec;
+    --vseti-color-text-gray: #656565;
+    --vseti-color-blue: #2a5885;
+    --vseti-color-blue-light: #4a76a8;
+    --vseti-color-blue-hover: #5181b8;
+    --vseti-color-background-light: #f0f2f5;
+    --vseti-color-background-gray: #edeef0;
+    
+    /* Размеры и радиусы */
     --border-radius: 8px;
+    --bg-secondary: var(--vseti-color-card);
+    --border-color: var(--vseti-color-border);
+    --text-primary: var(--vseti-color-text-primary);
+    --sidebar-width: 165px;
+    --right-sidebar-width: 320px;
+    --content-width: 550px;
+    --content-width-expanded: 700px; /* Расширенная ширина контента при скрытом сайдбаре */
+    --header-height: 60px;
+    --max-content-area: 1070px; /* Обновлено с учетом новой ширины правого сайдбара */
+    --side-spacing: 30px; /* Отступ от краев для сайдбаров */
+    --std-gap: 15px;
 }
 
 body {
     margin: 0;
 }
 
-.app {
-    min-height: 100vh;
-    background-color: var(--vk-color-background);
-    font-family: -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', sans-serif;
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    padding: 0;
 }
 
-.main {
-    width: 100%;
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 0 15px;
-    margin-top: 60px;
-    min-height: calc(100vh - 60px);
-    display: flex;
-    justify-content: center;
-    gap: 15px;
+button {
+    background-color: var(--vseti-color-button);
+    color: var(--vseti-color-text-dark);
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 8px 16px;
+}
+
+button:hover {
+    background-color: var(--vseti-color-button-hover);
+}
+
+
+
+.app {
+    min-height: 100vh;
+    background-color: var(--vseti-color-background);
+    font-family: -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', sans-serif;
     position: relative;
 }
 
+.main {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) var(--content-width) var(--right-sidebar-width);
+    grid-gap: var(--side-spacing);
+    margin: 0 auto;
+    margin-top: var(--header-height);
+    min-height: calc(100vh - var(--header-height));
+    justify-content: center;
+    max-width: calc(var(--sidebar-width) + var(--content-width) + var(--right-sidebar-width) + var(--side-spacing) * 2);
+    width: 100%;
+    padding: 0 var(--side-spacing);
+    position: relative;
+    box-sizing: border-box;
+    transition: max-width 0.3s ease, grid-template-columns 0.3s ease;
+}
+
+/* Измененная сетка при скрытом правом сайдбаре */
+.main.sidebar-hidden {
+    grid-template-columns: var(--sidebar-width) var(--content-width-expanded) 0;
+    max-width: calc(var(--sidebar-width) + var(--content-width-expanded) + var(--side-spacing) * 2);
+    transition: max-width 0.3s ease, grid-template-columns 0.3s ease;
+}
+
 .sidebar {
-    width: 165px;
-    position: fixed;
-    left: calc(50% - 480px);
-    top: 48px;
-    height: 100vh;
+    width: var(--sidebar-width);
+    position: sticky;
+    top: var(--header-height);
+    height: calc(100vh - var(--header-height));
     padding-top: 15px;
-    background-color: var(--vk-color-background);
+    background-color: var(--vseti-color-background);
+    z-index: 10;
 }
 
 .content {
-    flex-grow: 0;
-    width: 550px;
+    width: 100%;
+    padding-top: 20px;
+    transition: width 0.3s ease;
+}
+
+.right-sidebar {
+    width: var(--right-sidebar-width);
+    height: calc(100vh - var(--header-height));
+    position: sticky;
+    top: var(--header-height);
+    background-color: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    overflow-y: auto;
+    padding: 20px 0;
+    z-index: 10;
+    transition: transform 0.3s ease, opacity 0.3s ease, margin-left 0.3s ease, width 0.3s ease;
+    opacity: 1;
+    /* Стилизация скроллбара */
+    scrollbar-width: thin;
+    scrollbar-color: var(--vseti-color-scrollbar-light) transparent;
+}
+
+/* Стили для webkit браузеров (Chrome, Safari) */
+.right-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.right-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.right-sidebar::-webkit-scrollbar-thumb {
+    background-color: var(--vseti-color-scrollbar);
+    border-radius: 6px;
+}
+
+.right-sidebar-hidden {
+    transform: translateX(calc(100% + var(--side-spacing)));
+    opacity: 0;
+    margin-left: calc(-1 * var(--right-sidebar-width));
+}
+
+.toggle-sidebar-container {
+    position: fixed;
+    right: 20px;
+    top: calc(var(--header-height) + 20px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 11;
+}
+
+.toggle-sidebar-btn {
+    background-color: var(--vseti-color-light-button);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.toggle-sidebar-btn:hover {
+    background-color: var(--vseti-color-header);
+    transform: scale(1.05);
+    
+}
+
+.toggle-sidebar-btn:active {
+    transform: scale(0.95);
+}
+
+.playing-indicator {
+    width: 6px;
+    height: 6px;
+    background-color: var(--vseti-color-light-button);
+    border-radius: 50%;
+    position: relative;
+    margin-right: -5px;
+}
+
+.playing-indicator::before,
+.playing-indicator::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: var(--vseti-color-light-button);
+    animation: sound-wave 2s infinite;
+}
+
+.playing-indicator::after {
+    animation-delay: 0.5s;
+}
+
+@keyframes sound-wave {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
 }
 
 .post {
-    background: #fff;
+    background: var(--vseti-color-card);
     border-radius: 8px;
-    box-shadow: 0 1px 0 0 #d3d9de, 0 0 0 1px #e7e8ec;
+    box-shadow: 0 1px 0 0 var(--vseti-color-border), 0 0 0 1px var(--vseti-color-border);
     padding: 15px;
     margin-bottom: 15px;
 }
@@ -61,7 +261,7 @@ body {
 .nav-item {
     display: block;
     padding: 8px 0;
-    color: #285473;
+    color: var(--vseti-color-text-secondary);
     text-decoration: none;
     font-size: 13px;
     line-height: 1.154;
@@ -69,60 +269,61 @@ body {
 }
 
 .nav-item:hover {
-    background-color: var(--vk-color-hover);
+    background-color: var(--vseti-color-hover);
 }
 
 .nav-item.active {
-    color: var(--vk-color-header);
+    color: var(--vseti-color-header);
     font-weight: 500;
 }
 
 /* Адаптивность */
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
     .main {
-        padding: 0 20px;
+        grid-template-columns: var(--sidebar-width) 1fr;
+        padding: 0 var(--side-spacing);
     }
-
-    .sidebar {
-        left: 20px;
+    
+    .right-sidebar {
+        display: none;
+    }
+    
+    .toggle-sidebar-container {
+        display: none;
     }
 }
 
 @media (max-width: 768px) {
     .main {
+        grid-template-columns: 130px 1fr;
+        grid-gap: 15px;
         padding: 0 12px;
-        justify-content: flex-start;
     }
     
     .sidebar {
         width: 130px;
-        left: 12px;
     }
 
     .content {
         width: 100%;
-        margin-left: 145px;
     }
 }
 
 @media (max-width: 480px) {
     .main {
+        grid-template-columns: 1fr;
         padding: 0 8px;
     }
 
     .sidebar {
         display: none;
     }
-
-    .content {
-        margin-left: 0;
-    }
 }
 
 /* Стили для уведомления о плеере в отдельном окне */
 .player-window-notification {
-  background-color: rgba(29, 185, 84, 0.1);
-  color: #1db954;
+  background-color: var(--vseti-color-green-hover);
+  color: var(--vseti-color-light-button);
   padding: 8px 12px;
   border-radius: 4px;
   margin: 10px 0;
@@ -132,13 +333,13 @@ body {
   font-size: 0.9rem;
   position: relative;
   transition: all 0.3s ease;
-  border: 1px solid rgba(29, 185, 84, 0.3);
+  border: 1px solid var(--vseti-color-green-active);
 }
 
 .notification-indicator {
   width: 10px;
   height: 10px;
-  background-color: #1db954;
+  background-color: var(--vseti-color-light-button);
   border-radius: 50%;
   margin-left: 10px;
   animation: pulse 2s infinite;

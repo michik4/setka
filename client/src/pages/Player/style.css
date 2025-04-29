@@ -7,7 +7,7 @@
   justify-content: center;
   min-height: 100vh;
   background-color: #121212;
-  color: white;
+  color: var(--vseti-color-var(--vseti-color-white));
   overflow: hidden;
 }
 

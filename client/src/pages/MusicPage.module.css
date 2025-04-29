@@ -67,7 +67,7 @@
 }
 
 .viewModeToggle svg {
-    color: #4a76a8;
+    color: var(--vseti-color-blue-light);
 }
 
 .playerContainer {
@@ -94,13 +94,13 @@
 
 .title {
     font-size: 28px;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
     margin: 0 0 10px 0;
 }
 
 .subtitle {
     font-size: 16px;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
     margin: 0;
 }
 
@@ -125,7 +125,7 @@
 }
 
 .loading p {
-    color: #626d7a;
+    color: var(--vseti-color-text-muted);
     font-size: 15px;
     margin: 0;
 }
@@ -168,7 +168,7 @@
 
 .activeTrack {
     background-color: rgba(81, 129, 184, 0.1);
-    border-left: 3px solid #5181b8;
+    border-left: 3px solid var(--vseti-color-blue-hover);
     position: relative;
     overflow: hidden;
 }
@@ -278,7 +278,7 @@
 .pauseIcon span {
     width: 4px;
     height: 16px;
-    background-color: white;
+    background-color: var(--vseti-color-var(--vseti-color-white));
     border-radius: 2px;
 }
 
@@ -293,7 +293,7 @@
 .playingWaveform span {
     display: block;
     width: 3px;
-    background-color: white;
+    background-color: var(--vseti-color-var(--vseti-color-white));
     border-radius: 1.5px;
     animation: waveformAnimation 1.4s ease infinite;
     opacity: 0.8;
@@ -329,16 +329,16 @@
 .trackTitle {
     font-size: 13px;
     font-weight: 500;
-    color: #2a5885;
-    white-space: nowrap;
+    color: var(--vseti-color-blue);
+    var(--vseti-color-var(--vseti-color-white))-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .trackArtist {
     font-size: 12px;
-    color: #818c99;
-    white-space: nowrap;
+    color: var(--vseti-color-text-tertiary);
+    var(--vseti-color-var(--vseti-color-white))-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -354,7 +354,7 @@
 
 .trackDuration {
     font-size: 12px;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
     min-width: 30px;
     text-align: right;
 }
@@ -375,7 +375,7 @@
     border: none;
     padding: 8px;
     cursor: pointer;
-    color: #5181b8;
+    color: var(--vseti-color-blue-hover);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -387,7 +387,7 @@
 
 .queueButton:hover {
     background-color: rgba(81, 129, 184, 0.1);
-    color: #5181b8;
+    color: var(--vseti-color-blue-hover);
 }
 
 /* Вкладки */
@@ -395,7 +395,7 @@
     display: flex;
     gap: 1px;
     margin-bottom: 20px;
-    border-bottom: 1px solid #edeef0;
+    border-bottom: 1px solid var(--vseti-color-background-gray);
 }
 
 .tab {
@@ -404,18 +404,18 @@
     padding: 12px 20px;
     font-size: 15px;
     font-weight: 500;
-    color: #626d7a;
+    color: var(--vseti-color-text-muted);
     cursor: pointer;
     position: relative;
     transition: color 0.2s;
 }
 
 .tab:hover {
-    color: #2a5885;
+    color: var(--vseti-color-blue);
 }
 
 .tabActive {
-    color: #2a5885;
+    color: var(--vseti-color-blue);
 }
 
 .tabActive::after {
@@ -425,7 +425,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background-color: #5181b8;
+    background-color: var(--vseti-color-blue-hover);
 }
 
 .tabContent {
@@ -456,7 +456,7 @@
 
 .trackCount {
     font-size: 16px;
-    color: #5181b8;
+    color: var(--vseti-color-blue-hover);
     font-weight: 500;
 }
 
@@ -475,7 +475,7 @@
 }
 
 .loadingMore p {
-    color: #626d7a;
+    color: var(--vseti-color-text-muted);
     margin: 0;
 }
 
@@ -483,7 +483,7 @@
 .endOfList {
     text-align: center;
     padding: 20px 0;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
     font-size: 14px;
 }
 
@@ -521,8 +521,8 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: #fff;
-    border-top: 1px solid #edeef0;
+    background: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
+    border-top: 1px solid var(--vseti-color-background-gray);
     padding: 10px 20px;
     display: flex;
     justify-content: space-between;
@@ -553,13 +553,13 @@
 
 .playerTitle {
     font-size: 14px;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
     font-weight: 500;
 }
 
 .playerArtist {
     font-size: 13px;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
 }
 
 .playerControls {
@@ -581,20 +581,20 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
     transition: background-color 0.2s;
 }
 
 .prevButton:hover,
 .nextButton:hover {
-    background-color: #f0f2f5;
+    background-color: var(--vseti-color-background-light);
 }
 
 .playPauseButton {
     width: 40px;
     height: 40px;
-    background-color: #4a76a8;
-    color: white;
+    background-color: var(--vseti-color-blue-light);
+    color: var(--vseti-color-var(--vseti-color-white));
 }
 
 .playPauseButton:hover {
@@ -607,7 +607,7 @@
     gap: 10px;
     flex: 1;
     justify-content: flex-end;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
 }
 
 .volumeSlider {
@@ -615,7 +615,7 @@
     height: 4px;
     -webkit-appearance: none;
     appearance: none;
-    background: #dce1e6;
+    background: var(--vseti-color-border-light);
     border-radius: 2px;
     outline: none;
 }
@@ -626,7 +626,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #4a76a8;
+    background: var(--vseti-color-blue-light);
     cursor: pointer;
 }
 
@@ -634,7 +634,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #4a76a8;
+    background: var(--vseti-color-blue-light);
     cursor: pointer;
     border: none;
 }
@@ -652,7 +652,7 @@
     display: block;
     width: 3px;
     height: 8px;
-    background-color: #4a76a8;
+    background-color: var(--vseti-color-blue-light);
     border-radius: 1px;
     animation: sound 1.2s linear infinite;
 }
@@ -776,7 +776,7 @@
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    background-color: #fff;
+    background-color: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
     font-size: 1rem;
 }
 
@@ -787,8 +787,8 @@
 .uploadButton {
     grid-column: 1 / -1;
     padding: 12px;
-    background-color: #5181b8;
-    color: white;
+    background-color: var(--vseti-color-blue-hover);
+    color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     border-radius: 4px;
     font-size: 1rem;
@@ -799,7 +799,7 @@
 }
 
 .uploadButton:hover {
-    background-color: #4a76a8;
+    background-color: var(--vseti-color-blue-light);
 }
 
 .uploadButton:disabled {
@@ -810,7 +810,7 @@
 /* Прогресс-бар загрузки */
 .progressBar {
     margin-top: 15px;
-    background-color: #f0f2f5;
+    background-color: var(--vseti-color-background-light);
     border-radius: 4px;
     height: 20px;
     position: relative;
@@ -819,7 +819,7 @@
 
 .progressFill {
     height: 100%;
-    background-color: #5181b8;
+    background-color: var(--vseti-color-blue-hover);
     transition: width 0.3s ease;
 }
 
@@ -833,7 +833,7 @@
     align-items: center;
     justify-content: center;
     font-size: 0.8rem;
-    color: #fff;
+    color: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
     text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
 }
 
@@ -851,14 +851,14 @@
 }
 
 .emptyState p {
-    color: #626d7a;
+    color: var(--vseti-color-text-muted);
     margin: 5px 0;
 }
 
 .emptyState p:first-child {
     font-size: 17px;
     font-weight: 500;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
     margin-bottom: 10px;
 }
 
@@ -888,7 +888,7 @@
     border: none;
     padding: 8px;
     cursor: pointer;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -912,7 +912,7 @@
 
 .debugButton {
     background-color: #ff5722;
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     border-radius: 4px;
     padding: 5px 10px;
@@ -944,7 +944,7 @@
 
 .debugHeader button {
     background-color: #ff5722;
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     border-radius: 4px;
     padding: 5px 10px;
@@ -959,7 +959,7 @@
     overflow: auto;
     font-family: monospace;
     font-size: 0.9rem;
-    white-space: pre-wrap;
+    var(--vseti-color-var(--vseti-color-white))-space: pre-wrap;
     word-break: break-all;
 }
 
@@ -1046,7 +1046,7 @@
 
 .myMusicHeader h2 {
     font-size: 20px;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
     margin: 0;
 }
 
@@ -1085,7 +1085,7 @@
 
 .volumeIcon {
     margin-right: 10px;
-    color: #4a76a8;
+    color: var(--vseti-color-blue-light);
 }
 
 .volumeSliderFixed {
@@ -1093,7 +1093,7 @@
     height: 4px;
     -webkit-appearance: none;
     appearance: none;
-    background: #dce1e6;
+    background: var(--vseti-color-border-light);
     border-radius: 2px;
     outline: none;
 }
@@ -1103,7 +1103,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #4a76a8;
+    background: var(--vseti-color-blue-light);
     cursor: pointer;
 }
 
@@ -1111,7 +1111,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #4a76a8;
+    background: var(--vseti-color-blue-light);
     cursor: pointer;
     border: none;
 }

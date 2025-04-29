@@ -27,7 +27,10 @@ export interface Author {
     lastName: string;
     nickname?: string;
     email: string;
-    avatar?: Photo;
+    avatar?: {
+        id: number;
+        path: string;
+    };
 }
 
 export interface Post {
@@ -36,6 +39,16 @@ export interface Post {
     author: Author;
     authorId: number;
     wallOwnerId?: number;
+    groupId?: number;
+    group?: {
+        id: number;
+        name: string;
+        slug: string;
+        avatar?: {
+            id: number;
+            path: string;
+        };
+    };
     photos: Photo[];
     albums?: Album[];
     tracks?: Track[];

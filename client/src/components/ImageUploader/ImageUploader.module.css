@@ -14,12 +14,12 @@
 }
 
 .dropzone:hover {
-    border-color: #4a76a8;
-    background-color: #f0f2f5;
+    border-color: var(--vseti-color-blue-light);
+    background-color: var(--vseti-color-background-light);
 }
 
 .dragging {
-    border-color: #4a76a8;
+    border-color: var(--vseti-color-blue-light);
     background-color: #e1eaf7;
 }
 
@@ -45,7 +45,7 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    color: #4a76a8;
+    color: var(--vseti-color-blue-light);
 }
 
 .icon {
@@ -56,7 +56,7 @@
     width: 24px;
     height: 24px;
     border: 3px solid #f3f3f3;
-    border-top: 3px solid #4a76a8;
+    border-top: 3px solid var(--vseti-color-blue-light);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -64,7 +64,7 @@
 .previewContainer {
     width: 100%;
     padding: 10px;
-    background-color: #f0f2f5;
+    background-color: var(--vseti-color-background-light);
     border-radius: 8px;
 }
 
@@ -94,8 +94,8 @@
 }
 
 .uploadButton {
-    background-color: #4a76a8;
-    color: white;
+    background-color: var(--vseti-color-blue-light);
+    color: var(--vseti-color-var(--vseti-color-white));
 }
 
 .uploadButton:hover:not(:disabled) {
@@ -108,7 +108,7 @@
 }
 
 .cancelButton {
-    background-color: #f2f3f5;
+    background-color: var(--vseti-color-background-light);
     color: #626D7A;
 }
 
@@ -117,7 +117,7 @@
 }
 
 .cancelButton:disabled {
-    color: #939393;
+    color: var(--vseti-color-text-tertiary);
     cursor: not-allowed;
 }
 
@@ -128,13 +128,13 @@
     align-items: center;
     margin-bottom: 15px;
     padding-bottom: 10px;
-    border-bottom: 1px solid #e7e8ec;
+    border-bottom: 1px solid var(--vseti-color-border-light);
 }
 
 .previewTitle {
     margin: 0;
     font-size: 16px;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
 }
 
 .previewFiles {
@@ -144,7 +144,7 @@
 }
 
 .previewFile {
-    background-color: white;
+    background-color: var(--vseti-color-var(--vseti-color-white));
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
@@ -186,7 +186,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
 }
 
 .errorIcon {
@@ -209,8 +209,8 @@
 
 .fileName {
     font-size: 13px;
-    color: #2a5885;
-    white-space: nowrap;
+    color: var(--vseti-color-blue);
+    var(--vseti-color-var(--vseti-color-white))-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -218,7 +218,7 @@
 .removeButton {
     background: none;
     border: none;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
     font-size: 18px;
     cursor: pointer;
     padding: 0;
@@ -233,7 +233,7 @@
 
 .removeButton:hover {
     background-color: #f5f5f5;
-    color: #e64646;
+    color: var(--vseti-color-error);
 }
 
 .removeButton:disabled {
@@ -242,7 +242,7 @@
 }
 
 .addMoreFile {
-    border: 2px dashed #dce1e6;
+    border: 2px dashed var(--vseti-color-border-light);
     border-radius: 8px;
     height: 100%;
     min-height: 150px;
@@ -262,18 +262,18 @@
 
 .addMoreIcon {
     font-size: 30px;
-    color: #4a76a8;
+    color: var(--vseti-color-blue-light);
     margin-bottom: 5px;
 }
 
 .addMoreText {
     font-size: 14px;
-    color: #4a76a8;
+    color: var(--vseti-color-blue-light);
 }
 
 .subMessage {
     font-size: 13px;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
     margin-top: 5px;
 }
 

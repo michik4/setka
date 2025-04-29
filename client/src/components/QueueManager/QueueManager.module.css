@@ -1,0 +1,375 @@
+.queueManager {
+  background-color: var(--background-elevated);
+  border-radius: 8px;
+  max-width: 280px;
+  width: 100%;
+  font-size: 0.9rem;
+  padding: 10px;
+}
+
+.expanded {
+  max-width: 400px;
+}
+
+/* Стили для активного состояния перетаскивания */
+.draggingActive {
+  box-shadow: 0 0 0 2px var(--accent-primary), 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.queueHeader {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.queueHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.queueActions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.queueTab {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: background-color 0.2s, color 0.2s;
+  flex: 1;
+  text-align: center;
+}
+
+.active {
+  background-color: var(--accent-primary);
+  color: var(--text-on-accent);
+  font-weight: 500;
+}
+
+.clearQueue {
+  background-color: var(--background-danger);
+  color: var(--text-on-accent);
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clearQueue:hover {
+  background-color: var(--background-danger-hover);
+}
+
+.clearQueue:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.queueContent {
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.queueContent::-webkit-scrollbar {
+  width: 4px;
+}
+
+.queueContent::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 2px;
+}
+
+.queueContent::-webkit-scrollbar-track {
+  background-color: var(--scrollbar-track);
+}
+
+.queueList, .historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.queueTrack {
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  border-radius: 6px;
+  background-color: var(--background-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease, transform 0.2s ease;
+  position: relative;
+  border: 1px solid transparent;
+  animation: trackAppear 0.3s ease;
+  transform-origin: center;
+}
+
+@keyframes trackAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.queueTrack:hover {
+  background-color: var(--background-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.currentTrack {
+  background-color: var(--background-accent-soft);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.dragOver {
+  border: 1px dashed var(--accent-primary);
+  background-color: var(--background-accent-ultra-soft);
+  margin-top: 0;
+  animation: highlight 1.5s infinite ease-in-out;
+  transition: all 0.3s ease;
+}
+
+@keyframes highlight {
+  0% {
+    background-color: var(--background-accent-ultra-soft);
+  }
+  50% {
+    background-color: var(--background-accent-soft);
+  }
+  100% {
+    background-color: var(--background-accent-ultra-soft);
+  }
+}
+
+.dragging {
+  opacity: 0.5;
+  border: 1px dashed var(--accent-primary);
+  transform: scale(0.98);
+  transition: all 0.3s ease;
+}
+
+/* Стили для плейсхолдера */
+.dropPlaceholder {
+  height: 8px;
+  margin: 4px 0;
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  animation: fadeInOut 0.3s ease;
+  cursor: pointer;
+  background-color: var(--background-accent-ultra-soft);
+  padding: 3px 0;
+}
+
+.placeholderLine {
+  width: 90%;
+  height: 2px;
+  background-color: var(--accent-primary);
+  box-shadow: 0 0 4px rgba(var(--accent-primary-rgb), 0.5);
+  border-radius: 2px;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* Убираем старые стили плейсхолдеров */
+.trackPlaceholder,
+.dropZone,
+.firstPlaceholder {
+  display: none;
+}
+
+.trackDragHandle {
+  color: var(--text-secondary);
+  cursor: grab;
+  opacity: 0.6;
+  padding: 0 4px;
+  font-size: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.dragHandleIcon {
+  transition: transform 0.2s;
+}
+
+.trackDragHandle:hover {
+  opacity: 1;
+  color: var(--accent-primary);
+}
+
+.trackDragHandle:hover .dragHandleIcon {
+  transform: scale(1.2);
+}
+
+.queueTrack:hover .trackDragHandle {
+  opacity: 0.8;
+}
+
+.trackInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.trackCover {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.queueTrack:hover .trackCover {
+  transform: scale(1.05);
+}
+
+.trackCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playingIndicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  background-color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 7px;
+  animation: fadeIn 0.3s ease;
+}
+
+.playingIcon, .pausedIcon {
+  color: var(--text-on-accent);
+}
+
+.trackDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.trackTitle {
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.trackArtist {
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trackActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.trackDuration {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.trackRemove {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s, transform 0.2s;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.trackRemove:hover {
+  background-color: var(--background-danger);
+  color: var(--text-on-accent);
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.emptyList {
+  padding: 20px 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.dragDropHint {
+  text-align: center;
+  padding: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background-color: var(--background-secondary);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  border: 1px dashed var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.dragIconHint {
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: bold;
+  animation: wiggle 2s infinite;
+}
+
+@keyframes wiggle {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  50% { transform: rotate(0deg); }
+  75% { transform: rotate(-10deg); }
+  100% { transform: rotate(0deg); }
+} 

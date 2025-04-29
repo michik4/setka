@@ -1,3 +1,5 @@
+@import '../../App.css';
+
 .groupPage {
   max-width: 960px;
   margin: 0 auto;
@@ -9,18 +11,18 @@
   padding: 20px;
   text-align: center;
   font-size: 15px;
-  color: #818c99;
+  color: var(--vseti-color-text-muted);
 }
 
 .error {
-  color: #e64646;
+  color: var(--vseti-color-error);
 }
 
 /* Шапка группы */
 .groupHeader {
   position: relative;
   border-radius: 8px 8px 0 0;
-  background-color: #fff;
+  background-color: var(--vseti-color-background);
   padding: 20px;
   display: flex;
   align-items: center;
@@ -30,7 +32,7 @@
   width: 100%;
   height: 240px;
   object-fit: cover;
-  background-color: #edeef0;
+  background-color: var(--vseti-color-background-gray);
 }
 
 /* Аватар и информация группы */
@@ -44,8 +46,8 @@
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  background-color: #5181b8;
-  color: white;
+  background-color: var(--vseti-color-blue-hover);
+  color: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
   display: flex;
   justify-content: center;
   align-items: center;
@@ -78,20 +80,38 @@
 .groupName {
   font-size: 19px;
   font-weight: bold;
-  color: #000;
+  color: var(--vseti-color-text-primary);
   margin-bottom: 8px;
+}
+
+.groupDescription {
+  font-size: 14px;
+  color: var(--vseti-color-text-gray);
+  line-height: 1.5;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.privateBadge {
+  display: inline-block;
+  padding: 3px 8px;
+  background-color: rgba(74, 118, 168, 0.1);
+  color: var(--vseti-color-blue-light);
+  border-radius: 4px;
+  font-size: 12px;
+  margin-right: 10px;
 }
 
 .groupStats {
   display: flex;
   gap: 15px;
-  color: #626d7a;
+  color: var(--vseti-color-text-tertiary);
   font-size: 13px;
   margin-bottom: 12px;
 }
 
 .groupStats span {
-  color: #626d7a;
+  color: var(--vseti-color-text-tertiary);
 }
 
 .groupStats span:first-child {
@@ -99,8 +119,8 @@
 }
 
 .groupDetails button {
-  background-color: #5181b8;
-  color: white;
+  background-color: var(--vseti-color-blue-hover);
+  color: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
   border: none;
   border-radius: 4px;
   padding: 8px 16px;
@@ -110,7 +130,7 @@
 }
 
 .groupDetails button:hover {
-  background-color: #4a76a8;
+  background-color: var(--vseti-color-blue-light);
 }
 
 /* Информация и Участники */
@@ -122,16 +142,14 @@
 h3 {
   font-size: 16px;
   font-weight: bold;
-  color: #000;
+  color: var(--vseti-color-text-primary);
   margin: 20px 0 12px 0;
-  padding: 0 20px;
 }
 
 p {
   font-size: 13px;
-  color: #656565;
+  color: var(--vseti-color-text-gray);
   line-height: 1.4;
-  padding: 0 20px;
   margin-bottom: 20px;
 }
 
@@ -154,47 +172,45 @@ p {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #5181b8;
+  background-color: var(--vseti-color-blue-hover);
   display: flex;
   justify-content: center;
   align-items: center;
-  color: white;
+  color: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
   font-weight: bold;
   font-size: 16px;
 }
 
 .membersList span {
   font-size: 13px;
-  color: #2a5885;
+  color: var(--vseti-color-blue);
   display: flex;
   flex-direction: column;
 }
 
 .membersList span span {
   font-size: 12px;
-  color: #939393;
+  color: var(--vseti-color-text-tertiary);
 }
 
 /* Посты группы */
 .postsSection {
-  border-radius: 8px;
-  margin-top: 15px;
-  padding-top: 1px;
-  padding-bottom: 15px;
+  background-color: var(--vseti-color-background);
+  border-radius: 0 0 8px 8px;
 }
 
 .sectionTitle {
   font-size: 16px;
   font-weight: bold;
-  margin: 15px 20px 12px 20px;
-  padding: 0;
+  margin: 0 0 15px 0;
+  color: var(--vseti-color-blue);
 }
 
 /* Стили для интеграции CreatePostForm */
 .postsSection :global(.CreatePostForm_form__zfM4w) {
   margin: 0 20px 15px 20px;
   border-radius: 8px;
-  border: 1px solid #e7e8ec;
+  border: 1px solid var(--vseti-color-border-light);
 }
 
 .postsSection :global(.CreatePostForm_textarea__gJ2j2) {
@@ -203,7 +219,7 @@ p {
 }
 
 .postsSection :global(.CreatePostForm_submitButton__Yo9iF) {
-  background-color: #5181b8;
+  background-color: var(--vseti-color-blue-hover);
   border-radius: 4px;
   font-size: 13px;
   padding: 7px 16px;
@@ -214,14 +230,12 @@ p {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  margin: 0 15px;
 }
 
 /* Стили для компонента Post в группе */
 .postsList > div {
-  background-color: #fff;
+  background-color: var(--vseti-color-card);
   border-radius: 8px;
-  box-shadow: 0 1px 0 0 #d7d8db, 0 0 0 1px #e3e4e8;
   overflow: hidden;
 }
 
@@ -238,20 +252,48 @@ p {
   font-size: 13px;
   line-height: 1.5;
   margin-bottom: 12px;
-  color: #000;
-  padding: 0 15px;
+  color: var(--vseti-color-text-primary);
 }
 
 /* Стили для пустых постов */
 .emptyPosts {
   padding: 20px;
   text-align: center;
-  background: #fff;
+  background: var(--vseti-color-background);
   border-radius: 8px;
-  box-shadow: 0 1px 0 0 #d3d9de, 0 0 0 1px #e7e8ec;
-  color: #656565;
+  box-shadow: 0 1px 0 0 var(--vseti-color-shadow-light), 0 0 0 1px var(--vseti-color-border-light);
+  color: var(--vseti-color-text-gray);
   font-size: 13px;
-  margin: 0 15px;
+}
+
+/* Стили для закрытой группы */
+.privatePosts {
+  padding: 30px 20px;
+  text-align: center;
+  background: var(--vseti-color-background-light);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 0 var(--vseti-color-shadow-light), 0 0 0 1px var(--vseti-color-border-light);
+}
+
+.privatePosts p {
+  margin-bottom: 15px;
+  color: var(--vseti-color-text-gray);
+  font-size: 14px;
+}
+
+.joinButton {
+  background-color: var(--vseti-color-blue-hover);
+  color: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.joinButton:hover {
+  background-color: var(--vseti-color-blue-light);
 }
 
 .postHeader {
@@ -276,36 +318,37 @@ p {
 .postHeader > div > div:first-child {
   font-weight: 500;
   font-size: 13px;
-  color: #2a5885;
+  color: var(--vseti-color-blue);
   margin-bottom: 2px;
 }
 
 .postHeader > div > div:last-child {
   font-size: 12px;
-  color: #939393;
+  color: var(--vseti-color-text-tertiary);
 }
 
-.postsList > div > div:nth-child(4) {
+/* Замена селекторов, основанных на позиции, на классы */
+.postActionsBar {
   display: flex;
   align-items: center;
-  color: #909399;
+  color: var(--vseti-color-text-tertiary);
   font-size: 13px;
 }
 
-.postsList > div > div:nth-child(4) > div {
+.postActionItem {
   display: flex;
   align-items: center;
   gap: 5px;
   cursor: pointer;
 }
 
-.postsList > div > div:nth-child(4) > div:hover {
-  color: #2a5885;
+.postActionItem:hover {
+  color: var(--vseti-color-blue);
 }
 
-/* Плеер в отдельном окне */
+/* Стили для плеера в отдельном окне */
 .player-window-notification {
-  background-color: #f0f2f5;
+  background-color: var(--vseti-color-background-light);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 15px;
@@ -313,13 +356,13 @@ p {
   align-items: center;
   justify-content: space-between;
   font-size: 13px;
-  color: #626d7a;
+  color: var(--vseti-color-text-tertiary);
 }
 
 .notification-indicator {
   width: 8px;
   height: 8px;
-  background-color: #5181b8;
+  background-color: var(--vseti-color-blue-hover);
   border-radius: 50%;
   margin-left: 5px;
 }
@@ -337,9 +380,7 @@ p {
   .content > div:nth-child(2) {
     order: 1;
   }
-}
-
-@media (max-width: 600px) {
+  
   .groupInfo {
     flex-direction: column;
   }
@@ -347,8 +388,6 @@ p {
   .avatarContainer {
     margin-right: 0;
     margin-bottom: 15px;
-    margin-left: auto;
-    margin-right: auto;
   }
   
   .groupDetails {
@@ -360,9 +399,132 @@ p {
   }
 }
 
+@media (max-width: 600px) {
+  .groupHeader {
+    padding: 15px;
+  }
+  
+  .postsSection {
+    padding: 15px;
+  }
+  
+  .avatarContainer {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .avatar {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .groupName {
+    font-size: 17px;
+  }
+  
+  .groupDescription {
+    font-size: 13px;
+  }
+}
+
 /* Глобальная страница */
 body {
-  background-color: #edeef0;
+  background-color: var(--vseti-color-background-gray);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  color: #000;
+  color: var(--vseti-color-text-primary);
+}
+
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    margin: 15px 0;
+}
+
+.loadingSpinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #09f;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.error {
+    padding: 20px;
+    background-color: #ffeaea;
+    border-radius: 8px;
+    margin: 15px 0;
+    text-align: center;
+}
+
+.retryButton {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.retryButton:hover {
+    background-color: #0d8bf0;
+}
+
+.posts {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.emptyPosts {
+    text-align: center;
+    padding: 30px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.groupContent {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+.endOfFeed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 30px 0;
+    padding: 0 15px;
+}
+
+.endOfFeedLine {
+    flex-grow: 1;
+    height: 1px;
+    background-color: var(--vseti-color-border);
+}
+
+.endOfFeedText {
+    padding: 0 15px;
+    color: var(--vseti-color-text-gray);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.showcaseContainer {
+  background: var(--vseti-color-background);
+  border-radius: 8px;
 }

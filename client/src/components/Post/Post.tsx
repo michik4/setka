@@ -4,16 +4,23 @@ import { Post as PostType } from '../../types/post.types';
 import { Photo } from '../../types/post.types';
 import { Track } from '../../types/music.types';
 import { Album } from '../../types/album.types';
+import { Group } from '../../types/group.types';
 import { PhotoGrid } from '../PhotoGrid/PhotoGrid';
 import { AlbumGrid } from '../AlbumGrid/AlbumGrid';
 import { ImageUploader } from '../ImageUploader/ImageUploader';
-import { ImageSelector } from '../ImageSelector/ImageSelector';
+import { PhotoSelector } from '../PhotoSelector/PhotoSelector';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../utils/api';
 import styles from './Post.module.css';
 import { ServerImage } from '../ServerImage/ServerImage';
 import { PhotoViewer } from '../PhotoViewer/PhotoViewer';
 import { usePlayer } from '../../contexts/PlayerContext';
+import { useQueue } from '../../contexts/QueueContext';
+import { Comments } from '../Comments/Comments';
+import UniversalTrackItem from '../UniversalTrackItem/UniversalTrackItem';
+
+// Получаем URL API из переменных окружения
+const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 interface PostProps {
     post: PostType;
@@ -34,11 +41,51 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     const [isLikeLoading, setIsLikeLoading] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
-    const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
+    const [savingTrackId, setSavingTrackId] = useState<number | null>(null);
+    const [savedTrackIds, setSavedTrackIds] = useState<number[]>([]);
+    const [group, setGroup] = useState<Group | null>(null);
+    const [showPhotoSelector, setShowPhotoSelector] = useState(false);
     
     // Импортируем контекст плеера
     const { playTrack, currentTrack: playerCurrentTrack, isPlaying: playerIsPlaying, togglePlay, tracks: playerTracks, addToQueue } = usePlayer();
+
+    // Проверяем, какие треки уже добавлены в библиотеку пользователя
+    useEffect(() => {
+        const postTracks = post?.tracks || [];
+        if (postTracks.length > 0 && user) {
+            const checkSavedTracks = async () => {
+                try {
+                    // Получаем все треки пользователя
+                    const response = await api.get('/music');
+                    if (response && response.tracks) {
+                        // Создаем карту "название+исполнитель" -> true для быстрой проверки
+                        const userTracksMap = new Map<string, boolean>();
+                        response.tracks.forEach((track: Track) => {
+                            const key = `${track.title}:${track.artist}`.toLowerCase();
+                            userTracksMap.set(key, true);
+                        });
+                        
+                        // Проверяем, какие треки из поста уже есть в библиотеке пользователя
+                        const savedIds = postTracks
+                            .filter(track => {
+                                const key = `${track.title}:${track.artist}`.toLowerCase();
+                                return userTracksMap.has(key);
+                            })
+                            .map(track => track.id);
+                        
+                        if (savedIds.length > 0) {
+                            console.log('[Post] Найдены уже добавленные треки:', savedIds);
+                            setSavedTrackIds(savedIds);
+                        }
+                    }
+                } catch (error) {
+                    console.error('[Post] Ошибка при проверке сохраненных треков:', error);
+                }
+            };
+            
+            checkSavedTracks();
+        }
+    }, [post?.tracks, user]);
 
     useEffect(() => {
         // Проверяем, лайкнул ли пользователь этот пост
@@ -135,13 +182,34 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         try {
             const endpoint = post.wallOwnerId ? `/wall/${post.id}` : `/posts/${post.id}`;
             
-            // Обновляем пост с новым контентом, фотографиями и треками
-            const response = await api.put(endpoint, { 
+            // Проверяем наличие контента или вложений
+            if (!editedContent.trim() && editedPhotos.length === 0 && editedTracks.length === 0) {
+                setError('Добавьте текст или выберите медиа');
+                setIsSubmitting(false);
+                return;
+            }
+            
+            console.log('[Post] Редактирование поста', {
+                postId: post.id,
                 content: editedContent.trim(),
                 photoIds: editedPhotos.map(photo => photo.id),
                 trackIds: editedTracks.map(track => track.id)
             });
             
+            // Преобразуем массивы ID в JSON-строки для отправки
+            const photoIdsJson = JSON.stringify(editedPhotos.map(photo => photo.id));
+            const trackIdsJson = JSON.stringify(editedTracks.map(track => track.id));
+            
+            // Обновляем пост с новым контентом и вложениями
+            const response = await api.put(endpoint, { 
+                content: editedContent.trim(),
+                photoIds: photoIdsJson,
+                trackIds: trackIdsJson
+            });
+            
+            console.log('[Post] Ответ сервера после редактирования:', response);
+            
+            // Выходим из режима редактирования
             setIsEditing(false);
             
             // Обновляем пост локально с измененными данными
@@ -202,6 +270,13 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     };
 
     const handleImageUploaded = (photo: Photo) => {
+        // Проверяем, не превышает ли общее количество фотографий максимально допустимое (20)
+        if (editedPhotos.length >= 20) {
+            setError('Достигнуто максимальное количество фотографий (20)');
+            return;
+        }
+        
+        // Добавляем новую фотографию к списку
         setEditedPhotos(prev => [...prev, photo]);
         setError(null);
     };
@@ -218,9 +293,8 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     };
 
     const handleTrackRemove = (track: Track) => {
-        // В режиме редактирования удаляем трек из локального состояния
+        // Удаляем трек из редактируемого списка
         setEditedTracks(prev => prev.filter(t => t.id !== track.id));
-        setError(null);
     };
 
     // Добавляем функцию проверки состояния окна плеера
@@ -240,103 +314,44 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         return isPlayerWindowActive;
     };
 
-    const togglePlayTrack = (track: Track) => {
-        console.log('Попытка воспроизведения трека из поста:', track);
-        console.log('Аудио URL:', track.audioUrl);
-        
-        if (!track.audioUrl) {
-            console.error('ОШИБКА: У трека отсутствует URL для воспроизведения!');
-            return;
-        }
-        
-        // Добавляем метаданные о посте к треку
-        const trackWithSource = {
-            ...track,
-            source: {
-                type: 'post',
-                postId: post.id,
-                authorId: post.authorId,
-                authorName: `${post.author.firstName} ${post.author.lastName}`
-            }
-        };
-
-        const isPlayerWindowActive = checkPlayerWindowState();
-        const isCurrentWindowPlayerWindow = window.location.pathname.includes('/player');
-
-        // Принудительно заглушаем звук во всех окнах, кроме окна плеера
-        if (isPlayerWindowActive && !isCurrentWindowPlayerWindow) {
-            // Глобальное отключение звука
-            const allAudioElements = document.querySelectorAll('audio');
-            allAudioElements.forEach(audioElement => {
-                audioElement.muted = true;
-                if (!audioElement.paused) {
-                    audioElement.pause();
-                }
-            });
-        }
-
-        // Если окно плеера открыто и мы не в окне плеера
-        if (isPlayerWindowActive && !isCurrentWindowPlayerWindow) {
-            console.log('[Post] Окно плеера открыто, проверяем наличие трека в очереди');
-            
-            // Проверяем, есть ли трек уже в плейлисте
-            const existingTrackIndex = playerTracks.findIndex(t => t.id === track.id);
-            
-            if (existingTrackIndex !== -1) {
-                console.log('[Post] Трек уже в очереди, отправляем команду на переключение');
-                // Используем только синхронизационные сообщения, но сами не воспроизводим звук
-                
-                // Отправляем команду на воспроизведение в окно плеера
-                localStorage.setItem('play_track_command', JSON.stringify({
-                    trackId: track.id,
-                    timestamp: Date.now()
-                }));
-
-                // Обновляем локальное состояние
-                setIsPlaying(true);
-                setCurrentTrack(track);
-            } else {
-                console.log('[Post] Трек не в очереди, добавляем и отправляем команду на воспроизведение');
-                addToQueue(trackWithSource);
-                
-                // После добавления в очередь отправляем команду на воспроизведение
-                setTimeout(() => {
-                    localStorage.setItem('play_track_command', JSON.stringify({
-                        trackId: track.id,
-                        timestamp: Date.now()
-                    }));
-                }, 200); // Увеличиваем задержку, чтобы трек успел добавиться в очередь
-            }
-            
-            return;
-        }
-        
-        // Если мы в окне плеера или отдельное окно не открыто
-        if (isCurrentWindowPlayerWindow || !isPlayerWindowActive) {
-            if (playerCurrentTrack?.id === track.id) {
-                togglePlay();
-            } else {
-                playTrack(trackWithSource);
-            }
-            setCurrentTrack(track);
-        }
-    };
-
     // Логгирование треков для отладки
     useEffect(() => {
-        if (post.tracks && post.tracks.length > 0) {
-            console.log('Треки поста для отображения:', JSON.stringify(post.tracks, null, 2));
-            console.log('Присутствует ли audioUrl у треков:', post.tracks.every(track => Boolean(track.audioUrl)));
-            if (!post.tracks.every(track => Boolean(track.audioUrl))) {
+        const postTracks = post?.tracks || [];
+        if (postTracks.length > 0) {
+            console.log('Треки поста для отображения:', JSON.stringify(postTracks, null, 2));
+            
+            // Проверяем и обновляем audioUrl у треков при необходимости
+            const updatedTracks = postTracks.map(track => {
+                // Если у трека нет audioUrl, но есть filename, формируем URL
+                if (!track.audioUrl && track.filename) {
+                    return {
+                        ...track,
+                        audioUrl: `/api/music/file/${track.filename}`
+                    };
+                }
+                return track;
+            });
+            
+            // Если были обновления в треках, обновляем state
+            if (JSON.stringify(updatedTracks) !== JSON.stringify(postTracks)) {
+                console.log('Обновлены URL для треков:', updatedTracks);
+                // Если трек в editedTracks, обновляем его там
+                if (isEditing) {
+                    setEditedTracks(updatedTracks);
+                }
+            }
+            
+            console.log('Присутствует ли audioUrl у треков:', updatedTracks.every(track => Boolean(track.audioUrl)));
+            if (!updatedTracks.every(track => Boolean(track.audioUrl))) {
                 console.error('ВНИМАНИЕ: У некоторых треков отсутствует audioUrl!');
-                for (const track of post.tracks) {
+                for (const track of updatedTracks) {
                     if (!track.audioUrl) {
                         console.error('Трек без audioUrl:', track);
                     }
                 }
             }
         }
-    }, [post.tracks]);
+    }, [post?.tracks, isEditing]);
 
     // Функция для правильного склонения слов в зависимости от числа
     const getProperWordForm = (count: number, forms: [string, string, string]): string => {
@@ -358,21 +373,137 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         return forms[2];
     };
 
+    // Добавляем обработчик для выбора фотографий из галереи
+    const handlePhotoSelection = (photos: Photo[]) => {
+        // Добавляем выбранные фотографии к уже имеющимся
+        const newPhotos = [...editedPhotos];
+        
+        // Проверяем, не превышает ли общее количество фотографий максимально допустимое (20)
+        const totalPhotos = newPhotos.length + photos.length;
+        if (totalPhotos > 20) {
+            setError(`Максимальное количество фотографий в посте: 20. Выбрано: ${totalPhotos}`);
+            // Добавляем только часть фотографий до лимита
+            const availableSlots = 20 - newPhotos.length;
+            if (availableSlots > 0) {
+                newPhotos.push(...photos.slice(0, availableSlots));
+            }
+        } else {
+            // Добавляем все выбранные фотографии
+            newPhotos.push(...photos);
+            setError(null);
+        }
+        
+        setEditedPhotos(newPhotos);
+        setShowPhotoSelector(false);
+    };
+
+    // Загружаем информацию о группе только если её нет в посте
+    useEffect(() => {
+        const fetchGroupInfo = async () => {
+            if (post.groupId && !post.group) {
+                try {
+                    // Получаем данные о группе с аватаром
+                    const response = await api.get(`/groups/${post.groupId}?with_avatar=true`);
+                    if (response) {
+                        setGroup(response);
+                        console.log('[Post] Загружена информация о группе с аватаром:', response);
+                    }
+                } catch (error) {
+                    console.error('[Post] Ошибка при загрузке информации о группе:', error);
+                }
+            } else if (post.group) {
+                // Если группа уже есть в посте, но без аватара, загружаем аватар
+                if (!post.group.avatar && post.group.id) {
+                    try {
+                        const groupWithAvatar = await api.get(`/groups/${post.group.id}?with_avatar=true`);
+                        if (groupWithAvatar && groupWithAvatar.avatar) {
+                            setGroup({
+                                ...post.group,
+                                avatar: groupWithAvatar.avatar
+                            } as unknown as Group);
+                            console.log('[Post] Дозагружен аватар группы:', groupWithAvatar.avatar);
+                        } else {
+                            setGroup(post.group as unknown as Group);
+                        }
+                    } catch (avatarError) {
+                        console.error('[Post] Ошибка при загрузке аватара группы:', avatarError);
+                        setGroup(post.group as unknown as Group);
+                    }
+                } else {
+                    setGroup(post.group as unknown as Group);
+                }
+            }
+        };
+        
+        fetchGroupInfo();
+    }, [post.groupId, post.group]);
+
     return (
         <div className={styles.post}>
-            <div className={styles.header}>
+            <div className={styles.postHeader}>
                 <div className={styles.authorInfo}>
-                    <ServerImage
-                        path={post.author.avatar?.path}
-                        alt={`${post.author.firstName} ${post.author.lastName}`}
+                    <Link 
+                        to={group ? `/groups/${group.id}` : `/users/${post.author.id}`} 
                         className={styles.authorAvatar}
-                    />
-                    <Link to={`/users/${post.author.id}`} className={styles.author}>
-                        {post.author.firstName} {post.author.lastName}
+                    >
+                        {group && group.avatar ? (
+                            <ServerImage 
+                                path={group.avatar.path} 
+                                alt={group.name} 
+                                className={styles.authorAvatar}
+                            />
+                        ) : post.author.avatar ? (
+                            <ServerImage 
+                                path={post.author.avatar.path} 
+                                alt={`${post.author.firstName} ${post.author.lastName}`} 
+                                className={styles.authorAvatar}
+                            />
+                        ) : (
+                            <div className={styles.defaultAvatar}>
+                                {group ? group.name.charAt(0).toUpperCase() : 
+                                    `${post.author.firstName.charAt(0)}${post.author.lastName.charAt(0)}`}
+                            </div>
+                        )}
                     </Link>
-                </div>
-                <div className={styles.date}>
-                    {new Date(post.createdAt).toLocaleString()}
+                    <div className={styles.authorDetails}>
+                        <div className={styles.nameAndGroup}>
+                            {group ? (
+                                <Link 
+                                    to={`/groups/${group.id}`} 
+                                    className={styles.authorName}
+                                >
+                                    {group.name}
+                                </Link>
+                            ) : (
+                                <Link 
+                                    to={`/users/${post.author.id}`} 
+                                    className={styles.authorName}
+                                >
+                                    {post.author.firstName} {post.author.lastName}
+                                </Link>
+                            )}
+                            
+                            {group && (
+                                <div className={styles.groupInfo}>
+                                    <span className={styles.groupDivider}>•</span>
+                                    <Link 
+                                        to={`/users/${post.author.id}`} 
+                                        className={styles.postAuthor}
+                                    >
+                                        Автор: {post.author.firstName} {post.author.lastName}
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                        <div className={styles.postTime}>
+                            {new Date(post.createdAt).toLocaleString('ru', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: 'numeric',
+                                minute: 'numeric'
+                            })}
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -381,224 +512,260 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                     <textarea
                         className={styles.editTextarea}
                         value={editedContent}
-                        onChange={(e) => setEditedContent(e.target.value)}
-                        rows={4}
+                        onChange={e => setEditedContent(e.target.value)}
+                        placeholder="Что у вас нового?"
                     />
-
-                    <div className={styles.editPhotos}>
-                        <PhotoGrid 
-                            photos={editedPhotos}
-                            onPhotoDelete={handleEditPhotoRemove}
-                            canDelete={true}
-                            isEditing={true}
-                        />
-                        {user && (
-                            <ImageSelector 
-                                userId={user.id}
-                                selectedImages={editedPhotos}
-                                onImagesChange={setEditedPhotos}
-                            />
-                        )}
-                    </div>
-
-                    {/* Отображение и редактирование треков */}
-                    {editedTracks && editedTracks.length > 0 && (
-                        <div className={styles.editTracks}>
-                            {editedTracks.map(track => (
-                                <div key={track.id} className={styles.trackItem}>
-                                    <div className={styles.trackCover}>
-                                        <img 
-                                            src={track.coverUrl} 
-                                            alt={track.title} 
-                                            className={styles.trackCoverImage}
-                                        />
+                    
+                    {/* Предпросмотр поста */}
+                    {(editedContent.trim() || editedPhotos.length > 0 || editedTracks.length > 0) && (
+                        <div className={styles.previewContainer}>
+                            <h4 className={styles.previewTitle}>Предпросмотр</h4>
+                            <div className={styles.postPreview}>
+                                {editedContent && (
+                                    <div className={styles.content}>{editedContent}</div>
+                                )}
+                                
+                                {editedPhotos.length > 0 && (
+                                    <PhotoGrid
+                                        photos={editedPhotos}
+                                        onPhotoClick={handlePhotoClick}
+                                        onPhotoDelete={handleEditPhotoRemove}
+                                        isEditing={true}
+                                        canDelete={true}
+                                    />
+                                )}
+                                
+                                {editedTracks.length > 0 && (
+                                    <div className={styles.tracks}>
+                                        {editedTracks.map((track, index) => (
+                                            <div key={`edit-track-${track.id}-${index}`} className={styles.trackItemWithControls}>
+                                                <UniversalTrackItem 
+                                                    track={track} 
+                                                    variant="post" 
+                                                    isInLibrary={savedTrackIds.includes(track.id)}
+                                                    onLibraryStatusChange={() => {
+                                                        if (savedTrackIds.includes(track.id)) {
+                                                            setSavedTrackIds(savedTrackIds.filter(id => id !== track.id));
+                                                        } else {
+                                                            setSavedTrackIds([...savedTrackIds, track.id]);
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    className={styles.trackDeleteBtn}
+                                                    onClick={() => handleTrackRemove(track)}
+                                                    title="Удалить трек"
+                                                >
+                                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5z"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div className={styles.trackInfo}>
-                                        <div className={styles.trackTitle}>{track.title}</div>
-                                        <div className={styles.trackArtist}>{track.artist}</div>
-                                        {track.duration && (
-                                            <div className={styles.trackDuration}>{track.duration}</div>
-                                        )}
-                                    </div>
-                                    <button
-                                        className={styles.trackDeleteBtn}
-                                        onClick={() => handleTrackRemove(track)}
-                                        title="Удалить трек"
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                            ))}
+                                )}
+                            </div>
                         </div>
                     )}
-
+                    
+                    <div className={styles.mediaSelector}>
+                        <h4 className={styles.mediaSelectorTitle}>Медиа вложения</h4>
+                        <div className={styles.mediaSelectorTabs}>
+                            <button 
+                                className={`${styles.mediaSelectorTab} ${styles.active}`}
+                                type="button"
+                            >
+                                Фотографии
+                            </button>
+                            <button 
+                                className={styles.mediaSelectorTab}
+                                type="button"
+                                disabled
+                            >
+                                Музыка
+                            </button>
+                        </div>
+                        
+                        <div className={styles.editPhotos}>
+                            <ImageUploader 
+                                onImageUploaded={handleImageUploaded} 
+                                onError={(error) => setError(error)}
+                            />
+                            
+                            <button 
+                                className={styles.selectExistingButton}
+                                onClick={() => setShowPhotoSelector(true)}
+                            >
+                                Выбрать из загруженных
+                            </button>
+                        </div>
+                    </div>
+                    
                     {error && <div className={styles.error}>{error}</div>}
-
+                    
                     <div className={styles.editButtons}>
-                        <div className={styles.editButtonsLeft}>
-                            <button 
-                                className={`${styles.actionButton} ${styles.cancelButton}`}
-                                onClick={() => {
-                                    setIsEditing(false);
-                                    setEditedContent(post.content);
-                                    setEditedPhotos(post.photos || []);
-                                    setEditedTracks(post.tracks || []);
-                                    setError(null);
-                                }}
-                                disabled={isSubmitting}
-                            >
-                                Отмена
-                            </button>
-                            {canDelete && (
-                                <button 
-                                    className={`${styles.actionButton} ${styles.deleteButton}`}
-                                    onClick={handleDelete}
-                                    disabled={isSubmitting}
-                                >
-                                    Удалить пост
-                                </button>
-                            )}
-                        </div>
-                        <div className={styles.editButtonsRight}>
-                            <button 
-                                className={`${styles.actionButton} ${styles.saveButton}`}
-                                onClick={handleEdit}
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? 'Сохранение...' : 'Сохранить'}
-                            </button>
-                        </div>
+                        <button
+                            className={styles.cancelButton}
+                            onClick={() => {
+                                setIsEditing(false);
+                                setEditedContent(post.content);
+                                setEditedPhotos(post.photos || []);
+                                setEditedTracks(post.tracks || []);
+                                setError(null);
+                            }}
+                            disabled={isSubmitting}
+                        >
+                            Отмена
+                        </button>
+                        <button
+                            className={styles.saveButton}
+                            onClick={handleEdit}
+                            disabled={isSubmitting || (!editedContent.trim() && editedPhotos.length === 0 && editedTracks.length === 0)}
+                        >
+                            {isSubmitting ? 'Сохранение...' : 'Сохранить'}
+                        </button>
                     </div>
                 </div>
             ) : (
                 <>
                     <div className={styles.content}>{post.content}</div>
+                    
                     {post.photos && post.photos.length > 0 && (
-                        <PhotoGrid 
-                            photos={post.photos} 
-                            onPhotoDelete={handlePhotoDelete}
-                            canDelete={Boolean(canDelete)}
-                            isEditing={isEditing}
-                            isWallPost={Boolean(post.wallOwnerId)}
+                        <PhotoGrid
+                            photos={post.photos.filter(photo => !photo.isDeleted)}
                             onPhotoClick={handlePhotoClick}
                         />
                     )}
                     
-                    {/* Отображение альбомов в посте */}
                     {post.albums && post.albums.length > 0 && (
                         <div className={styles.albums}>
-                            {post.albums.map(album => (
-                                <AlbumGrid
-                                    key={album.id}
-                                    album={album}
+                            <AlbumGrid album={post.albums[0]} />
+                        </div>
+                    )}
+                    
+                    {post.tracks && post.tracks.length > 0 && (
+                        <div className={styles.tracks}>
+                            {post.tracks.map((track, index) => (
+                                <UniversalTrackItem 
+                                    key={`post-track-${track.id}-${index}`}
+                                    track={track} 
+                                    variant="post" 
+                                    isInLibrary={savedTrackIds.includes(track.id)}
+                                    onLibraryStatusChange={() => {
+                                        if (savedTrackIds.includes(track.id)) {
+                                            setSavedTrackIds(savedTrackIds.filter(id => id !== track.id));
+                                        } else {
+                                            setSavedTrackIds([...savedTrackIds, track.id]);
+                                        }
+                                    }}
                                 />
                             ))}
                         </div>
                     )}
-
-                    {/* Отображение треков в посте */}
-                    {post.tracks && post.tracks.length > 0 && (
-                        <div className={styles.tracks} style={{ display: 'flex', flexDirection: 'column' }}>
-                            {post.tracks.map(track => (
-                                <div 
-                                    key={track.id} 
-                                    className={`${styles.trackItem} ${playerCurrentTrack?.id === track.id && playerIsPlaying ? styles.playing : ''}`}
-                                    style={{ display: 'flex', width: '100%' }}
-                                >
-                                    <div className={styles.trackCover}>
-                                        <img 
-                                            src={track.coverUrl} 
-                                            alt={track.title} 
-                                            className={styles.trackCoverImage}
-                                        />
-                                        <button 
-                                            className={styles.playButton}
-                                            onClick={() => togglePlayTrack(track)}
-                                            title={checkPlayerWindowState() ? "Добавить в плеер" : "Воспроизвести"}
-                                        >
-                                            {checkPlayerWindowState() ? (
-                                                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                                                    <path d="M14 12l-8.5 6V6L14 12zm3-1.5v3l4.5-1.5L17 10.5z"/>
-                                                </svg>
-                                            ) : (
-                                                playerCurrentTrack?.id === track.id && playerIsPlaying ? (
-                                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                                                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                                                    </svg>
-                                                ) : (
-                                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                                                        <path d="M8 5v14l11-7z"/>
-                                                    </svg>
-                                                )
-                                            )}
-                                        </button>
-                                    </div>
-                                    <div className={styles.trackInfo}>
-                                        <div className={styles.trackTitle}>{track.title}</div>
-                                        <div className={styles.trackArtist}>{track.artist}</div>
-                                        <div className={styles.trackDuration}>
-                                            {track.duration}
-                                            {track.playCount > 0 && (
-                                                <span className={styles.playCount}>
-                                                    • {track.playCount} {getProperWordForm(track.playCount, ['прослушивание', 'прослушивания', 'прослушиваний'])}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {selectedPhoto && (
-                        <PhotoViewer
-                            photo={selectedPhoto}
-                            onClose={() => {
-                                setSelectedPhoto(null);
-                                setSelectedPhotoIndex(null);
-                            }}
-                            onDelete={canDelete ? () => handlePhotoDelete(selectedPhoto) : undefined}
-                            canDelete={canDelete}
-                            isWallPost={Boolean(post.wallOwnerId)}
-                            allPhotos={post.photos}
-                            currentIndex={selectedPhotoIndex || 0}
-                            onPhotoChange={handlePhotoChange}
-                        />
-                    )}
-
-                    <div className={styles.footer}>
-                        <button 
-                            className={`${styles.actionButton} ${styles.likeButton} ${liked ? styles.liked : ''}`}
-                            onClick={handleLike}
-                            disabled={isLikeLoading}
-                        >
-                            {isLikeLoading ? '...' : liked ? 'Нравится' : 'Нравится'} • {likesCount}
-                        </button>
-                        
-                        <div className={styles.actions}>
-                            <button className={styles.actionButton}>
-                                💬 {post.commentsCount || 0}
-                            </button>
-                            <button className={styles.actionButton}>
-                                🔄 {post.sharesCount || 0}
-                            </button>
-                        </div>
-
-                        <div className={styles.modifyButtons}>
-                            {canEdit && !isEditing && (
-                                <button
-                                    className={`${styles.actionButton} ${styles.editButton}`}
-                                    onClick={() => setIsEditing(true)}
-                                >
-                                    Редактировать
-                                </button>
-                            )}
-                        </div>
-                    </div>
                 </>
             )}
+            
+            <div className={styles.footer}>
+                <div className={`${styles.actions} postActionsBar`}>
+                    <button
+                        className={`${styles.actionButton} ${styles.likeButton} ${liked ? styles.liked : ''} postActionItem`}
+                        onClick={handleLike}
+                        disabled={isLikeLoading}
+                        title="Нравится"
+                    >
+                        {liked ? (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="#e53935">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                        ) : (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                        )}
+                        {likesCount > 0 && <span className={styles.actionText}>{likesCount}</span>}
+                    </button>
+                    <button 
+                        className={`${styles.actionButton} postActionItem`}
+                        title="Комментарии"
+                        onClick={() => document.getElementById(`comments-${post.id}`)?.scrollIntoView({ behavior: 'smooth' })}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                        {post.commentsCount > 0 && <span className={styles.actionText}>{post.commentsCount}</span>}
+                    </button>
+                </div>
+                <div className={styles.postManageActions}>
+                    {canEdit && !isEditing && (
+                        <button
+                            className={`${styles.actionButton}`}
+                            onClick={() => setIsEditing(true)}
+                            title="Редактировать"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                            </svg>
+                        </button>
+                    )}
+                    {canDelete && !isEditing && (
+                        <button
+                            className={`${styles.actionButton} ${styles.deleteIcon}`}
+                            onClick={handleDelete}
+                            disabled={isSubmitting}
+                            title="Удалить"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" />
+                            </svg>
+                        </button>
+                    )}
+                </div>
+            </div>
+            
+            {/* Блок комментариев */}
+            <div id={`comments-${post.id}`}>
+                <Comments postId={post.id} />
+            </div>
+            
+            {selectedPhoto && (
+                <PhotoViewer
+                    photo={selectedPhoto}
+                    onClose={() => {
+                        setSelectedPhoto(null);
+                        setSelectedPhotoIndex(null);
+                    }}
+                    allPhotos={post.photos.filter(photo => !photo.isDeleted)}
+                    currentIndex={selectedPhotoIndex || 0}
+                    onPhotoChange={handlePhotoChange}
+                />
+            )}
 
-            {error && <div className={styles.error}>{error}</div>}
+            {/* Модальное окно выбора фотографий */}
+            {showPhotoSelector && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}>
+                        <div className={styles.modalHeader}>
+                            <h3 className={styles.modalTitle}>Выберите фотографии</h3>
+                            <button 
+                                className={styles.modalClose}
+                                onClick={() => setShowPhotoSelector(false)}
+                            >
+                                &times;
+                            </button>
+                        </div>
+                        <div className={styles.modalBody}>
+                            <PhotoSelector 
+                                userId={user?.id || 0}
+                                onSelect={(photos, albums) => {
+                                    handlePhotoSelection(photos);
+                                }}
+                                onCancel={() => setShowPhotoSelector(false)}
+                                multiple={true}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

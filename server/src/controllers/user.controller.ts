@@ -6,7 +6,10 @@ import { AuthenticatedRequest } from '../types/express'
 import { upload } from '../utils/upload'
 import { AppDataSource } from '../db/db_connect'
 import { Photo } from '../entities/photo.entity'
+import { User } from '../entities/user.entity'
 import path from 'path'
+import { Friend } from '../entities/friend.entity'
+import { FriendRequest } from '../entities/friend-request.entity'
 
 export class UserController {
     private photoRepository = AppDataSource.getRepository(Photo);
@@ -86,15 +89,40 @@ export class UserController {
     }
 
     async getUserById(req: Request, res: Response) {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) {
+            return res.status(400).json({ error: 'Неверный формат ID' });
+        }
+
         try {
-            const { id } = req.params
-            const user = await this.userService.getUserById(parseInt(id))
+            const user = await AppDataSource.getRepository(User)
+                .createQueryBuilder('user')
+                .leftJoinAndSelect('user.avatar', 'avatar')
+                .where('user.id = :id', { id })
+                .getOne();
+
             if (!user) {
-                return res.status(404).json({ message: 'Пользователь не найден' })
+                return res.status(404).json({ error: 'Пользователь не найден' });
             }
-            res.json(user)
+
+            // Если есть аутентифицированный пользователь, определяем статус дружбы
+            const currentUserId = (req as AuthenticatedRequest).user?.id;
+            let friendshipStatus = 'none';
+            
+            if (currentUserId) {
+                friendshipStatus = await UserController.getFriendshipStatus(currentUserId, id);
+            }
+
+            // Добавляем статус дружбы к ответу
+            const responseUser = {
+                ...user,
+                friendshipStatus
+            };
+
+            return res.json(responseUser);
         } catch (error) {
-            res.status(500).json({ message: 'Ошибка при получении пользователя', error })
+            console.error(error);
+            return res.status(500).json({ error: 'Ошибка сервера при получении пользователя' });
         }
     }
 
@@ -107,7 +135,22 @@ export class UserController {
             }
 
             const user = await this.userService.findUserWithAvatar(userId);
-            res.json(user);
+            
+            // Если есть аутентифицированный пользователь, определяем статус дружбы
+            const currentUserId = (req as AuthenticatedRequest).user?.id;
+            let friendshipStatus = 'none';
+            
+            if (currentUserId) {
+                friendshipStatus = await UserController.getFriendshipStatus(currentUserId, userId);
+            }
+
+            // Добавляем статус дружбы к ответу
+            const responseUser = {
+                ...user,
+                friendshipStatus
+            };
+
+            res.json(responseUser);
         } catch (error) {
             if (error instanceof NotFoundException) {
                 res.status(404).json({ message: error.message });
@@ -176,6 +219,82 @@ export class UserController {
         } catch (error) {
             console.error('Ошибка при загрузке аватара:', error);
             return res.status(500).json({ message: 'Ошибка при загрузке аватара' });
+        }
+    }
+
+    /**
+     * Получить статус дружбы между текущим пользователем и запрашиваемым пользователем
+     */
+    private static async getFriendshipStatus(currentUserId: number, userId: number): Promise<string> {
+        console.log(`getFriendshipStatus: Проверка статуса дружбы между ${currentUserId} и ${userId}`);
+        
+        // Если запрашивают текущего пользователя, возвращаем 'self'
+        if (currentUserId === userId) {
+            console.log(`getFriendshipStatus: currentUserId (${currentUserId}) === userId (${userId}), returning 'self'`);
+            return 'self';
+        }
+
+        try {
+            // Проверяем, являются ли пользователи друзьями с помощью QueryBuilder и явного SQL условия
+            const friendshipQuery = AppDataSource.getRepository(Friend)
+                .createQueryBuilder('friend')
+                .where('(friend.userId = :currentUserId AND friend.friendId = :userId) OR (friend.userId = :userId AND friend.friendId = :currentUserId)', 
+                    { currentUserId, userId });
+            
+            console.log('SQL запрос для проверки дружбы:', friendshipQuery.getSql(), { currentUserId, userId });
+            
+            const existingFriendship = await friendshipQuery.getOne();
+            console.log(`getFriendshipStatus: Результат проверки дружбы:`, existingFriendship);
+
+            if (existingFriendship) {
+                console.log(`getFriendshipStatus: Пользователи ${currentUserId} и ${userId} являются друзьями`);
+                return 'friends';
+            }
+            
+            // Дополнительная проверка с помощью прямого SQL запроса
+            const rawResult = await AppDataSource.query(
+                `SELECT * FROM friends WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
+                [currentUserId, userId]
+            );
+            
+            console.log('Результат прямого SQL запроса:', rawResult);
+            
+            if (rawResult && rawResult.length > 0) {
+                console.log(`getFriendshipStatus: Прямой SQL запрос подтвердил, что пользователи ${currentUserId} и ${userId} являются друзьями`);
+                return 'friends';
+            }
+
+            // Проверяем запросы в друзья
+            const requestQuery = AppDataSource.getRepository(FriendRequest)
+                .createQueryBuilder('request')
+                .where('(request.senderId = :currentUserId AND request.receiverId = :userId) OR (request.senderId = :userId AND request.receiverId = :currentUserId)', 
+                    { currentUserId, userId });
+                    
+            console.log('SQL запрос для проверки заявок в друзья:', requestQuery.getSql(), { currentUserId, userId });
+            
+            const existingRequest = await requestQuery.getOne();
+            console.log(`getFriendshipStatus: Результат проверки заявок в друзья:`, existingRequest);
+
+            if (existingRequest) {
+                if (existingRequest.status === 'rejected') {
+                    console.log(`getFriendshipStatus: Запрос на дружбу отклонен, возвращаем 'none'`);
+                    return 'none';
+                }
+                
+                if (existingRequest.senderId === currentUserId) {
+                    console.log(`getFriendshipStatus: Запрос на дружбу отправлен от ${currentUserId} к ${userId}, возвращаем 'pending_sent'`);
+                    return 'pending_sent';
+                } else {
+                    console.log(`getFriendshipStatus: Запрос на дружбу получен от ${userId} к ${currentUserId}, возвращаем 'pending_received'`);
+                    return 'pending_received';
+                }
+            }
+
+            console.log(`getFriendshipStatus: Нет дружбы или запросов между пользователями ${currentUserId} и ${userId}, возвращаем 'none'`);
+            return 'none';
+        } catch (error) {
+            console.error('Ошибка при определении статуса дружбы:', error);
+            return 'none';
         }
     }
 } 

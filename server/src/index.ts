@@ -57,7 +57,24 @@ app.use((req, res, next) => {
     }
   }
   
-  console.log('======================================================================\n');
+  // Перехватываем метод send для логирования ответов
+  const originalSend = res.send;
+  res.send = function(body) {
+    console.log(`[RESPONSE] Status: ${res.statusCode}`);
+    
+    // Логируем тело ответа, только если это не успешный ответ (чтобы не логировать большие данные)
+    if (res.statusCode < 200 || res.statusCode >= 400) {
+      try {
+        console.log('Response Body:', typeof body === 'string' ? body : JSON.stringify(body, null, 2));
+      } catch (e) {
+        console.log('Response Body: [Cannot stringify]');
+      }
+    }
+    
+    console.log('======================================================================\n');
+    return originalSend.call(this, body);
+  };
+  
   next();
 });
 

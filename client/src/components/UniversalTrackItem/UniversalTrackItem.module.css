@@ -1,0 +1,241 @@
+.trackItem {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    background-color: var(--vseti-color-card);
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s, transform 0.1s;
+    cursor: default;
+}
+
+.trackItem:hover {
+    background-color: var(--vseti-color-card-item);
+}
+
+.trackItem.selected {
+    background-color: var(--vseti-color-green-hover);
+}
+
+.trackItem.playing {
+    background-color: var(--vseti-color-green-hover);
+}
+
+.trackItem.selected:hover, 
+.trackItem.playing:hover {
+    background-color: var(--vseti-color-green-active);
+}
+
+/* Варианты отображения */
+.default {
+    /* Стандартный стиль, уже определен в .trackItem */
+}
+
+.compact {
+    padding: 6px 10px;
+    margin-bottom: 4px;
+}
+
+.post {
+    background-color: var(--vseti-color-hover);
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.album {
+    border-radius: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.queue {
+    padding: 8px 12px;
+    background-color: transparent;
+    border-bottom: 1px solid var(--vseti-color-border);
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+.queue:hover {
+    background-color: var(--vseti-color-hover);
+}
+
+.trackIndex {
+    width: 28px;
+    text-align: center;
+    color: var(--vseti-color-text-tertiary);
+    font-size: 0.9rem;
+    margin-right: 8px;
+}
+
+.trackCover {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.trackCover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 0.2s;
+}
+
+.playingOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.playingIndicator {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    position: relative;
+}
+
+.playingIndicator::before {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 14px;
+    background-color: white;
+    border-radius: 2px;
+    animation: sound-wave-1 0.8s infinite ease-in-out alternate;
+    left: 0;
+}
+
+.playingIndicator::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 14px;
+    background-color: white;
+    border-radius: 2px;
+    animation: sound-wave-2 0.8s infinite ease-in-out alternate 0.2s;
+    right: 0;
+}
+
+@keyframes sound-wave-1 {
+    0% {
+        height: 4px;
+        transform: translateY(5px);
+    }
+    100% {
+        height: 14px;
+        transform: translateY(0);
+    }
+}
+
+@keyframes sound-wave-2 {
+    0% {
+        height: 6px;
+        transform: translateY(4px);
+    }
+    100% {
+        height: 10px;
+        transform: translateY(2px);
+    }
+}
+
+.trackInfo {
+    flex: 1;
+    min-width: 0;
+    margin-right: 16px;
+}
+
+.trackTitle {
+    font-weight: 500;
+    color: var(--vseti-color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.trackArtist {
+    font-size: 0.85rem;
+    color: var(--vseti-color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.trackDuration {
+    color: var(--vseti-color-text-tertiary);
+    font-size: 0.85rem;
+    font-family: monospace;
+    padding: 0 12px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.trackControls {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.trackControlButton {
+    background: none;
+    border: none;
+    color: var(--vseti-color-text-tertiary);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.trackControlButton:hover {
+    background-color: var(--vseti-color-green-hover);
+    color: var(--vseti-color-light-button);
+    transform: scale(1.1);
+}
+
+.trackControlButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.trackControlButton.inLibrary {
+    color: var(--vseti-color-green);
+}
+
+/* Адаптивный дизайн */
+@media (max-width: 768px) {
+    .trackDuration {
+        display: none;
+    }
+    
+    .trackControls {
+        gap: 4px;
+    }
+}
+
+@media (max-width: 480px) {
+    .trackArtist {
+        display: none;
+    }
+    
+    .trackControls {
+        gap: 2px;
+    }
+    
+    .trackControlButton {
+        width: 24px;
+        height: 24px;
+    }
+} 

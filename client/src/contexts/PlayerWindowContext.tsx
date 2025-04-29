@@ -154,14 +154,7 @@ export const PlayerWindowProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const openedTimestamp = parseInt(localStorage.getItem('player_window_opened') || '0');
         
         if (closedTimestamp > openedTimestamp) {
-          // При закрытии окна сохраняем текущее состояние
-          const state = {
-            position: audio.currentTime,
-            isPlaying: false,
-            trackId: audio.src,
-            timestamp: Date.now()
-          };
-          localStorage.setItem('player_window_state', JSON.stringify(state));
+          // При закрытии окна не сохраняем позицию, а только статус активности
           setIsControlActive(false);
         }
       }
@@ -174,17 +167,6 @@ export const PlayerWindowProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
   }, [audio]);
 
-  // Восстановление состояния при открытии окна
-  useEffect(() => {
-    const savedState = localStorage.getItem('player_window_state');
-    if (savedState && audio) {
-      const state = JSON.parse(savedState);
-      if (state.trackId === audio.src) {
-        audio.currentTime = state.position;
-      }
-    }
-  }, [audio]);
-  
   return (
     <PlayerWindowContext.Provider
       value={{

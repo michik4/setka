@@ -2,6 +2,9 @@ import { API_URL } from '../config';
 import { Group, CreateGroupData, UpdateGroupData } from '../types/group.types';
 import { User } from '../types/user.types';
 import { Post } from '../types/post.types';
+import { Photo } from '../types/photo.types';
+import { Album } from '../types/album.types';
+import { Track, MusicAlbum } from '../types/music.types';
 
 export const groupService = {
     async getAllGroups(limit: number = 10, offset: number = 0): Promise<{ items: Group[], total: number }> {
@@ -185,6 +188,32 @@ export const groupService = {
         }
     },
     
+    async removeMember(groupId: number, userId: number): Promise<void> {
+        const response = await fetch(`${API_URL}/groups/${groupId}/members/${userId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка при удалении участника');
+        }
+    },
+    
+    async banMember(groupId: number, userId: number): Promise<void> {
+        const response = await fetch(`${API_URL}/groups/${groupId}/ban`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ userId })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка при бане участника');
+        }
+    },
+    
     async getGroupPosts(groupId: number, limit: number = 10, offset: number = 0): Promise<Post[]> {
         const response = await fetch(`${API_URL}/groups/${groupId}/posts?limit=${limit}&offset=${offset}`, {
             credentials: 'include'
@@ -215,6 +244,68 @@ export const groupService = {
         
         if (!response.ok) {
             throw new Error('Ошибка при создании поста в группе');
+        }
+        
+        return await response.json();
+    },
+    
+    async getUserAdminGroups(userId: number): Promise<Group[]> {
+        const response = await fetch(`${API_URL}/groups/user/${userId}/admin`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка при получении групп, где пользователь является администратором');
+        }
+        
+        const data = await response.json();
+        console.log('API ответ - группы администратора:', data);
+        return data;
+    },
+    
+    async getGroupMediaPhotos(groupId: number, limit: number = 20, offset: number = 0): Promise<{ items: Photo[], total: number }> {
+        const response = await fetch(`${API_URL}/groups/${groupId}/media/photos?limit=${limit}&offset=${offset}`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка при получении фотографий группы');
+        }
+        
+        return await response.json();
+    },
+    
+    async getGroupMediaAlbums(groupId: number, limit: number = 20, offset: number = 0): Promise<{ items: Album[], total: number }> {
+        const response = await fetch(`${API_URL}/groups/${groupId}/media/albums?limit=${limit}&offset=${offset}`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка при получении альбомов группы');
+        }
+        
+        return await response.json();
+    },
+    
+    async getGroupMediaTracks(groupId: number, limit: number = 20, offset: number = 0): Promise<{ items: Track[], total: number }> {
+        const response = await fetch(`${API_URL}/groups/${groupId}/media/tracks?limit=${limit}&offset=${offset}`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка при получении треков группы');
+        }
+        
+        return await response.json();
+    },
+    
+    async getGroupMediaMusicAlbums(groupId: number, limit: number = 20, offset: number = 0): Promise<{ items: MusicAlbum[], total: number }> {
+        const response = await fetch(`${API_URL}/groups/${groupId}/media/music-albums?limit=${limit}&offset=${offset}`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка при получении музыкальных альбомов группы');
         }
         
         return await response.json();

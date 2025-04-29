@@ -22,8 +22,8 @@
 
 .deleteButton {
     padding: 8px 16px;
-    background: #e64646;
-    color: white;
+    background: var(--vseti-color-error);
+    color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     border-radius: 6px;
     font-size: 13px;
@@ -38,7 +38,7 @@
 .title {
     font-size: 24px;
     font-weight: 600;
-    color: #000;
+    color: var(--vseti-color-text-primary);
     margin: 0 0 12px 0;
 }
 
@@ -139,8 +139,8 @@
 /* Стили для кнопки загрузки фотографий */
 .uploadButton {
     padding: 8px 16px;
-    background-color: #4a76a8;
-    color: white;
+    background-color: var(--vseti-color-blue-light);
+    color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -170,7 +170,7 @@
 .uploaderTitle {
     margin: 0 0 15px 0;
     font-size: 18px;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
 }
 
 .uploadingStatus {
@@ -179,7 +179,7 @@
     background-color: #e1eaf7;
     border-radius: 4px;
     text-align: center;
-    color: #4a76a8;
+    color: var(--vseti-color-blue-light);
     font-weight: 500;
 }
 

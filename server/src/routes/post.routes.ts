@@ -27,6 +27,12 @@ router.get('/', authenticateSession, (req: Request, res: Response) => {
     initializeController().getAllPosts(req, res);
 });
 
+// Получение постов из групп, на которые подписан пользователь
+router.get('/subscribed-groups', authenticateSession, (req: Request, res: Response) => {
+    console.log('[Posts] Запрос на получение постов из групп, на которые подписан пользователь');
+    initializeController().getSubscribedGroupsPosts(req, res);
+});
+
 // Получение постов пользователя (должен быть перед /:id)
 router.get('/user/:userId', authenticateSession, (req: Request, res: Response) => {
     console.log('[Posts] Запрос на получение постов пользователя:', req.params.userId);

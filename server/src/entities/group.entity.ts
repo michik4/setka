@@ -54,6 +54,14 @@ export class Group {
     })
     admins: User[]
 
+    @ManyToMany(() => User)
+    @JoinTable({
+        name: 'group_banned_users',
+        joinColumn: { name: 'groupId', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'userId', referencedColumnName: 'id' }
+    })
+    bannedUsers: User[]
+
     @OneToMany(() => Post, post => post.group)
     posts: Post[]
 
@@ -65,4 +73,9 @@ export class Group {
 
     @UpdateDateColumn()
     updatedAt: Date
+
+    // Виртуальные поля для количества участников и постов
+    membersCount?: number
+    
+    postsCount?: number
 } 

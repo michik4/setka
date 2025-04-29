@@ -1,0 +1,190 @@
+.testModeContainer {
+  background-color: var(--vseti-color-white);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.tabsContainer {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--vseti-color-border-light);
+}
+
+.tab {
+  padding: 10px 15px;
+  margin-right: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--vseti-color-text-muted);
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--vseti-color-blue);
+}
+
+.tab.active {
+  color: var(--vseti-color-blue);
+  font-weight: 500;
+}
+
+.tab.active:after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--vseti-color-blue-light);
+}
+
+.featureSection {
+  margin-bottom: 30px;
+}
+
+.modulesSection {
+  margin-bottom: 30px;
+}
+
+.featureItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.featureInfo {
+  flex: 1;
+}
+
+.featureTitle {
+  font-size: 18px;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+.featureDescription {
+  color: #777;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.toggleWrapper {
+  display: flex;
+  align-items: center;
+  margin-left: 20px;
+}
+
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+}
+
+.toggleInput {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--vseti-color-white);
+  transition: .4s;
+  border-radius: 50%;
+}
+
+.toggleInput:checked + .slider {
+  background-color: #4f7fd1;
+}
+
+.toggleInput:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+.toggleStatus {
+  margin-left: 10px;
+  font-size: 14px;
+  color: #555;
+  min-width: 75px;
+}
+
+.sectionDivider {
+  height: 1px;
+  background-color: #eee;
+  margin: 20px 0;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+.infoBox {
+  background-color: #f9f9f9;
+  border-left: 4px solid #4f7fd1;
+  padding: 10px 15px;
+  border-radius: 0 4px 4px 0;
+}
+
+.infoTitle {
+  font-size: 16px;
+  color: #333;
+  margin: 0 0 5px 0;
+}
+
+.infoText {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .featureItem {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .toggleWrapper {
+    margin-left: 0;
+    margin-top: 10px;
+  }
+  
+  .testModeContainer {
+    padding: 15px;
+  }
+} 

@@ -1,0 +1,167 @@
+.moduleManager {
+  background-color: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  box-shadow: 0 1px 0 0 var(--vseti-color-shadow-light), 0 0 0 1px var(--vseti-color-border-light);
+}
+
+.title {
+  font-size: 18px;
+  margin: 0 0 20px;
+  color: var(--text-primary);
+}
+
+.addModuleForm {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.input, .select, .button {
+  padding: 8px 12px;
+  border: 1px solid var(--vseti-color-border-light);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.input:focus, .select:focus {
+  border-color: #a9bbcf;
+  outline: none;
+}
+
+.button {
+  background-color: var(--vseti-color-light-button);
+  color: var(--vseti-color-var(--vseti-color-white));
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-align: center;
+  font-weight: 500;
+}
+
+.button:hover {
+  background-color: var(--vseti-color-header);
+}
+
+.button:disabled {
+  background-color: #a5bedb;
+  cursor: not-allowed;
+}
+
+.modulesList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.moduleItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #f8f9fb;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.moduleItem:hover {
+  background-color: var(--vseti-color-background-light);
+}
+
+.moduleItem.hidden {
+  opacity: 0.6;
+  background-color: #f0f0f0;
+}
+
+.moduleInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.moduleType {
+  font-size: 11px;
+  padding: 2px 6px;
+  background-color: var(--vseti-color-hover);
+  color: var(--vseti-color-blue-hover);
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.moduleTitle {
+  font-size: 14px;
+  color: var(--vseti-color-blue);
+  cursor: pointer;
+}
+
+.moduleTitle:hover {
+  text-decoration: underline;
+}
+
+.moduleActions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.actionButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  color: var(--vseti-color-text-tertiary);
+}
+
+.actionButton:hover {
+  background-color: var(--vseti-color-hover);
+}
+
+.visibilityButton.hidden {
+  color: #bbb;
+}
+
+.moveUpButton, .moveDownButton {
+  color: #71aaeb;
+}
+
+.deleteButton {
+  color: var(--vseti-color-error);
+}
+
+.actionButton.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.actionButton.disabled:hover {
+  background: none;
+}
+
+.editingContainer {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.editInput {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #a9bbcf;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.emptyMessage {
+  text-align: center;
+  color: var(--vseti-color-text-tertiary);
+  padding: 20px;
+  border: 1px dashed var(--vseti-color-border-light);
+  border-radius: 6px;
+  font-size: 14px;
+} 

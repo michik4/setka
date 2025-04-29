@@ -40,20 +40,6 @@ export class WallPost {
     })
     photos: Photo[];
 
-    @ManyToMany(() => Album)
-    @JoinTable({
-        name: "post_album",
-        joinColumn: {
-            name: "postId", 
-            referencedColumnName: "id"
-        },
-        inverseJoinColumn: {
-            name: "albumId",
-            referencedColumnName: "id"
-        }
-    })
-    albums: Album[];
-
     @ManyToMany(() => MusicTrack)
     @JoinTable({
         name: "wall_posts_tracks",

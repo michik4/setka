@@ -1,12 +1,11 @@
 .form {
-    background: #fff;
+    background: var(--vseti-color-card);
     border-radius: 8px;
     padding: 15px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
-    border: 1px solid transparent;
+    border: 1px solid var(--vseti-color-border);
     box-sizing: border-box;
-    margin-bottom: 15px;
 }
 
 .form.expanded {
@@ -14,7 +13,7 @@
 }
 
 .form.dragging {
-    border: 2px dashed #4a76a8;
+    border: 2px dashed var(--vseti-color-blue-light);
     background-color: rgba(74, 118, 168, 0.05);
 }
 
@@ -26,13 +25,14 @@
     box-sizing: border-box;
     width: 100%;
     padding: 12px;
-    border: 1px solid #E7E8EC;
+    border: 1px solid var(--vseti-color-border);
     border-radius: 8px;
     resize: none;
     font-size: 14px;
     line-height: 1.4;
     transition: height 0.3s ease;
     overflow: hidden;
+    background-color: var(--vseti-color-card);
 }
 
 .expanded .textarea {
@@ -41,11 +41,11 @@
 
 .textarea:focus {
     outline: none;
-    border-color: #447BBA;
+    border-color: var(--vseti-color-blue-light);
 }
 
 .textarea::placeholder {
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
 }
 
 .preview {
@@ -94,7 +94,7 @@
 .albumTitle {
     font-size: 14px;
     font-weight: 500;
-    color: #000000;
+    color: var(--vseti-color-text-primary)000;
     margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
@@ -176,7 +176,7 @@
 }
 
 .submitButton:hover {
-    background: #3d6898;
+    background: var(--vseti-color-blue-light);
 }
 
 .submitButton:disabled {
@@ -193,7 +193,7 @@
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.4);
     border: none;
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -286,7 +286,7 @@
 .audioUploaderContainer {
     width: 500px;
     max-width: 95%;
-    background-color: #fff;
+    background-color: var(--vseti-color-white);
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     overflow: hidden;
@@ -308,7 +308,7 @@
 
 .tracksPreview {
     margin-top: 16px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--vseti-color-card);
     border-radius: 8px;
     overflow: hidden;
 }
@@ -317,7 +317,7 @@
     display: flex;
     align-items: center;
     padding: 10px;
-    background-color: #f9f9f9;
+    background-color: var(--vseti-color-card-item);
 }
 
 .trackCover {
@@ -365,7 +365,7 @@
     border-radius: 50%;
     background-color: rgba(0, 0, 0, 0.6);
     border: none;
-    color: white;
+    color: var(--vseti-color-white);
     font-size: 14px;
     display: flex;
     align-items: center;
@@ -394,7 +394,7 @@
     display: none;
     position: absolute;
     right: 0;
-    background-color: #fff;
+    background-color: var(--vseti-color-white);
     min-width: 160px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     border-radius: 6px;
@@ -422,4 +422,317 @@
 
 .dropdownItem:hover {
     background-color: rgba(63, 81, 181, 0.1);
+}
+
+.createPostForm {
+    background: var(--vseti-color-card);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--vseti-color-border);
+    transition: all 0.2s ease;
+}
+
+.createPostForm:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.header {
+    margin-bottom: 16px;
+}
+
+.authorSelector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.authorSelector:hover {
+    background-color: rgba(var(--primary-rgb), 0.04);
+}
+
+.authorAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.authorAvatar:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.authorAvatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.authorSelect {
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--background-paper);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 300px;
+    transition: all 0.2s ease;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 32px;
+}
+
+.authorSelect:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(var(--primary-rgb), 0.02);
+}
+
+.authorSelect:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.content {
+    margin-bottom: 16px;
+}
+
+.textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    resize: vertical;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background-color: var(--background-paper);
+    transition: all 0.2s ease;
+}
+
+.textarea:hover {
+    border-color: rgba(var(--primary-rgb), 0.5);
+}
+
+.textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.textarea::placeholder {
+    color: var(--text-secondary);
+}
+
+.expanded {
+    border-color: var(--vseti-color-blue-light);
+}
+
+.mediaSection {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid var(--border-color);
+    margin-top: 16px;
+}
+
+.attachButtons {
+    display: flex;
+    gap: 12px;
+}
+
+.photoSelectorButton,
+.audioSelectorButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--primary-color);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.photoSelectorButton:hover,
+.audioSelectorButton:hover {
+    background-color: rgba(var(--primary-rgb), 0.08);
+}
+
+.submitButton {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.submitButton:hover:not(:disabled) {
+    background-color: rgba(var(--primary-rgb), 0.9);
+    transform: translateY(-1px);
+}
+
+.submitButton:disabled {
+    background-color: rgba(var(--primary-rgb), 0.5);
+    cursor: not-allowed;
+}
+
+.error {
+    color: var(--error-color);
+    font-size: 14px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    border-radius: 6px;
+    background-color: rgba(var(--error-rgb), 0.1);
+}
+
+.authorName {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vseti-color-text-primary);
+    background-color: transparent;
+    border-radius: 4px;
+    line-height: 20px;
+}
+
+.customSelector {
+    position: relative;
+    user-select: none;
+    width: 100%;
+    max-width: 300px;
+}
+
+.selectorHeader {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--background-paper);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.selectorHeader:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    transition: transform 0.2s ease;
+}
+
+.selectorHeader.open:after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.selectorHeader:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(var(--primary-rgb), 0.02);
+}
+
+.selectorDropdown {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    width: 100%;
+    background-color: var(--vseti-color-card-item);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1;
+    max-height: 250px;
+    overflow-y: auto;
+    display: none;
+}
+
+.selectorDropdown.open {
+    display: block;
+}
+
+.optionCategory {
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background-color: rgba(var(--primary-rgb), 0.05);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.option:hover {
+    background-color: rgba(var(--primary-rgb), 0.08);
+}
+
+.option.selected {
+    background-color: rgba(var(--primary-rgb), 0.12);
+}
+
+.optionAvatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    z-index: 5;
+}
+
+.optionAvatar:hover {
+    transform: scale(1.15);
+}
+
+.optionAvatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.optionName {
+    font-size: 14px;
+    color: var(--text-primary);
 } 

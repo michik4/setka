@@ -1,5 +1,4 @@
 .groupsPage {
-    width: 100%;
     padding: 16px;
 }
 
@@ -16,8 +15,8 @@
 }
 
 .createButton {
-    background-color: var(--vk-color-header);
-    color: white;
+    background-color: var(--vseti-color-header);
+    color: var(--vseti-color-white);
     border: none;
     border-radius: 4px;
     padding: 8px 16px;
@@ -26,7 +25,7 @@
 }
 
 .createButton:hover {
-    background-color: #3d6898;
+    background-color: var(--vseti-color-blue-light);
 }
 
 .searchContainer {
@@ -37,14 +36,14 @@
 .searchInput {
     flex: 1;
     padding: 8px 12px;
-    border: 1px solid var(--vk-color-border);
+    border: 1px solid var(--vseti-color-border);
     border-radius: 4px 0 0 4px;
     font-size: 14px;
 }
 
 .searchButton {
-    background-color: var(--vk-color-light-button);
-    color: white;
+    background-color: var(--vseti-color-light-button);
+    color: var(--vseti-color-white);
     border: none;
     border-radius: 0 4px 4px 0;
     padding: 8px 16px;
@@ -53,13 +52,13 @@
 }
 
 .searchButton:hover {
-    background-color: #4a76a8;
+    background-color: var(--vseti-color-blue-light);
 }
 
 .section {
-    background-color: white;
+    background-color: var(--vseti-color-card);
     border-radius: var(--border-radius);
-    box-shadow: 0 1px 0 0 #d3d9de, 0 0 0 1px #e7e8ec;
+    border: 1px solid var(--vseti-color-border);
     padding: 16px;
     margin-bottom: 20px;
 }
@@ -68,7 +67,7 @@
     font-size: 16px;
     margin-top: 0;
     margin-bottom: 16px;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
 }
 
 .groupsList {
@@ -82,14 +81,15 @@
     align-items: flex-start;
     padding: 12px;
     border-radius: 4px;
-    background-color: var(--vk-color-hover);
+    background-color: var(--vseti-color-card-item);
     transition: background-color 0.2s ease;
 }
 
+/*
 .groupItem:hover {
-    background-color: #f2f3f5;
+    background-color: var(--vseti-color-card-item-hover);
 }
-
+*/
 .groupAvatar {
     width: 80px;
     height: 80px;
@@ -99,7 +99,7 @@
     flex-shrink: 0;
 }
 
-.groupAvatar img {
+.groupAvatarImage {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -108,8 +108,8 @@
 .defaultAvatar {
     width: 100%;
     height: 100%;
-    background-color: var(--vk-color-header);
-    color: white;
+    background-color: var(--vseti-color-header);
+    color: var(--vseti-color-white);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -126,7 +126,7 @@
 
 .groupName {
     font-weight: 500;
-    color: var(--vk-color-text);
+    color: var(--vseti-color-text);
     text-decoration: none;
     font-size: 16px;
     display: block;
@@ -139,7 +139,7 @@
 
 .groupDescription {
     font-size: 13px;
-    color: #656565;
+    color: var(--vseti-color-text-gray);
     margin-bottom: 8px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -149,7 +149,7 @@
 
 .groupStats {
     font-size: 12px;
-    color: #939393;
+    color: var(--vseti-color-text-tertiary);
     display: flex;
     gap: 12px;
 }
@@ -170,39 +170,39 @@
 }
 
 .joinButton {
-    background-color: var(--vk-color-light-button);
-    color: white;
+    background-color: var(--vseti-color-light-button);
+    color: var(--vseti-color-text);
 }
 
 .joinButton:hover {
-    background-color: #4a76a8;
+    background-color: var(--vseti-color-blue-light);
 }
 
 .leaveButton {
-    background-color: #e5ebf1;
-    color: #55677d;
+    background-color: var(--vseti-color-white);
+    color: var(--vseti-color-text-muted);
 }
 
 .leaveButton:hover {
-    background-color: #dce1e6;
+    background-color: var(--vseti-color-border-light);
 }
 
 .leaveButton:disabled {
-    background-color: #f5f6f8;
-    color: #a3adb8;
+    background-color: var(--vseti-color-card-item);
+    color: var(--vseti-color-text-muted);
     cursor: not-allowed;
 }
 
 .loading {
     text-align: center;
     padding: 20px;
-    color: #939393;
+    color: var(--vseti-color-text-tertiary);
 }
 
 .emptyState {
     text-align: center;
     padding: 40px 20px;
-    color: #939393;
+    color: var(--vseti-color-text-tertiary);
     font-size: 14px;
 }
 
@@ -221,7 +221,7 @@
 }
 
 .modalContent {
-    background-color: white;
+    background-color: var(--vseti-color-card);
     border-radius: var(--border-radius);
     width: 90%;
     max-width: 500px;
@@ -247,7 +247,7 @@
     border: none;
     font-size: 24px;
     cursor: pointer;
-    color: #939393;
+    color: var(--vseti-color-text-tertiary);
 }
 
 .formGroup {
@@ -258,14 +258,14 @@
     display: block;
     margin-bottom: 8px;
     font-size: 14px;
-    color: #626d7a;
+    color: var(--vseti-color-text-muted);
 }
 
 .formGroup input, 
 .formGroup textarea {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid var(--vk-color-border);
+    border: 1px solid var(--vseti-color-border);
     border-radius: 4px;
     font-size: 14px;
     box-sizing: border-box;
@@ -293,19 +293,19 @@
 }
 
 .formActions button[type="button"] {
-    background-color: #e5ebf1;
-    color: #55677d;
+    background-color: var(--vseti-color-hover);
+    color: var(--vseti-color-text-muted);
     border: none;
 }
 
 .formActions button[type="submit"] {
-    background-color: var(--vk-color-light-button);
-    color: white;
+    background-color: var(--vseti-color-light-button);
+    color: var(--vseti-color-white);
     border: none;
 }
 
 .error {
-    color: #e64646;
+    color: var(--vseti-color-error);
     font-size: 14px;
     margin-bottom: 16px;
     padding: 8px;

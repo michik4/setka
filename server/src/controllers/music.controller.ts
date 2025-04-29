@@ -276,6 +276,59 @@ export class MusicController {
             throw error;
         }
     }
+
+    /**
+     * Добавляет существующий трек в библиотеку пользователя
+     */
+    async saveTrackToUserCollection(req: any, trackId: number): Promise<MusicTrack | null> {
+        try {
+            console.log(`[MusicController] Запрос на добавление трека ID:${trackId} в библиотеку пользователя ID:${req.user?.id}`);
+            
+            // Находим оригинальный трек
+            const sourceTrack = await this.musicRepository.findOne({
+                where: { id: trackId }
+            });
+            
+            if (!sourceTrack) {
+                console.error(`[MusicController] Не найден трек с ID:${trackId}`);
+                return null;
+            }
+            
+            // Проверяем, есть ли у пользователя такой же трек
+            const existingTrack = await this.musicRepository.findOne({
+                where: {
+                    userId: req.user?.id,
+                    title: sourceTrack.title,
+                    artist: sourceTrack.artist
+                }
+            });
+            
+            if (existingTrack) {
+                console.log(`[MusicController] Трек "${sourceTrack.title}" от исполнителя "${sourceTrack.artist}" уже существует в коллекции пользователя`);
+                return existingTrack;
+            }
+            
+            // Создаем новую запись трека для пользователя
+            const newTrack = this.musicRepository.create({
+                title: sourceTrack.title,
+                artist: sourceTrack.artist,
+                duration: sourceTrack.duration,
+                filename: sourceTrack.filename, // Используем тот же файл
+                filepath: sourceTrack.filepath, // Используем тот же путь
+                coverUrl: sourceTrack.coverUrl,
+                userId: req.user?.id,
+                playCount: 0
+            });
+            
+            await this.musicRepository.save(newTrack);
+            
+            console.log(`[MusicController] Трек успешно добавлен в библиотеку пользователя, ID:${newTrack.id}`);
+            return newTrack;
+        } catch (error) {
+            console.error('[MusicController] Ошибка при добавлении трека в библиотеку:', error);
+            return null;
+        }
+    }
 }
 
 export default new MusicController(); 

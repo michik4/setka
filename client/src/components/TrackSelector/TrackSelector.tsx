@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Track } from '../../types/music.types';
-import { api } from '../../utils/api';
+import { MusicService } from '../../services/music.service';
 import styles from './TrackSelector.module.css';
 
 interface TrackSelectorProps {
@@ -21,10 +21,9 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ userId, onSelect, onCance
     const fetchTracks = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/music');
+        const response = await MusicService.getUserTracks(1000);
         // Проверяем структуру ответа и извлекаем треки
-        const tracksData = response.tracks || response;
-        setTracks(tracksData);
+        setTracks(response.tracks);
         setLoading(false);
       } catch (err) {
         console.error('Ошибка при загрузке треков:', err);
@@ -61,69 +60,71 @@ const TrackSelector: React.FC<TrackSelectorProps> = ({ userId, onSelect, onCance
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h2>Выберите музыку</h2>
-        <button
-          className={styles.closeButton}
-          onClick={onCancel}
-          aria-label="Закрыть"
-        >
-          ×
-        </button>
-      </div>
-
-      <div className={styles.searchContainer}>
-        <input
-          type="text"
-          placeholder="Поиск по названию или исполнителю"
-          className={styles.searchInput}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {loading ? (
-        <div className={styles.loading}>Загрузка...</div>
-      ) : error ? (
-        <div className={styles.error}>{error}</div>
-      ) : (
-        <div className={styles.trackList}>
-          {filteredTracks.length === 0 ? (
-            <div className={styles.noResults}>Ничего не найдено</div>
-          ) : (
-            filteredTracks.map(track => (
-              <div
-                key={track.id}
-                className={`${styles.trackItem} ${selectedTracks.some(t => t.id === track.id) ? styles.selected : ''}`}
-                onClick={() => handleTrackSelect(track)}
-              >
-                <div className={styles.trackCover}>
-                  <img src={track.coverUrl} alt={track.title} />
-                </div>
-                <div className={styles.trackInfo}>
-                  <div className={styles.trackTitle}>{track.title}</div>
-                  <div className={styles.trackArtist}>{track.artist}</div>
-                </div>
-                <div className={styles.trackDuration}>{track.duration}</div>
-              </div>
-            ))
-          )}
+      <div className={styles.content}>
+        <div className={styles.header}>
+          <h2>Выберите музыку</h2>
+          <button
+            className={styles.closeButton}
+            onClick={onCancel}
+            aria-label="Закрыть"
+          >
+            ×
+          </button>
         </div>
-      )}
 
-      <div className={styles.footer}>
-        <button className={styles.cancelButton} onClick={onCancel}>
-          Отмена
-        </button>
-        <button
-          className={styles.confirmButton}
-          onClick={handleConfirm}
-          disabled={selectedTracks.length === 0}
-        >
-          {selectedTracks.length > 0
-            ? `Выбрать (${selectedTracks.length})`
-            : 'Выбрать'}
-        </button>
+        <div className={styles.searchContainer}>
+          <input
+            type="text"
+            placeholder="Поиск по названию или исполнителю"
+            className={styles.searchInput}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {loading ? (
+          <div className={styles.loading}>Загрузка...</div>
+        ) : error ? (
+          <div className={styles.error}>{error}</div>
+        ) : (
+          <div className={styles.trackList}>
+            {filteredTracks.length === 0 ? (
+              <div className={styles.noResults}>Ничего не найдено</div>
+            ) : (
+              filteredTracks.map(track => (
+                <div
+                  key={track.id}
+                  className={`${styles.trackItem} ${selectedTracks.some(t => t.id === track.id) ? styles.selected : ''}`}
+                  onClick={() => handleTrackSelect(track)}
+                >
+                  <div className={styles.trackCover}>
+                    <img src={track.coverUrl} alt={track.title} />
+                  </div>
+                  <div className={styles.trackInfo}>
+                    <div className={styles.trackTitle}>{track.title}</div>
+                    <div className={styles.trackArtist}>{track.artist}</div>
+                  </div>
+                  <div className={styles.trackDuration}>{track.duration}</div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        <div className={styles.footer}>
+          <button className={styles.cancelButton} onClick={onCancel}>
+            Отмена
+          </button>
+          <button
+            className={styles.confirmButton}
+            onClick={handleConfirm}
+            disabled={selectedTracks.length === 0}
+          >
+            {selectedTracks.length > 0
+              ? `Выбрать (${selectedTracks.length})`
+              : 'Выбрать'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AppDataSource } from '../db/db_connect';
-import { WallPost } from '../entities/wall.entity';
+import { Post } from '../entities/post.entity';
 import { User } from '../entities/user.entity';
 import { AuthenticatedRequest } from '../types/express';
 import { Photo } from '../entities/photo.entity';
@@ -10,7 +10,7 @@ import { MusicTrack } from '../entities/music.entity';
 import { In } from 'typeorm';
 
 export class WallController {
-    private wallPostRepository = AppDataSource.getRepository(WallPost);
+    private postRepository = AppDataSource.getRepository(Post);
     private userRepository = AppDataSource.getRepository(User);
     private photoRepository = AppDataSource.getRepository(Photo);
     private albumRepository = AppDataSource.getRepository(Album);
@@ -20,7 +20,7 @@ export class WallController {
     private async getPostWithRelations(postId: number) {
         try {
             // Получаем пост со связями
-            const post = await this.wallPostRepository
+            const post = await this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.author', 'author')
                 .leftJoinAndSelect('author.avatar', 'avatar')
@@ -194,19 +194,21 @@ export class WallController {
             const { userId } = req.params;
             const { page = 1, limit = 10 } = req.query;
 
-            const queryBuilder = this.wallPostRepository
-                .createQueryBuilder('wallPost')
-                .leftJoinAndSelect('wallPost.author', 'author')
+            const queryBuilder = this.postRepository
+                .createQueryBuilder('post')
+                .leftJoinAndSelect('post.author', 'author')
                 .leftJoinAndSelect('author.avatar', 'authorAvatar')
-                .leftJoinAndSelect('wallPost.photos', 'photos')
-                .leftJoinAndSelect('wallPost.tracks', 'tracks')
+                .leftJoinAndSelect('post.photos', 'photos')
+                .leftJoinAndSelect('post.tracks', 'tracks')
                 .select([
-                    'wallPost.id',
-                    'wallPost.content',
-                    'wallPost.authorId',
-                    'wallPost.wallOwnerId',
-                    'wallPost.createdAt',
-                    'wallPost.updatedAt',
+                    'post.id',
+                    'post.content',
+                    'post.authorId',
+                    'post.groupId',
+                    'post.likesCount',
+                    'post.commentsCount',
+                    'post.createdAt',
+                    'post.updatedAt',
                     'author.id',
                     'author.firstName',
                     'author.lastName',
@@ -226,8 +228,8 @@ export class WallController {
                     'tracks.filename',
                     'tracks.coverUrl'
                 ])
-                .where('wallPost.wallOwnerId = :userId', { userId: parseInt(userId) })
-                .orderBy('wallPost.createdAt', 'DESC')
+                .where('post.wallOwnerId = :userId', { userId: parseInt(userId) })
+                .orderBy('post.createdAt', 'DESC')
                 .take(Number(limit))
                 .skip((Number(page) - 1) * Number(limit));
 
@@ -239,92 +241,74 @@ export class WallController {
                 for (const post of postsQuery) {
                     const postWithAlbums = await this.getPostWithRelations(post.id);
                     if (postWithAlbums) {
+                        // Добавляем wallOwnerId к посту для совместимости с клиентом
+                        (postWithAlbums as any).wallOwnerId = parseInt(userId);
                         posts.push(postWithAlbums);
                     } else {
-                        posts.push({...post, albums: []});
+                        // Добавляем wallOwnerId к посту для совместимости с клиентом
+                        const postWithWallOwner = {...post, albums: [], wallOwnerId: parseInt(userId)};
+                        posts.push(postWithWallOwner);
                     }
                 }
             } catch (error) {
                 console.error('Ошибка при загрузке альбомов для постов:', error);
                 // В случае ошибки добавляем посты без альбомов
-                posts.push(...postsQuery.map(post => ({...post, albums: []})));
+                posts.push(...postsQuery.map(post => ({...post, albums: [], wallOwnerId: parseInt(userId)})));
             }
 
-            return res.json({
+            res.json({
                 posts,
-                total,
+                totalPosts: total,
                 currentPage: Number(page),
                 totalPages: Math.ceil(total / Number(limit))
             });
         } catch (error) {
             console.error('Ошибка при получении записей со стены:', error);
-            return res.status(500).json({ message: 'Ошибка при получении записей со стены' });
+            res.status(500).json({ message: 'Ошибка при получении записей со стены' });
         }
     }
 
-    // Создание нового поста на стене
+    // Создание записи на стене
     async createWallPost(req: AuthenticatedRequest, res: Response) {
         try {
-            console.log('Body запроса:', req.body);
-            console.log('Файлы:', req.files);
-            
-            const { content, authorId, wallOwnerId, trackIds, trackId } = req.body;
-            let albums = req.body.albums;
-            
-            // Обновленная обработка albums - проверяем как массив из FormData
-            if (req.body['albums[]']) {
-                // Если пришел как albums[], преобразуем в массив
-                albums = Array.isArray(req.body['albums[]']) 
-                    ? req.body['albums[]'].map(id => parseInt(id, 10))
-                    : [parseInt(req.body['albums[]'], 10)];
-                console.log('Преобразовали albums[] в массив:', albums);
-            } 
-            // Обрабатываем стандартный случай с JSON строкой
-            else if (albums && typeof albums === 'string') {
-                try {
-                    albums = JSON.parse(albums);
-                    console.log('Успешно распарсили JSON с альбомами:', albums);
-                } catch (error) {
-                    console.error('Ошибка при парсинге JSON albums:', error);
-                    albums = [];
-                }
-            }
-            
-            // Собираем все ID треков в один массив
-            let allTrackIds: any[] = [];
-            
-            // Обрабатываем trackIds
-            if (trackIds) {
-                let parsedTrackIds = trackIds;
-                if (typeof trackIds === 'string') {
-                    try {
-                        parsedTrackIds = JSON.parse(trackIds);
-                        console.log('[WallController] Удалось распарсить trackIds из строки:', parsedTrackIds);
-                    } catch (e) {
-                        console.error('[WallController] Ошибка при парсинге trackIds:', e);
-                        // Если это одиночное значение, пробуем превратить его в массив
-                        if (!isNaN(Number(trackIds))) {
-                            parsedTrackIds = [Number(trackIds)];
-                            console.log('[WallController] Преобразовано в массив из одного элемента:', parsedTrackIds);
-                        }
-                    }
-                }
-                
-                if (Array.isArray(parsedTrackIds)) {
-                    allTrackIds = [...allTrackIds, ...parsedTrackIds];
-                }
-            }
-            
-            // Добавляем trackId, если он есть
-            if (trackId) {
-                const parsedTrackId = Number(trackId);
-                if (!isNaN(parsedTrackId) && !allTrackIds.includes(parsedTrackId)) {
-                    allTrackIds.push(parsedTrackId);
-                }
-            }
-            
-            console.log('[WallController] Итоговый список ID треков:', allTrackIds);
+            const { content, photoIds, albumIds, trackIds, authorId, wallOwnerId } = req.body;
             const photos = req.files as Express.Multer.File[];
+            
+            // Обработка идентификаторов альбомов из JSON-строки
+            let albums = [];
+            if (albumIds) {
+                try {
+                    albums = JSON.parse(albumIds);
+                    console.log('Обработаны ID альбомов:', albums);
+                } catch (e) {
+                    console.error('Ошибка при парсинге ID альбомов:', e);
+                }
+            }
+            
+            // Обработка идентификаторов треков из JSON-строки
+            let parsedTrackIds = [];
+            if (trackIds) {
+                try {
+                    parsedTrackIds = JSON.parse(trackIds);
+                    console.log('Обработаны ID треков:', parsedTrackIds);
+                } catch (e) {
+                    console.error('Ошибка при парсинге ID треков:', e);
+                }
+            }
+            
+            // Обработка идентификаторов фотографий из JSON-строки
+            let parsedPhotoIds = [];
+            if (photoIds) {
+                try {
+                    parsedPhotoIds = JSON.parse(photoIds);
+                    console.log('Обработаны ID фотографий:', parsedPhotoIds);
+                } catch (e) {
+                    console.error('Ошибка при парсинге ID фотографий:', e);
+                }
+            }
+            
+            // Объединяем все ID треков из разных источников
+            const allTrackIds = parsedTrackIds || [];
             
             console.log('Создание поста на стене с данными:', { 
                 content, 
@@ -349,14 +333,14 @@ export class WallController {
                 });
             }
 
-            // Создаем новый пост на стене
-            const wallPost = new WallPost();
-            wallPost.content = content;
-            wallPost.authorId = authorId;
-            wallPost.wallOwnerId = wallOwnerId;
+            // Создаем новый пост для стены
+            const post = new Post();
+            post.content = content;
+            post.authorId = authorId;
+            post.wallOwnerId = wallOwnerId;
 
             // Сохраняем пост
-            const savedWallPost = await this.wallPostRepository.save(wallPost);
+            const savedPost = await this.postRepository.save(post);
 
             // Если есть фотографии, связываем их с постом
             if (photos && photos.length > 0) {
@@ -375,161 +359,87 @@ export class WallController {
                 }
 
                 // Связываем фотографии с постом
-                wallPost.photos = photoEntities;
-                await this.wallPostRepository.save(wallPost);
+                post.photos = photoEntities;
+                await this.postRepository.save(post);
             }
 
-            console.log('Сохранен пост:', savedWallPost.id);
-
-            // Обрабатываем добавление музыкальных треков через ORM
-            if (Array.isArray(allTrackIds) && allTrackIds.length > 0) {
-                console.log(`[WallController] Начинаем добавление ${allTrackIds.length} треков к wall посту ${savedWallPost.id}`, allTrackIds);
+            console.log('Сохранен пост:', savedPost.id);
+            
+            // Обработка photoIds, если они указаны (для ранее загруженных фотографий)
+            if (parsedPhotoIds && parsedPhotoIds.length > 0) {
+                console.log('Добавление существующих фотографий к посту:', parsedPhotoIds);
                 
-                try {
-                    // Проверяем доступные треки в базе данных
-                    console.log('[WallController] Проверка доступных треков в базе данных...');
-                    const allTracks = await this.musicTrackRepository.find();
-                    console.log(`[WallController] В базе данных найдено ${allTracks.length} треков:`);
-                    if (allTracks.length > 0) {
-                        console.log(allTracks.map(t => ({ id: t.id, title: t.title, artist: t.artist })));
-                    } else {
-                        console.log('[WallController] В базе данных нет треков!');
-                    }
-                    
-                    // Преобразуем все ID в числа для безопасного поиска
-                    const trackIdsNumbers = allTrackIds
-                        .map(id => Number(id))
-                        .filter(id => !isNaN(id));
-                    
-                    console.log(`[WallController] Преобразованные ID треков: ${JSON.stringify(trackIdsNumbers)}`);
-                    
-                    // Находим треки по ID
-                    const trackEntities = await this.musicTrackRepository.findBy(
-                        trackIdsNumbers.map(id => ({ id }))
-                    );
-                    
-                    console.log(`[WallController] Найдено ${trackEntities.length} треков из ${trackIdsNumbers.length} запрошенных`);
-                    console.log('[WallController] Найденные треки:', trackEntities.map(t => ({ id: t.id, title: t.title, artist: t.artist })));
-                    
-                    if (trackEntities.length > 0) {
-                        // Проверим состояние поста до добавления треков
-                        console.log(`[WallController] Состояние поста ДО добавления треков:`, {
-                            id: savedWallPost.id,
-                            hasTracks: !!savedWallPost.tracks,
-                            tracksCount: savedWallPost.tracks?.length || 0
-                        });
-                        
-                        // Присваиваем треки к посту через ORM
-                        savedWallPost.tracks = trackEntities;
-                        
-                        console.log(`[WallController] Присвоены треки к посту:`, {
-                            postId: savedWallPost.id, 
-                            tracksAssigned: savedWallPost.tracks.length,
-                            tracksDetails: savedWallPost.tracks.map(t => ({ id: t.id, title: t.title }))
-                        });
-                        
-                        // Сохраняем обновленный пост с треками
-                        const updatedPost = await this.wallPostRepository.save(savedWallPost);
-                        
-                        console.log(`[WallController] Результат сохранения поста:`, {
-                            id: updatedPost.id,
-                            hasTracks: !!updatedPost.tracks,
-                            tracksCount: updatedPost.tracks?.length || 0
-                        });
-                        
-                        console.log(`[WallController] Добавлено ${trackEntities.length} треков к посту ${savedWallPost.id} через ORM`);
-                        
-                        // Проверим SQL запросы напрямую
-                        try {
-                            const trackRelations = await AppDataSource.query(
-                                `SELECT * FROM wall_posts_tracks WHERE "wallPostId" = $1`,
-                                [savedWallPost.id]
-                            );
-                            console.log(`[WallController] Связи в таблице wall_posts_tracks:`, trackRelations);
-                        } catch (sqlError) {
-                            console.error(`[WallController] Ошибка при проверке связей:`, sqlError);
-                            // Если таблица не существует, создаем её
-                            try {
-                                console.log('[WallController] Попытка создать таблицу wall_posts_tracks...');
-                                await AppDataSource.query(`
-                                    CREATE TABLE IF NOT EXISTS wall_posts_tracks (
-                                        "wallPostId" integer NOT NULL,
-                                        "trackId" integer NOT NULL,
-                                        CONSTRAINT "PK_wall_posts_tracks" PRIMARY KEY ("wallPostId", "trackId"),
-                                        CONSTRAINT "FK_wall_posts" FOREIGN KEY ("wallPostId") 
-                                            REFERENCES "wall_posts" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-                                        CONSTRAINT "FK_tracks" FOREIGN KEY ("trackId") 
-                                            REFERENCES "music_tracks" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-                                    );
-                                `);
-                                console.log('[WallController] Таблица wall_posts_tracks успешно создана');
-                                
-                                // Вставляем данные напрямую
-                                await AppDataSource.query(
-                                    `INSERT INTO wall_posts_tracks ("wallPostId", "trackId") VALUES ($1, $2)
-                                     ON CONFLICT ("wallPostId", "trackId") DO NOTHING`,
-                                    [savedWallPost.id, trackEntities[0].id]
-                                );
-                                console.log(`[WallController] Добавлена связь между wall постом ${savedWallPost.id} и треком ${trackEntities[0].id}`);
-                            } catch (createTableError) {
-                                console.error('[WallController] Ошибка при создании таблицы wall_posts_tracks:', createTableError);
-                            }
-                        }
-                    } else {
-                        console.log(`[WallController] Не найдено треков для добавления к посту`);
-                    }
-                } catch (error) {
-                    console.error(`[WallController] Ошибка при добавлении треков:`, error);
+                const existingPhotos = await this.photoRepository.findBy({
+                    id: In(parsedPhotoIds)
+                });
+                
+                if (!post.photos) {
+                    post.photos = existingPhotos;
+                } else {
+                    post.photos = [...post.photos, ...existingPhotos];
                 }
-            } else {
-                console.log(`[WallController] Нет треков для добавления к посту`);
+                
+                console.log(`Добавлено ${existingPhotos.length} существующих фотографий к посту ${post.id}`);
+                await this.postRepository.save(post);
             }
-
-            // Если есть альбомы, связываем их с постом
+            
+            // Обработка albumIds, если они указаны
             if (albums && albums.length > 0) {
-                console.log(`Найдено ${albums.length} альбомов для привязки к посту ${savedWallPost.id}:`, albums);
+                console.log('Добавление альбомов к посту:', albums);
                 
-                try {
-                    // Находим альбомы по ID и проверяем, что они не приватные
-                    const albumsToAdd = await this.albumRepository.find({
-                        where: { 
-                            id: In(albums.map((id: any) => Number(id))),
-                            isPrivate: false 
-                        }
-                    });
+                for (const albumId of albums) {
+                    const album = await this.albumRepository.findOneBy({ id: albumId });
                     
-                    if (albumsToAdd.length > 0) {
-                        console.log(`Найдено ${albumsToAdd.length} альбомов из ${albums.length} для привязки к посту ${savedWallPost.id}`);
+                    if (album) {
+                        // Создаем связь между постом и альбомом
+                        const postAlbum = new PostAlbum();
+                        postAlbum.post = savedPost;
+                        postAlbum.album = album;
                         
-                        // Присваиваем альбомы посту
-                        savedWallPost.albums = albumsToAdd;
-                        
-                        // Сохраняем пост с альбомами
-                        await this.wallPostRepository.save(savedWallPost);
-                        
-                        console.log(`Привязано ${albumsToAdd.length} альбомов к посту ${savedWallPost.id}`);
+                        await AppDataSource.getRepository(PostAlbum).save(postAlbum);
+                        console.log(`Создана связь между постом ${savedPost.id} и альбомом ${album.id}`);
                     } else {
-                        console.log(`Не найдено подходящих альбомов для привязки к посту ${savedWallPost.id}`);
+                        console.warn(`Альбом с ID ${albumId} не найден!`);
                     }
-                } catch (error) {
-                    console.error(`Ошибка при связывании поста ${savedWallPost.id} с альбомами:`, error);
                 }
             }
-
-            // Загружаем пост с отношениями для ответа
-            const savedPost = await this.getPostWithRelations(wallPost.id);
+            
+            // Обработка trackIds, если они указаны
+            if (allTrackIds && allTrackIds.length > 0) {
+                console.log('Добавление треков к посту:', allTrackIds);
+                
+                // Получаем треки по их ID
+                const tracks = await this.musicTrackRepository.findBy({
+                    id: In(allTrackIds)
+                });
+                
+                // Связываем треки с постом
+                post.tracks = tracks;
+                await this.postRepository.save(post);
+                
+                console.log(`Добавлено ${tracks.length} треков к посту ${post.id}`);
+            }
+            
+            // Получаем пост со всеми связями для ответа
+            const savedPostWithRelations = await this.getPostWithRelations(savedPost.id);
+            
+            // Добавляем wallOwnerId для совместимости с клиентом
+            const savedPostWithWallOwner = {
+                ...savedPostWithRelations,
+                wallOwnerId
+            };
             
             // Проверяем наличие альбомов и их фотографий в подготовленном ответе
-            if (savedPost && (savedPost as any).albums && (savedPost as any).albums.length > 0) {
-                const responseAlbums = (savedPost as any).albums;
-                console.log(`Пост ${savedPost.id} содержит ${responseAlbums.length} альбомов в ответе`);
+            if (savedPostWithWallOwner && (savedPostWithWallOwner as any).albums && (savedPostWithWallOwner as any).albums.length > 0) {
+                const responseAlbums = (savedPostWithWallOwner as any).albums;
+                console.log(`Пост ${savedPostWithWallOwner.id} содержит ${responseAlbums.length} альбомов в ответе`);
                 
                 for (const album of responseAlbums) {
                     console.log(`Альбом ${album.id} в ответе: photosCount=${album.photosCount}, photos.length=${album.photos?.length || 0}`);
                 }
             }
 
-            res.status(201).json(savedPost);
+            res.status(201).json(savedPostWithWallOwner);
         } catch (error: any) {
             console.error('Ошибка при создании поста на стене:', error);
             res.status(500).json({
@@ -545,7 +455,7 @@ export class WallController {
             const { postId } = req.params;
             const userId = req.user.id;
 
-            const post = await this.wallPostRepository.findOne({
+            const post = await this.postRepository.findOne({
                 where: { id: parseInt(postId) }
             });
 
@@ -558,7 +468,7 @@ export class WallController {
                 return res.status(403).json({ message: 'Нет прав для удаления этой записи' });
             }
 
-            await this.wallPostRepository.remove(post);
+            await this.postRepository.remove(post);
             return res.json({ message: 'Запись успешно удалена' });
         } catch (error) {
             console.error('Ошибка при удалении записи со стены:', error);
@@ -578,77 +488,74 @@ export class WallController {
             console.log('Новые ID треков:', trackIds);
             console.log('Новые ID альбомов:', albumIds);
 
-            let wallPost = await this.wallPostRepository.findOne({
+            let post = await this.postRepository.findOne({
                 where: { id: parseInt(postId) },
-                relations: ['photos', 'tracks', 'albums']
+                relations: ['photos', 'tracks']
             });
 
-            if (!wallPost) {
-                return res.status(404).json({ message: 'Wall post not found' });
+            if (!post) {
+                return res.status(404).json({ message: 'Post not found' });
             }
 
             // Обновляем текст
-            wallPost.content = content;
+            post.content = content;
 
             // Обновляем фотографии
             if (photoIds && Array.isArray(photoIds)) {
                 const photoRepository = AppDataSource.getRepository(Photo);
                 const photos = await photoRepository.findBy({ id: In(photoIds.map(id => Number(id))) });
-                wallPost.photos = photos;
+                post.photos = photos;
                 console.log(`[WallController] Установлено ${photos.length} фотографий для поста ${postId}`);
             }
-            
-            // Обрабатываем изменение треков
-            if (Array.isArray(trackIds)) {
-                // Преобразуем ID в числа и отфильтруем невалидные значения
-                const validTrackIds = trackIds
-                    .map(id => Number(id))
-                    .filter(id => !isNaN(id));
-                
-                console.log(`[WallController] Поиск ${validTrackIds.length} треков для обновления поста ${postId}`);
-                
-                // Находим треки по ID
-                const tracks = await this.musicTrackRepository.findBy(
-                    validTrackIds.map(id => ({ id }))
-                );
-                
-                console.log(`[WallController] Найдено ${tracks.length} треков из ${validTrackIds.length}`);
-                
-                // Присваиваем треки посту
-                wallPost.tracks = tracks;
+
+            // Обновляем треки
+            if (trackIds && Array.isArray(trackIds)) {
+                const tracks = await this.musicTrackRepository.findBy({ 
+                    id: In(trackIds.map(id => Number(id))) 
+                });
+                post.tracks = tracks;
                 console.log(`[WallController] Установлено ${tracks.length} треков для поста ${postId}`);
             }
 
-            // Обрабатываем изменение альбомов
-            if (Array.isArray(albumIds)) {
-                // Преобразуем ID в числа и отфильтруем невалидные значения
-                const validAlbumIds = albumIds
-                    .map(id => Number(id))
-                    .filter(id => !isNaN(id));
+            // Сохраняем изменения
+            await this.postRepository.save(post);
+
+            // Обновляем альбомы, если указаны
+            if (albumIds && Array.isArray(albumIds)) {
+                // Удаляем текущие связи с альбомами
+                await AppDataSource.query(`
+                    DELETE FROM post_album
+                    WHERE "postId" = $1
+                `, [postId]);
+
+                // Создаем новые связи с альбомами
+                for (const albumId of albumIds) {
+                    await AppDataSource.query(`
+                        INSERT INTO post_album ("postId", "albumId", "wallPostId")
+                        VALUES ($1, $2, NULL)
+                    `, [postId, albumId]);
+                }
                 
-                console.log(`[WallController] Поиск ${validAlbumIds.length} альбомов для обновления поста ${postId}`);
-                
-                // Находим альбомы по ID и проверяем, что они не приватные
-                const albums = await this.albumRepository.find({
-                    where: { id: In(validAlbumIds), isPrivate: false }
-                });
-                
-                console.log(`[WallController] Найдено ${albums.length} альбомов из ${validAlbumIds.length}`);
-                
-                // Присваиваем альбомы посту
-                wallPost.albums = albums;
-                console.log(`[WallController] Установлено ${albums.length} альбомов для поста ${postId}`);
+                console.log(`[WallController] Обновлены альбомы для поста ${postId}`);
             }
 
-            await this.wallPostRepository.save(wallPost);
-            console.log(`[WallController] Пост ${postId} успешно обновлен`);
+            // Получаем обновленный пост со всеми связями
+            const updatedPost = await this.getPostWithRelations(parseInt(postId));
+            
+            if (!updatedPost) {
+                return res.status(404).json({ message: 'Не удалось загрузить обновленный пост' });
+            }
+            
+            // Добавляем wallOwnerId для совместимости с клиентом
+            const updatedPostWithWallOwner = {
+                ...updatedPost,
+                wallOwnerId: post.wallOwnerId
+            };
 
-            // Загружаем обновленный пост с отношениями
-            const updatedPost = await this.getPostWithRelations(wallPost.id);
-            res.json(updatedPost);
+            return res.json(updatedPostWithWallOwner);
         } catch (error) {
-            console.error('Error updating wall post:', error);
-            res.status(500).json({ message: 'Error updating wall post' });
+            console.error('Ошибка при обновлении поста:', error);
+            return res.status(500).json({ message: 'Ошибка при обновлении поста' });
         }
     }
 } 

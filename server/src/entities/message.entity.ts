@@ -1,21 +1,35 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from "typeorm"
-import { User } from "./user.entity"
-import { Chat } from "./chat.entity"
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
+import { User } from './user.entity';
+import { Conversation } from './conversation.entity';
 
 @Entity('messages')
 export class Message {
     @PrimaryGeneratedColumn()
-    id: number
+    id: number;
 
     @Column('text')
-    content: string
+    content: string;
 
-    @ManyToOne(() => User)
-    sender: User
+    @ManyToOne(() => User, user => user.sentMessages)
+    @JoinColumn({ name: 'sender_id' })
+    sender: User;
 
-    @ManyToOne(() => Chat, chat => chat.messages)
-    chat: Chat
+    @Column({ name: 'sender_id' })
+    senderId: number;
 
-    @CreateDateColumn()
-    createdAt: Date
+    @ManyToOne(() => Conversation, conversation => conversation.messages)
+    @JoinColumn({ name: 'conversation_id' })
+    conversation: Conversation;
+
+    @Column({ name: 'conversation_id' })
+    conversationId: number;
+
+    @Column({ default: false })
+    isRead: boolean;
+
+    @CreateDateColumn({ name: 'created_at' })
+    createdAt: Date;
+
+    @UpdateDateColumn({ name: 'updated_at' })
+    updatedAt: Date;
 } 

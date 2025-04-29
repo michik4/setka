@@ -1,15 +1,17 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../db/db_connect';
-import { Chat } from '../entities/chat.entity';
+import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
 import { User } from '../entities/user.entity';
+import { In } from 'typeorm';
 
+// @deprecated Используйте ConversationController вместо ChatController
 export class ChatController {
   // Получение всех чатов
   static async getAllChats(req: Request, res: Response) {
     try {
-      const chatRepository = AppDataSource.getRepository(Chat);
-      const chats = await chatRepository.find({
+      const conversationRepository = AppDataSource.getRepository(Conversation);
+      const chats = await conversationRepository.find({
         relations: ['participants']
       });
       res.json(chats);
@@ -29,11 +31,11 @@ export class ChatController {
         });
       }
 
-      const chatRepository = AppDataSource.getRepository(Chat);
+      const conversationRepository = AppDataSource.getRepository(Conversation);
       const userRepository = AppDataSource.getRepository(User);
 
       // Находим всех пользователей по их ID
-      const participants = await userRepository.findByIds(participantIds);
+      const participants = await userRepository.findBy({ id: In(participantIds) });
 
       if (participants.length !== participantIds.length) {
         return res.status(400).json({ 
@@ -42,16 +44,16 @@ export class ChatController {
       }
 
       // Создаем новый чат
-      const chat = chatRepository.create({
-        type,
+      const conversation = conversationRepository.create({
+        isGroup: type === 'group',
         participants
       });
 
-      await chatRepository.save(chat);
+      await conversationRepository.save(conversation);
 
       // Получаем чат с загруженными отношениями
-      const savedChat = await chatRepository.findOne({
-        where: { id: chat.id },
+      const savedChat = await conversationRepository.findOne({
+        where: { id: conversation.id },
         relations: ['participants']
       });
 
@@ -64,8 +66,8 @@ export class ChatController {
   // Получение чата по ID
   static async getChatById(req: Request, res: Response) {
     try {
-      const chatRepository = AppDataSource.getRepository(Chat);
-      const chat = await chatRepository.findOne({
+      const conversationRepository = AppDataSource.getRepository(Conversation);
+      const chat = await conversationRepository.findOne({
         where: { id: parseInt(req.params.id) },
         relations: ['participants', 'messages', 'messages.sender']
       });
@@ -82,11 +84,11 @@ export class ChatController {
   // Получение всех чатов пользователя
   static async getUserChats(req: Request, res: Response) {
     try {
-      const chatRepository = AppDataSource.getRepository(Chat);
-      const chats = await chatRepository
-        .createQueryBuilder('chat')
-        .leftJoinAndSelect('chat.participants', 'participant')
-        .leftJoinAndSelect('chat.messages', 'message')
+      const conversationRepository = AppDataSource.getRepository(Conversation);
+      const chats = await conversationRepository
+        .createQueryBuilder('conversation')
+        .leftJoinAndSelect('conversation.participants', 'participant')
+        .leftJoinAndSelect('conversation.messages', 'message')
         .leftJoinAndSelect('message.sender', 'sender')
         .where('participant.id = :userId', { userId: parseInt(req.params.userId) })
         .getMany();
@@ -100,16 +102,16 @@ export class ChatController {
   // Отправка сообщения в чат
   static async sendMessage(req: Request, res: Response) {
     try {
-      const chatRepository = AppDataSource.getRepository(Chat);
+      const conversationRepository = AppDataSource.getRepository(Conversation);
       const messageRepository = AppDataSource.getRepository(Message);
       const userRepository = AppDataSource.getRepository(User);
 
-      const chat = await chatRepository.findOne({
+      const conversation = await conversationRepository.findOne({
         where: { id: parseInt(req.params.chatId) },
         relations: ['participants']
       });
 
-      if (!chat) {
+      if (!conversation) {
         return res.status(404).json({ message: 'Чат не найден' });
       }
 
@@ -122,17 +124,25 @@ export class ChatController {
       }
 
       // Проверяем, является ли отправитель участником чата
-      if (!chat.participants.some(p => p.id === sender.id)) {
+      if (!conversation.participants.some(p => p.id === sender.id)) {
         return res.status(403).json({ message: 'Пользователь не является участником чата' });
       }
 
       const message = messageRepository.create({
         content: req.body.content,
         sender,
-        chat
+        senderId: sender.id,
+        conversation,
+        conversationId: conversation.id,
+        isRead: false
       });
 
       await messageRepository.save(message);
+      
+      // Обновляем lastMessageId в беседе
+      conversation.lastMessageId = message.id;
+      await conversationRepository.save(conversation);
+      
       res.status(201).json(message);
     } catch (error) {
       res.status(500).json({ message: 'Ошибка при отправке сообщения', error });
@@ -142,8 +152,8 @@ export class ChatController {
   // Удаление чата
   static async deleteChat(req: Request, res: Response) {
     try {
-      const chatRepository = AppDataSource.getRepository(Chat);
-      const result = await chatRepository.delete(parseInt(req.params.id));
+      const conversationRepository = AppDataSource.getRepository(Conversation);
+      const result = await conversationRepository.delete(parseInt(req.params.id));
       
       if (result.affected === 0) {
         return res.status(404).json({ message: 'Чат не найден' });

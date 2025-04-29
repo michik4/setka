@@ -2,7 +2,7 @@
     border-radius: 6px;
     overflow: hidden;
     background: #f9f9f9;
-    border: 1px solid #e7e8ec;
+    border: 1px solid var(--vseti-color-border-light);
 }
 
 .albumHeader {
@@ -10,19 +10,19 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #e7e8ec;
-    background: #fff;
+    border-bottom: 1px solid var(--vseti-color-border-light);
+    background: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
 }
 
 .albumTitle {
     font-weight: 500;
     font-size: 14px;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
 }
 
 .albumCount {
     font-size: 13px;
-    color: #818c99;
+    color: var(--vseti-color-text-tertiary);
 }
 
 .photoGrid {
@@ -35,7 +35,7 @@
     position: relative;
     overflow: hidden;
     cursor: pointer;
-    background-color: #f0f2f5;
+    background-color: var(--vseti-color-background-light);
 }
 
 .photo {
@@ -145,7 +145,7 @@
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
     font-size: 24px;
     font-weight: bold;
     display: flex;

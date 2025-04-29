@@ -11,7 +11,7 @@
     position: relative;
     overflow: hidden;
     cursor: pointer;
-    background-color: #f0f2f5;
+    background-color: var(--vseti-color-background-light);
 }
 
 .photo {
@@ -127,7 +127,7 @@
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
     font-size: 24px;
     font-weight: bold;
     display: flex;
@@ -154,7 +154,7 @@
 .menuButton {
     background: none;
     border: none;
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
     cursor: pointer;
     padding: 4px 8px;
     font-size: 14px;
@@ -198,7 +198,7 @@
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.4);
     border: none;
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
     display: flex;
     align-items: center;
     justify-content: center;

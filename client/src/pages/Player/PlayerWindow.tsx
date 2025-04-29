@@ -182,7 +182,7 @@ const QueueView: React.FC<QueueViewProps> = ({
                         
                         return (
                             <div 
-                                key={track.id}
+                                key={`queue-track-${track.id}-${index}`}
                                 className={`${styles.queueItem} ${isActive ? styles.queueItemActive : ''}`}
                                 onClick={() => onTrackSelect(index)}
                                 ref={isActive ? activeItemRef : null}
@@ -339,23 +339,17 @@ const PlayerWindow: React.FC = () => {
         };
     }, []);
 
-    // Добавляем обработчик закрытия окна без остановки воспроизведения
+    // Добавляем эффект для обработки закрытия окна
     useEffect(() => {
         const handleBeforeUnload = () => {
-            // Устанавливаем метку времени закрытия окна, которая должна быть новее метки открытия
-            const closedTime = Date.now();
-            localStorage.setItem('player_window_closed', closedTime.toString());
-            
-            // Плеер должен продолжать воспроизведение после закрытия окна
-            localStorage.setItem('player_window_closed_keep_playing', 'true');
-            
-            // Для гарантии того, что флаг закрытия будет установлен после флага открытия
-            const openedTime = localStorage.getItem('player_window_opened');
-            if (openedTime && parseInt(openedTime) >= closedTime) {
-                // Если метка открытия новее или равна метке закрытия, 
-                // обновляем метку закрытия, делая её на 1 мс новее
-                localStorage.setItem('player_window_closed', (parseInt(openedTime) + 1).toString());
+            // Удаляем сохраненную позицию текущего трека перед закрытием окна
+            if (currentTrack) {
+                const positionKey = `player_position_${currentTrack.id}`;
+                localStorage.removeItem(positionKey);
             }
+            
+            // Отмечаем, что окно плеера закрылось
+            localStorage.setItem('player_window_closed', Date.now().toString());
         };
 
         window.addEventListener('beforeunload', handleBeforeUnload);
@@ -363,7 +357,7 @@ const PlayerWindow: React.FC = () => {
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, []);
+    }, [currentTrack]);
 
     // Пытаемся стать главным плеером при загрузке компонента
     useEffect(() => {
@@ -773,36 +767,13 @@ const PlayerWindow: React.FC = () => {
 
     // Улучшенный обработчик для переключения воспроизведения с анимацией
     const handleTogglePlay = () => {
-        // Всегда сначала становимся мастером
-        if (!isMasterPlayer) {
-            const success = becomeMasterPlayer();
-            if (!success) return;
-        }
-        
-        // Проверяем, что аудио элемент существует
-        if (!audio) {
-            togglePlay(); // Резервный вариант
-            return;
-        }
-        
-        // Добавим анимацию кнопки при клике
-        const playButton = document.querySelector(`.${styles.playButton}`);
-        if (playButton) {
-            playButton.classList.add(styles.buttonPulse);
-            setTimeout(() => {
-                playButton.classList.remove(styles.buttonPulse);
-            }, 300);
-        }
-        
         try {
             if (isPlaying) {
                 // ПАУЗА: останавливаем воспроизведение напрямую через DOM API
                 audio.pause();
                 setIsPlaying(false);
                 
-                // Сохраняем позицию в localStorage с уникальным ключом для текущего трека
-                const positionKey = `player_position_${currentTrack?.id}`;
-                localStorage.setItem(positionKey, audio.currentTime.toString());
+                // Удаляем сохранение позиции в localStorage
                 
                 // Создаем метку времени для синхронизации с другими вкладками
                 const syncData = {
@@ -814,14 +785,16 @@ const PlayerWindow: React.FC = () => {
                 };
                 localStorage.setItem('audio_state_change', JSON.stringify(syncData));
             } else {
-                // ВОСПРОИЗВЕДЕНИЕ: запускаем с текущей позиции
+                // Устанавливаем флаг воспроизведения для лучшего UX до фактического начала воспроизведения
+                setIsPlaying(true);
+                
+                // Запускаем воспроизведение напрямую с текущей позиции
+                // при этом не делаем никаких изменений src или currentTime, если не нужно
                 const playPromise = audio.play();
                 
                 if (playPromise !== undefined) {
                     playPromise
                         .then(() => {
-                            setIsPlaying(true);
-                            
                             // Создаем метку времени для синхронизации с другими вкладками
                             const syncData = {
                                 action: 'play',
@@ -832,15 +805,15 @@ const PlayerWindow: React.FC = () => {
                             };
                             localStorage.setItem('audio_state_change', JSON.stringify(syncData));
                         })
-                        .catch(() => {
-                            // Тихая обработка ошибок воспроизведения
+                        .catch(error => {
+                            console.error('Ошибка воспроизведения:', error);
+                            setIsPlaying(false);
                         });
                 }
             }
         } catch (error) {
-            console.warn('Direct audio control failed:', error);
-            // В случае ошибки используем метод контекста как запасной вариант
-            togglePlay();
+            console.error('Ошибка при переключении воспроизведения:', error);
+            setIsPlaying(false);
         }
     };
 
@@ -1020,9 +993,7 @@ const PlayerWindow: React.FC = () => {
                     audio.pause();
                     setIsPlaying(false);
                     
-                    // Сохраняем позицию в localStorage с уникальным ключом
-                    const positionKey = `player_position_${currentTrack.id}`;
-                    localStorage.setItem(positionKey, data.position.toString());
+                    // Удаляем сохранение позиции в localStorage
                 } else if (data.action === 'play') {
                     // Начало воспроизведения из другой вкладки
                     const playPromise = audio.play();
@@ -1048,25 +1019,6 @@ const PlayerWindow: React.FC = () => {
             window.removeEventListener('storage', handleStorageChange);
         };
     }, [audio, currentTrack, setIsPlaying]);
-
-    // Добавляем эффект для восстановления позиции при загрузке трека
-    useEffect(() => {
-        if (!audio || !currentTrack) return;
-        
-        const positionKey = `player_position_${currentTrack.id}`;
-        const savedPosition = localStorage.getItem(positionKey);
-        
-        if (savedPosition) {
-            const position = parseFloat(savedPosition);
-            // Проверяем, что позиция валидная
-            if (!isNaN(position) && position >= 0 && position <= audio.duration) {
-                // Устанавливаем позицию только если трек не играет
-                if (!isPlaying) {
-                    audio.currentTime = position;
-                }
-            }
-        }
-    }, [audio, currentTrack, isPlaying]);
 
     // Обработчики для кликов по соседним обложкам
     const handlePrevCoverClick = () => {

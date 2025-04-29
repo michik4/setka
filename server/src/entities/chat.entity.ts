@@ -2,6 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { User } from "./user.entity"
 import { Message } from "./message.entity"
 
+// Устаревшая сущность. Вместо нее используйте Conversation
+// @deprecated Используйте Conversation вместо Chat
 @Entity('chats')
 export class Chat {
     @PrimaryGeneratedColumn()
@@ -22,7 +24,8 @@ export class Chat {
     })
     participants: User[]
 
-    @OneToMany(() => Message, message => message.chat)
+    // Закомментировано, т.к. в Message больше нет свойства chat
+    // @OneToMany(() => Message, message => message.chat)
     messages: Message[]
 
     @CreateDateColumn()

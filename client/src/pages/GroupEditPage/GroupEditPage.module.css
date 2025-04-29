@@ -1,0 +1,428 @@
+.editPage {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: var(--vseti-color-card);
+  border-radius: 8px;
+  border: 1px solid var(--vseti-color-border);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.backButton {
+  background-color: var(--vseti-color-blue-hover);
+  color: var(--vseti-color-var(--vseti-color-white));
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.backButton:hover {
+  background-color: var(--vseti-color-blue-light);
+}
+
+/* Табы */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--vseti-color-border-light);
+  margin-bottom: 20px;
+}
+
+.tabButton {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--vseti-color-text-gray);
+  position: relative;
+}
+
+.tabButton:hover {
+  background-color: var(--vseti-color-background-light);
+}
+
+.tabButton.active {
+  color: var(--vseti-color-blue-hover);
+  font-weight: bold;
+}
+
+.tabButton.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--vseti-color-blue-hover);
+}
+
+.tabButton.dangerTab {
+  color: var(--vseti-color-error);
+}
+
+.tabButton.dangerTab.active {
+  color: var(--vseti-color-error);
+}
+
+.tabButton.dangerTab.active::after {
+  background-color: var(--vseti-color-error);
+}
+
+/* Стили для секции аватара */
+.avatarSection {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.currentAvatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 20px;
+}
+
+.avatarPreview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.defaultAvatar {
+  width: 100%;
+  height: 100%;
+  background-color: var(--vseti-color-blue-hover);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--vseti-color-var(--vseti-color-white));
+  font-size: 40px;
+  font-weight: bold;
+}
+
+.avatarUpload {
+  display: flex;
+  flex-direction: column;
+}
+
+.uploadButton {
+  display: inline-block;
+  background-color: var(--vseti-color-hover);
+  color: var(--vseti-color-blue);
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+
+.uploadButton:hover {
+  background-color: #dae2ea;
+}
+
+/* Общие стили для форм */
+.formGroup {
+  margin-bottom: 15px;
+}
+
+.formGroup label {
+  display: block;
+  font-size: 14px;
+  color: var(--vseti-color-text-primary);
+  margin-bottom: 5px;
+}
+
+.formGroup input[type="text"],
+.formGroup textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--vseti-color-shadow-light);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.formGroup textarea {
+  resize: vertical;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.checkboxLabel input {
+  margin-right: 8px;
+}
+
+.saveButton {
+  background-color: var(--vseti-color-blue-hover);
+  color: var(--vseti-color-var(--vseti-color-white));
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.saveButton:hover {
+  background-color: var(--vseti-color-blue-light);
+}
+
+.saveButton:disabled {
+  background-color: #b2c6de;
+  cursor: not-allowed;
+}
+
+/* Уведомления */
+.successMessage,
+.errorMessage {
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.successMessage {
+  background-color: #e6f7e6;
+  color: #367c36;
+  border: 1px solid #c5e9c5;
+}
+
+.errorMessage {
+  background-color: #fce8e8;
+  color: var(--vseti-color-error);
+  border: 1px solid #f7d6d6;
+}
+
+/* Список пользователей */
+.usersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+}
+
+.userCard {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--vseti-color-border);
+  border-radius: 4px;
+}
+
+.userAvatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 12px;
+  background-color: var(--vseti-color-blue-hover);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--vseti-color-var(--vseti-color-white));
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.userAvatar img, 
+.memberAvatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.userInfo {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.userName {
+  display: block;
+  font-weight: bold;
+  font-size: 14px;
+  color: var(--vseti-color-blue);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.creatorBadge,
+.adminBadge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: normal;
+  margin-right: 4px;
+}
+
+.creatorBadge {
+  background-color: #ffc107;
+  color: var(--vseti-color-text-primary);
+}
+
+.adminBadge {
+  background-color: var(--vseti-color-blue-hover);
+  color: var(--vseti-color-var(--vseti-color-white));
+}
+
+.userActions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.actionButton {
+  background-color: var(--vseti-color-blue-hover);
+  color: var(--vseti-color-var(--vseti-color-white));
+  border: none;
+  border-radius: 3px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.actionButton:hover {
+  background-color: var(--vseti-color-blue-light);
+}
+
+.actionButton:disabled {
+  background-color: #b2c6de;
+  cursor: not-allowed;
+}
+
+.removeButton {
+  background-color: var(--vseti-color-text-tertiary);
+}
+
+.removeButton:hover {
+  background-color: #6f7a85;
+}
+
+.banButton {
+  background-color: var(--vseti-color-error);
+}
+
+.banButton:hover {
+  background-color: #d43c3c;
+}
+
+/* Опасная зона */
+.dangerZone {
+  border: 1px solid var(--vseti-color-error);
+  border-radius: 4px;
+  padding: 15px;
+  background-color: var(--vseti-color-card);
+}
+
+.dangerZone h3 {
+  color: var(--vseti-color-error);
+  margin-top: 0;
+}
+
+.warningText {
+  color: var(--vseti-color-error);
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.dangerAction {
+  border-top: 1px solid var(--vseti-color-error);
+  padding-top: 15px;
+}
+
+.dangerAction h4 {
+  color: var(--vseti-color-text-primary);
+  margin-top: 0;
+  font-size: 16px;
+}
+
+.dangerAction p {
+  color: var(--vseti-color-text-gray);
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.deleteButton {
+  background-color: var(--vseti-color-error);
+  color: var(--vseti-color-var(--vseti-color-white));
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.deleteButton:hover {
+  background-color: #d43c3c;
+}
+
+.deleteButton:disabled {
+  background-color: #ffd4d4;
+  cursor: not-allowed;
+}
+
+/* Состояния загрузки */
+.loading, .error {
+  padding: 20px;
+  text-align: center;
+  font-size: 15px;
+}
+
+.loading {
+  color: var(--vseti-color-text-tertiary);
+}
+
+.error {
+  color: var(--vseti-color-error);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .header h1 {
+    margin-bottom: 10px;
+  }
+  
+  .tabs {
+    flex-wrap: wrap;
+  }
+  
+  .tabButton {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .usersGrid {
+    grid-template-columns: 1fr;
+  }
+} 

@@ -1,21 +1,21 @@
 .userPage {
     max-width: 900px;
     margin: 0 auto;
-    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .userInfo {
-    background: #FFFFFF;
+    background: var(--vseti-color-card);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--vseti-color-border);
     padding: 20px;
-    margin-bottom: 20px;
 }
 
 .userHeader {
     display: flex;
     gap: 20px;
-    margin-bottom: 20px;
 }
 
 .avatarContainer {
@@ -24,7 +24,7 @@
     position: relative;
     border-radius: 4px;
     overflow: hidden;
-    background: #f0f2f5;
+    background: var(--vseti-color-background-light);
 }
 
 .defaultAvatar {
@@ -35,7 +35,7 @@
     justify-content: center;
     font-size: 64px;
     color: #99a2ad;
-    background: #f5f6f8;
+    background: var(--vseti-color-background-light);
 }
 
 .userAvatar {
@@ -50,7 +50,7 @@
     left: 0;
     right: 0;
     background: rgba(0, 0, 0, 0.5);
-    color: white;
+    color: var(--vseti-color-white);
     padding: 8px;
     text-align: center;
     cursor: pointer;
@@ -90,20 +90,20 @@
 .statusInput {
     flex: 1;
     padding: 8px;
-    border: 1px solid #d3d9de;
+    border: 1px solid var(--vseti-color-shadow-light);
     border-radius: 4px;
     font-size: 13px;
 }
 
 .statusInput:focus {
     outline: none;
-    border-color: #4a76a8;
+    border-color: var(--vseti-color-blue-light);
 }
 
 .statusButton {
     padding: 8px 16px;
-    background: #4a76a8;
-    color: white;
+    background: var(--vseti-color-blue-light);
+    color: var(--vseti-color-white);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -111,13 +111,13 @@
 }
 
 .statusButton:hover {
-    background: #3d6898;
+    background: var(--vseti-color-blue-light);
 }
 
 .cancelButton {
     padding: 8px 16px;
-    background: #e5ebf1;
-    color: #55677d;
+    background: var(--vseti-color-hover);
+    color: var(--vseti-color-text-muted);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -129,7 +129,9 @@
 }
 
 .wallSection {
-    /**/
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .posts {
@@ -163,7 +165,7 @@
 }
 
 .editButton:hover {
-    background: #f0f2f5;
+    background: var(--vseti-color-background-light);
 }
 
 .error {
@@ -241,4 +243,154 @@
 .post-date,
 .error-message {
     display: none;
+}
+
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    margin: 15px 0;
+}
+
+.loadingSpinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #09f;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.error {
+    padding: 20px;
+    background-color: #ffeaea;
+    border-radius: 8px;
+    margin: 15px 0;
+    text-align: center;
+}
+
+.retryButton {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.retryButton:hover {
+    background-color: #0d8bf0;
+}
+
+.endOfFeed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 30px 0;
+    padding: 0 15px;
+}
+
+.endOfFeedLine {
+    flex-grow: 1;
+    height: 1px;
+    background-color: var(--vseti-color-border);
+}
+
+.endOfFeedText {
+    padding: 0 15px;
+    color: var(--vseti-color-text-gray);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Стили для кнопок дружбы */
+.friendshipContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.friendshipStatus {
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 4px;
+    text-align: center;
+    background-color: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary-color);
+}
+
+.friendActionButtons {
+    display: flex;
+    gap: 8px;
+}
+
+.actionButton {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+    border: none;
+}
+
+.actionButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.acceptButton {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.acceptButton:hover:not(:disabled) {
+    background-color: var(--primary-dark);
+}
+
+.rejectButton {
+    background-color: var(--error-color);
+    color: white;
+}
+
+.rejectButton:hover:not(:disabled) {
+    background-color: var(--error-dark);
+}
+
+.addFriendButton {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.addFriendButton:hover:not(:disabled) {
+    background-color: var(--primary-dark);
+}
+
+.pendingButton {
+    background-color: #E0E0E0;
+    color: #757575;
+}
+
+.removeFriendButton {
+    background-color: var(--vseti-color-card);
+    color: var(--vseti-color-text-primary);
+    border: 1px solid var(--vseti-color-border);
+}
+
+.removeFriendButton:hover:not(:disabled) {
+    background-color: var(--vseti-color-card-hover);
+    color: var(--vseti-color-text-primary);
+    border: 1px solid var(--vseti-color-border);
 }

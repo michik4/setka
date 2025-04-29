@@ -1,24 +1,25 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, SetStateAction } from 'react';
 import { Track } from '../types/music.types';
 import { api } from '../utils/api';
 import { BroadcastChannelManager } from '../utils/BroadcastChannelManager';
+import { useQueue, dispatchQueueEvent } from './QueueContext';
+import { 
+    DEFAULT_COVER_URL,
+    PLAYER_SYNC_CHANNEL,
+    ACTIVE_PLAYER_STORAGE_KEY,
+    PLAYER_SESSION_KEY,
+    API_URL
+} from '../config/constants';
+import audioChannelService from '../services/AudioChannelService';
+import audioValidationService from '../services/AudioValidationService';
 
-// Добавляем константу для плейсхолдера обложки
-const DEFAULT_COVER_URL = '/api/music/cover/default.png';
-
-// Константа для имени канала обмена сообщениями
-const PLAYER_SYNC_CHANNEL = 'player_sync_channel';
-// Константа для имени хранилища активного плеера
-const ACTIVE_PLAYER_STORAGE_KEY = 'active_player_instance';
-// Константа для имени хранилища сессии плеера
-const PLAYER_SESSION_KEY = 'player_session';
-// Константа для хранения перемешанной очереди
-const SHUFFLE_QUEUE_KEY = 'player_shuffle_queue';
+// Константа для ID аудио канала - используем фиксированный префикс для всех компонентов
+export const PLAYER_CHANNEL_PREFIX = "vseti_player_";
 
 // Типы сообщений для синхронизации плеера
 type PlayerSyncMessage = {
     type: 'PLAY_TRACK' | 'PAUSE_TRACK' | 'NEXT_TRACK' | 'PREV_TRACK' | 
-          'SET_VOLUME' | 'UPDATE_QUEUE' | 'UPDATE_STATE' | 'SEEK_TO' | 
+          'SET_VOLUME' | 'UPDATE_STATE' | 'SEEK_TO' | 'UPDATE_QUEUE' |
           'SET_REPEAT_MODE' | 'SET_SHUFFLE_MODE' | 'BECOME_MASTER' | 'MASTER_HEARTBEAT';
     data?: any;
     source?: string;
@@ -32,47 +33,84 @@ interface PlayerSession {
     repeatMode: 'none' | 'one' | 'all';
     shuffleMode: boolean;
     volume: number;
-    currentTime?: number;
     lastUpdate: number;
 }
 
+// Определение типа событий очереди
+type QueueSyncEventTypes = 'QUEUE_UPDATED' | 'TRACK_ADDED' | 'TRACK_REMOVED' | 
+                           'QUEUE_CLEARED' | 'TRACK_PLAYED' | 'HISTORY_UPDATED' |
+                           'SHUFFLE_ON' | 'SHUFFLE_OFF';
+
 export interface PlayerContextProps {
-    tracks: Track[];
+    // Основные свойства плеера
     currentTrack: Track | null;
     currentTrackIndex: number;
     isPlaying: boolean;
     audio: HTMLAudioElement;
-    repeatMode: 'none' | 'one' | 'all'; // none - без повтора, one - повтор трека, all - повтор плейлиста
-    shuffleMode: boolean; // перемешивание треков
-    isMasterPlayer: boolean; // является ли данный плеер активным источником звука
-    isPlayerWindowOpen: boolean; // Добавляем флаг открытия окна плеера
-    shuffledQueue: number[]; // Перемешанная очередь индексов треков
-    setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
+    repeatMode: 'none' | 'one' | 'all';
+    shuffleMode: boolean;
+    isMasterPlayer: boolean;
+    isPlayerWindowOpen: boolean;
+    
+    // Для совместимости с существующим кодом
+    tracks: Track[];
+    shuffledQueue: number[];
+    
+    // Сеттеры для основных свойств
     setCurrentTrack: React.Dispatch<React.SetStateAction<Track | null>>;
     setCurrentTrackIndex: React.Dispatch<React.SetStateAction<number>>;
     setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+    setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
+    setRepeatMode: React.Dispatch<React.SetStateAction<'none' | 'one' | 'all'>>;
+    
+    // Методы управления воспроизведением
     playTrack: (track: Track) => void;
     playTrackByIndex: (index: number) => void;
     pauseTrack: () => void;
     nextTrack: () => void;
     prevTrack: () => void;
     togglePlay: () => void;
-    toggleRepeat: () => void; // Переключение режима повтора
-    setRepeatMode: React.Dispatch<React.SetStateAction<'none' | 'one' | 'all'>>; // Установка режима повтора
-    toggleShuffle: () => void; // Переключение режима перемешивания
-    setVolume: (volume: number) => void; // Установка громкости
-    getTrackCover: (coverUrl: string) => string; // Функция для получения обложки с обработкой ошибок
-    addToQueue: (track: Track) => void; // Добавление трека в очередь
-    removeTrackFromQueue: (trackId: number) => void; // Удаление трека из очереди
-    seekTo: (time: number) => void; // Перемотка к указанному времени
-    instanceId: string; // Уникальный ID экземпляра плеера для идентификации сообщений
-    becomeMasterPlayer: () => boolean; // Стать главным плеером (источником звука)
+    toggleRepeat: () => void;
+    toggleShuffle: () => void;
+    
+    // Методы управления треками
+    setVolume: (volume: number) => void;
+    seekTo: (time: number) => void;
+    
+    // Вспомогательные методы
+    getTrackCover: (coverUrl: string) => string;
+    
+    // Работа с очередью (для совместимости)
+    addToQueue: (track: Track) => void;
+    removeTrackFromQueue: (trackId: number) => void;
+    clearQueue: () => void;
+    
+    // Идентификаторы и управление мастер-плеером
+    instanceId: string;
+    channelId: string;
+    becomeMasterPlayer: () => boolean;
 }
 
 const PlayerContext = createContext<PlayerContextProps | undefined>(undefined);
 
-// URL API
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+// В начале файла добавим расширение типа Window
+declare global {
+    interface Window {
+        playerApi?: {
+            playTrack: (track: Track) => void;
+            togglePlay: () => void;
+            nextTrack: () => void;
+            prevTrack: () => void;
+            setVolume: (volume: number) => void;
+            becomeMasterPlayer: () => boolean;
+        };
+        playerContextData?: {
+            tracks: Track[];
+            currentTrackIndex: number;
+            isPlaying: boolean;
+        };
+    }
+}
 
 // Глобальная переменная для хранения состояния проигрывания
 interface PlayerState {
@@ -88,20 +126,6 @@ let playerState: PlayerState = {
     trackId: '',
     timestamp: 0
 };
-
-// В начале файла добавим расширение типа Window
-declare global {
-    interface Window {
-        playerApi?: {
-            playTrack: (track: Track) => void;
-            togglePlay: () => void;
-            nextTrack: () => void;
-            prevTrack: () => void;
-            setVolume: (volume: number) => void;
-            becomeMasterPlayer: () => boolean;
-        };
-    }
-}
 
 // В начале файла после импортов добавим глобального слушателя всех аудио
 // Создаем глобальный менеджер аудио для предотвращения дублирования
@@ -146,27 +170,75 @@ const audioManager = {
 };
 
 export const PlayerProvider = ({ children }: { children: React.ReactNode }): React.ReactElement => {
-    //console.log('[PlayerContext] Initializing PlayerContext');
-    const [tracks, setTracks] = useState<Track[]>([]);
+    const { queue, 
+            currentTrackIndex: queueCurrentTrackIndex, 
+            getNextTrack, 
+            getPreviousTrack, 
+            getCurrentTrack,
+            setCurrentTrackIndex: setQueueTrackIndex,
+            addToQueue: queueAddToQueue,
+            removeFromQueue: queueRemoveFromQueue,
+            clearQueue: queueClearQueue,
+            replaceQueue: queueReplaceQueue
+    } = useQueue();
+            
     const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
     const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
     const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all'>('none');
     const [shuffleMode, setShuffleMode] = useState<boolean>(false);
-    const [shuffledQueue, setShuffledQueue] = useState<number[]>([]);
-    const [originalQueue, setOriginalQueue] = useState<Track[]>([]);
-    const [shuffleUsedTracks, setShuffleUsedTracks] = useState<Set<number>>(new Set());
     const [audio] = useState<HTMLAudioElement>(new Audio());
     const [isMasterPlayer, setIsMasterPlayer] = useState<boolean>(false);
     const lastHeartbeatRef = useRef<number>(0);
     const [instanceId] = useState<string>(() => 'player_' + Math.random().toString(36).substring(2, 9));
     const [isInitialized, setIsInitialized] = useState<boolean>(false);
+    const [listenToQueueEvents, setListenToQueueEvents] = useState<boolean>(false);
+    const [shuffledQueue, setShuffledQueue] = useState<number[]>([]);
+    
+    // Создаем согласованный ID канала для всех компонентов, использующих данный аудио элемент
+    const channelId = `${PLAYER_CHANNEL_PREFIX}${instanceId}`;
     
     // Используем ref для BroadcastChannelManager
     const channelManagerRef = useRef<BroadcastChannelManager | null>(null);
     
     // Добавляем состояние для отслеживания открытия плеера в отдельном окне
     const [isPlayerWindowOpen, setIsPlayerWindowOpen] = useState<boolean>(false);
+    
+    // Создаем кеш для обложек
+    const [coverCache, setCoverCache] = useState<Record<string, string>>({});
+    
+    // Новый ref для хранения таймера heartbeat
+    const masterHeartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Флаг для отслеживания запроса на становление мастер-плеером вне эффектов
+    const becomeMasterRequestRef = useRef<boolean>(false);
+
+    // Инициализируем аудиоканал
+    useEffect(() => {
+        // Регистрируем аудио элемент в сервисе с согласованным ID канала
+        console.log(`[PlayerContext] Регистрация аудио канала: ${channelId}`);
+        audioChannelService.registerAudio(channelId, audio, isMasterPlayer);
+        
+        // При размонтировании удаляем регистрацию
+        return () => {
+            console.log(`[PlayerContext] Удаление аудио канала: ${channelId}`);
+            audioChannelService.unregisterAudio(channelId);
+        };
+    }, [channelId, audio, isMasterPlayer]);
+    
+    // Функция для проверки и обеспечения регистрации аудио канала
+    const ensureAudioChannelRegistered = useCallback(() => {
+        // Проверяем, зарегистрирован ли канал
+        const isRegistered = audioChannelService.isChannelRegistered(channelId);
+        
+        if (!isRegistered) {
+            // Если канал не зарегистрирован, регистрируем снова
+            console.log(`[PlayerContext] Повторная регистрация аудио канала ${channelId}`);
+            audioChannelService.registerAudio(channelId, audio, isMasterPlayer);
+            return true;
+        }
+        return false;
+    }, [channelId, audio, isMasterPlayer]);
     
     // Инициализация менеджера каналов
     useEffect(() => {
@@ -181,8 +253,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
                     
                     // Игнорируем собственные сообщения
                     if (message.source === instanceId) return;
-                    
-                    //console.log('[PlayerSync] Получено сообщение:', message);
                     
                     // Обработка различных типов сообщений
                     handleChannelMessage(message);
@@ -210,7 +280,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
         };
     }, [instanceId]);
     
-    // Функция для обработки сообщений
+    // Функция для обработки сообщений (сокращенная версия)
     const handleChannelMessage = (message: PlayerSyncMessage) => {
         if (message.source === instanceId) {
             return;
@@ -221,68 +291,28 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
                 case 'PLAY_TRACK':
                     if (message.data && message.data.track) {
                         const receivedTrack = message.data.track as Track;
-                        const isPlayerWindow = window.location.pathname.includes('/player');
                         
-                        // Проверяем наличие трека в плейлисте и используем полученный трек как запасной вариант
-                        const localTrack = tracks.find(t => t.id === receivedTrack.id) ?? receivedTrack;
-
-                        // Если трек не в плейлисте, добавляем его
-                        if (!tracks.some(t => t.id === localTrack.id)) {
-                            setTracks(prevTracks => [...prevTracks, localTrack]);
-                        }
-
                         // Обновляем состояние
-                        setCurrentTrack(localTrack);
+                        setCurrentTrack(receivedTrack);
                         setIsPlaying(true);
-                        setCurrentTrackIndex(message.data.index ?? tracks.length);
-
-                        // Проверка состояния окна плеера
-                        const playerWindowOpened = localStorage.getItem('player_window_opened');
-                        const playerWindowClosed = localStorage.getItem('player_window_closed');
-                        let isPlayerWindowActive = false;
-                        
-                        if (playerWindowOpened && playerWindowClosed) {
-                            const openedTime = parseInt(playerWindowOpened);
-                            const closedTime = parseInt(playerWindowClosed);
-                            isPlayerWindowActive = openedTime > closedTime;
-                        } else if (playerWindowOpened && !playerWindowClosed) {
-                            isPlayerWindowActive = true;
+                        if (message.data.index !== undefined) {
+                            setCurrentTrackIndex(message.data.index);
+                            setQueueTrackIndex(message.data.index);
                         }
-
-                        // Строгая проверка: только окно плеера может воспроизводить звук
-                        if (isPlayerWindow && isPlayerWindowActive) {
-                            console.log('[PlayerContext] Воспроизведение трека в окне плеера:', localTrack.title);
-                            
-                            // Заглушаем все остальные аудио элементы
-                            audioManager.muteAllExcept(audio);
-                            
-                            if (audio.src !== localTrack.audioUrl) {
-                                audio.src = localTrack.audioUrl;
-                            }
-                            audio.muted = false;
-                            audio.play().catch(err => {
-                                console.error('Ошибка воспроизведения:', err);
-                                setIsPlaying(false);
-                            });
-                        } else {
-                            // Все остальные окна должны быть заглушены
-                            console.log('[PlayerContext] Заглушение звука в других окнах');
-                            audio.muted = true;
-                            if (!audio.paused) {
-                                audio.pause();
-                            }
+                        
+                        // Проверяем состояние окна плеера
+                        const isPlayerWindow = window.location.pathname.includes('/player');
+                        const playerWindowOpen = localStorage.getItem('player_window_opened');
+                        
+                        if (isPlayerWindow || (!playerWindowOpen && isMasterPlayer)) {
+                            audioChannelService.playTrack(channelId, receivedTrack, 0, true);
                         }
                     }
                     break;
 
                 case 'PAUSE_TRACK':
                     setIsPlaying(false);
-                    if (!audio.paused) {
-                        audio.pause();
-                    }
-                    if (message.data && message.data.position !== undefined) {
-                        audio.currentTime = message.data.position;
-                    }
+                    audioChannelService.pauseActiveChannel();
                     break;
 
                 case 'SEEK_TO':
@@ -292,19 +322,26 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
                     break;
 
                 case 'BECOME_MASTER':
-                    // Если мы были мастером, но получили сообщение о новом мастере,
-                    // отключаем наш звук
                     if (isMasterPlayer) {
                         setIsMasterPlayer(false);
                         audio.muted = true;
-                        if (!audio.paused) {
-                            audio.pause();
+                    }
+                    break;
+
+                case 'NEXT_TRACK':
+                case 'PREV_TRACK':
+                    if (message.data && message.data.index !== undefined) {
+                        const nextTrack = queue[message.data.index];
+                        if (nextTrack) {
+                            setCurrentTrack(nextTrack);
+                            setCurrentTrackIndex(message.data.index);
+                            setQueueTrackIndex(message.data.index);
                         }
                     }
                     break;
             }
         } catch (error) {
-            console.error('Ошибка при обработке сообщения:', error);
+            console.error('[PlayerContext] Ошибка при обработке сообщения:', error);
         }
     };
     
@@ -314,495 +351,417 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
             // Добавляем идентификатор источника и timestamp
             message.source = instanceId;
             message.timestamp = Date.now();
-            // Убрали логирование сообщений
             channelManagerRef.current.postMessage(message);
         }
     }, [instanceId]);
 
-    // Функция для обновления heartbeat текущего мастера - объявляем с useRef чтобы избежать цикличных зависимостей
-    const updateMasterHeartbeatRef = useRef<(() => void) | null>(null);
-    updateMasterHeartbeatRef.current = () => {
-        if (isMasterPlayer) {
-            const currentTime = Date.now();
-            localStorage.setItem(
-                ACTIVE_PLAYER_STORAGE_KEY, 
-                JSON.stringify({ id: instanceId, timestamp: currentTime })
-            );
-            lastHeartbeatRef.current = currentTime;
+    // Синхронизация с QueueContext
+    useEffect(() => {
+        const currentQueueTrack = getCurrentTrack();
+        if (currentQueueTrack && (!currentTrack || currentTrack.id !== currentQueueTrack.id)) {
+            setCurrentTrack(currentQueueTrack);
+        }
+        
+        if (queueCurrentTrackIndex !== currentTrackIndex) {
+            setCurrentTrackIndex(queueCurrentTrackIndex);
+        }
+    }, [queueCurrentTrackIndex, getCurrentTrack]);
+
+    // Управление воспроизведением
+    const togglePlay = () => {
+        if (!currentTrack) return;
+        
+        if (isPlaying) {
+            // Ставим на паузу
+            setIsPlaying(false);
             
-            // Отправляем heartbeat другим плеерам
-            if (channelManagerRef.current) {
-                // Используем прямую отправку без setState
-                const message: PlayerSyncMessage = {
-                    type: 'MASTER_HEARTBEAT',
-                    source: instanceId,
-                    timestamp: currentTime
-                };
-                channelManagerRef.current.postMessage(message);
+            audioChannelService.pauseActiveChannel().then(() => {
+                // Отправляем сообщение о паузе
+                sendSyncMessage({
+                    type: 'PAUSE_TRACK',
+                    data: { position: audio.currentTime }
+                });
+            });
+        } else {
+            // Проверяем и обеспечиваем регистрацию канала
+            ensureAudioChannelRegistered();
+            
+            // Возобновляем воспроизведение через сервис
+            if (currentTrack) {
+                audioChannelService.playTrack(channelId, currentTrack, audio.currentTime);
             }
             
-            // Планируем следующий heartbeat напрямую через setTimeout без setState
-            if (masterHeartbeatTimeoutRef.current) {
-                clearTimeout(masterHeartbeatTimeoutRef.current);
-            }
+            setIsPlaying(true);
             
-            const timeoutId = setTimeout(() => {
-                if (updateMasterHeartbeatRef.current) {
-                    updateMasterHeartbeatRef.current();
+            // Отправляем сообщение о воспроизведении
+            sendSyncMessage({
+                type: 'PLAY_TRACK',
+                data: { 
+                    track: currentTrack,
+                    index: currentTrackIndex,
+                    position: audio.currentTime 
                 }
-            }, 2000);
-            
-            // Используем ref вместо setState для хранения таймера
-            masterHeartbeatTimeoutRef.current = timeoutId;
+            });
         }
     };
 
-    // Новый ref для хранения таймера heartbeat
-    const masterHeartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Обновляем функцию becomeMasterPlayer для учета отдельного окна плеера
-    const becomeMasterPlayer = useCallback(() => {
-        // Если открыто окно плеера и мы не являемся этим окном, не становимся мастером
-        const playerWindowTimestamp = localStorage.getItem('player_window_opened');
-        const playerWindowClosed = localStorage.getItem('player_window_closed');
-        let isPlayerWindowActive = false;
+    // Оптимизированная функция playTrack
+    const playTrack = (track: Track) => {
+        console.log('[PlayerContext] Воспроизведение трека:', track.title);
         
-        if (playerWindowTimestamp && playerWindowClosed) {
-            const openedTime = parseInt(playerWindowTimestamp);
-            const closedTime = parseInt(playerWindowClosed);
-            isPlayerWindowActive = openedTime > closedTime;
-        } else if (playerWindowTimestamp && !playerWindowClosed) {
-            isPlayerWindowActive = true;
+        // Устанавливаем трек как текущий
+        setCurrentTrack(track);
+        setIsPlaying(true);
+        
+        // Обновляем индекс текущего трека в очереди
+        const trackIndex = queue.findIndex(t => t.id === track.id);
+        if (trackIndex !== -1) {
+            setCurrentTrackIndex(trackIndex);
+            setQueueTrackIndex(trackIndex);
+        } else {
+            // Если трека нет в очереди, добавляем его
+            queueAddToQueue(track);
+            // Позже текущий индекс обновится через событие
         }
         
-        if (isPlayerWindowActive && !window.location.pathname.includes('/player')) {
-            return false;
-        }
+        // Проверяем и обеспечиваем регистрацию канала
+        ensureAudioChannelRegistered();
         
-        const currentTime = Date.now();
-        localStorage.setItem(
-            ACTIVE_PLAYER_STORAGE_KEY, 
-            JSON.stringify({ id: instanceId, timestamp: currentTime })
-        );
+        // Используем AudioChannelService для воспроизведения
+        audioChannelService.playTrack(channelId, track, 0, true);
         
-        // Устанавливаем флаг мастер-плеера
-        setIsMasterPlayer(true);
-        
-        // Непосредственно изменяем состояние аудио
-        if (audio) {
-            audio.muted = false;
-            
-            // Восстанавливаем сохраненную позицию из сессии
-            try {
-                const sessionData = localStorage.getItem(PLAYER_SESSION_KEY);
-                if (sessionData) {
-                    const session: PlayerSession = JSON.parse(sessionData);
-                    if (session.currentTime !== undefined && currentTrack) {
-                        audio.currentTime = session.currentTime;
-                    }
-                }
-            } catch (e) {
-                // Игнорируем ошибки при загрузке сессии
-            }
-        }
-        
-        // Обновляем последний heartbeat
-        lastHeartbeatRef.current = currentTime;
-        
-        // Оповещаем всех о новом мастере
+        // Отправляем сообщение для синхронизации
         sendSyncMessage({
-            type: 'BECOME_MASTER',
-            source: instanceId,
-            timestamp: currentTime,
-            data: {
-                currentTrackIndex,
-                isPlaying
+            type: 'PLAY_TRACK',
+            data: { 
+                track,
+                index: trackIndex
             }
         });
-        
-        // Запускаем heartbeat
-        if (updateMasterHeartbeatRef.current) {
-            updateMasterHeartbeatRef.current();
+    };
+
+    // Упрощенная функция playTrackByIndex
+    const playTrackByIndex = (index: number) => {
+        if (index < 0 || index >= queue.length) {
+            console.error(`[PlayerContext] Некорректный индекс трека: ${index}`);
+            return;
         }
         
-        // Возвращаем true, чтобы обозначить успешное становление мастером
-        return true;
-    }, [instanceId, audio, sendSyncMessage, isPlaying, currentTrackIndex, currentTrack]);
+        const track = queue[index];
+        console.log('[PlayerContext] Воспроизведение трека по индексу:', index, track.title);
+        
+        setCurrentTrack(track);
+        setCurrentTrackIndex(index);
+        setQueueTrackIndex(index);
+        setIsPlaying(true);
+        
+        // Проверяем и обеспечиваем регистрацию канала
+        ensureAudioChannelRegistered();
+        
+        // Используем AudioChannelService для воспроизведения
+        audioChannelService.playTrack(channelId, track, 0, true);
+        
+        // Отправляем сообщение для синхронизации
+        sendSyncMessage({
+            type: 'PLAY_TRACK',
+            data: { 
+                track,
+                index
+            }
+        });
+    };
 
-    // Функция для сохранения текущей сессии воспроизведения
-    const savePlayerSession = useCallback(() => {
-        const session: PlayerSession = {
-            currentTrackIndex,
-            isPlaying,
-            repeatMode,
-            shuffleMode,
-            volume: audio.volume,
-            currentTime: audio.currentTime,
-            lastUpdate: Date.now()
-        };
-        localStorage.setItem(PLAYER_SESSION_KEY, JSON.stringify(session));
-    }, [currentTrackIndex, isPlaying, repeatMode, shuffleMode, audio]);
+    // Упрощенная функция nextTrack
+    const nextTrack = () => {
+        // Учитываем режим повтора при переключении на следующий трек
+        if (repeatMode === 'one' && currentTrack) {
+            // В режиме повтора одного трека, при нажатии кнопки "следующий трек"
+            // просто перезапускаем текущий трек с начала
+            console.log('[PlayerContext] Режим повтора одного трека - перезапускаем текущий');
+            audio.currentTime = 0;
+            if (isPlaying && isMasterPlayer) {
+                audioChannelService.playTrack(channelId, currentTrack, 0, true);
+            }
+            return;
+        }
+        
+        if (currentTrackIndex === queue.length - 1) {
+            // Достигнут конец очереди - всегда переходим к первому треку при нажатии на кнопку
+            console.log('[PlayerContext] Конец очереди, переходим к первому треку');
+            playTrackByIndex(0);
+            return;
+        }
+        
+        const nextTrackData = getNextTrack();
+        if (!nextTrackData) return;
+        
+        const nextIndex = queue.findIndex(t => t.id === nextTrackData.id);
+        if (nextIndex === -1) return;
+        
+        // Устанавливаем новый трек
+        setCurrentTrack(nextTrackData);
+        setCurrentTrackIndex(nextIndex);
+        setQueueTrackIndex(nextIndex);
+        
+        
+        // Проверяем и обеспечиваем регистрацию канала
+        ensureAudioChannelRegistered();
+        
+        // Воспроизводим через AudioChannelService
+        if (isPlaying) {
+            audioChannelService.playTrack(channelId, nextTrackData, 0, true);
+        }
+        
+        // Отправляем сообщение об изменении трека
+        sendSyncMessage({
+            type: 'NEXT_TRACK',
+            data: { index: nextIndex }
+        });
+    };
 
-    // Функция для загрузки сессии воспроизведения
-    const loadPlayerSession = useCallback(() => {
-        try {
-            const sessionData = localStorage.getItem(PLAYER_SESSION_KEY);
-            if (!sessionData) return false;
+    // Упрощенная функция prevTrack
+    const prevTrack = () => {
+        // Проверка особого случая: переход к предыдущему треку после начала воспроизведения текущего
+        if (audio && audio.currentTime > 3) {
+            // Если прошло более 3 секунд, просто перематываем на начало текущего трека
+            audio.currentTime = 0;
             
-            const session: PlayerSession = JSON.parse(sessionData);
+            // Отправляем событие об изменении позиции
+            sendSyncMessage({
+                type: 'SEEK_TO',
+                data: { position: 0 }
+            });
             
-            // Проверяем, что есть треки для воспроизведения
-            if (tracks.length > 0 && session.currentTrackIndex >= 0 && 
-                session.currentTrackIndex < tracks.length) {
-                
-                // Обновляем состояние плеера из сессии
-                setCurrentTrackIndex(session.currentTrackIndex);
-                setCurrentTrack(tracks[session.currentTrackIndex]);
-                setIsPlaying(session.isPlaying);
-                setRepeatMode(session.repeatMode);
-                setShuffleMode(session.shuffleMode);
-                
-                // Обновляем громкость
-                if (session.volume !== undefined) {
-                    audio.volume = session.volume;
-                }
-                
-                // Обновляем позицию воспроизведения
-                if (session.currentTime !== undefined && isMasterPlayer) {
-                    audio.currentTime = session.currentTime;
-                }
-                
-                return true;
-            }
-        } catch (e) {
-            console.error('Ошибка при загрузке сессии плеера:', e);
+            return;
         }
-        return false;
-    }, [tracks, audio, isMasterPlayer]);
-
-    // Сохраняем сессию при изменении важных параметров
-    useEffect(() => {
-        if (isInitialized && currentTrack) {
-            savePlayerSession();
-        }
-    }, [isInitialized, currentTrack, currentTrackIndex, isPlaying, repeatMode, shuffleMode, savePlayerSession]);
-
-    // Сохраняем текущую позицию воспроизведения периодически для мастер-плеера
-    useEffect(() => {
-        if (!isMasterPlayer || !isPlaying) return;
         
-        const saveTimeInterval = setInterval(() => {
-            if (audio && !audio.paused && !audio.ended) {
-                const session: PlayerSession = {
-                    currentTrackIndex,
-                    isPlaying,
-                    repeatMode,
-                    shuffleMode,
-                    volume: audio.volume,
-                    currentTime: audio.currentTime,
-                    lastUpdate: Date.now()
-                };
-                localStorage.setItem(PLAYER_SESSION_KEY, JSON.stringify(session));
+        // Учитываем режим повтора одного трека
+        if (repeatMode === 'one' && currentTrack) {
+            // В режиме повтора одного трека, при нажатии кнопки "предыдущий трек"
+            // просто перезапускаем текущий трек с начала
+            console.log('[PlayerContext] Режим повтора одного трека - перезапускаем текущий');
+            audio.currentTime = 0;
+            if (isPlaying && isMasterPlayer) {
+                audioChannelService.playTrack(channelId, currentTrack, 0, true);
             }
-        }, 5000); // Сохраняем каждые 5 секунд
+            return;
+        }
         
-        return () => {
-            clearInterval(saveTimeInterval);
-        };
-    }, [isMasterPlayer, isPlaying, currentTrackIndex, repeatMode, shuffleMode, audio]);
-
-    // Пытаемся загрузить сессию при инициализации
-    useEffect(() => {
-        if (isInitialized && tracks.length > 0 && !currentTrack) {
-            loadPlayerSession();
-        }
-    }, [isInitialized, tracks, currentTrack, loadPlayerSession]);
-
-    // Обновляем аудио источник при изменении текущего трека
-    useEffect(() => {
-        if (currentTrack) {
-            // Проверяем, изменился ли трек
-            const isNewTrack = audio.src !== currentTrack.audioUrl;
-            
-            if (isNewTrack) {
-                audio.src = currentTrack.audioUrl;
-                
-                if (isPlaying && isMasterPlayer) {
-                    // Добавляем проверку на уже играющий аудио, чтобы избежать дублирования
-                    if (audio.paused || audio.ended) {
-                        audio.play().catch(err => {
-                            console.error('Ошибка воспроизведения:', err);
-                        });
-                    }
-                }
-                
-                // Увеличиваем счетчик прослушиваний только для нового трека
-                if (currentTrack.id > 0) {
-                    try {
-                        api.post(`/music/${currentTrack.id}/play`, {});
-                    } catch (err) {
-                        console.error('Ошибка при обновлении счетчика прослушиваний:', err);
-                    }
-                }
+        // Учитываем режим повтора при переключении на предыдущий трек
+        if (currentTrackIndex === 0) {
+            // Находимся на первом треке очереди
+            if (repeatMode === 'all') {
+                // Режим повтора всей очереди - переходим к последнему треку
+                console.log('[PlayerContext] Начало очереди, переходим в конец (prevTrack)');
+                playTrackByIndex(queue.length - 1);
+                return;
             }
         }
-    }, [currentTrack, isMasterPlayer, isPlaying]);
-
-    // Обновляем перемешанный список при изменении режима или треков
-    useEffect(() => {
-        if (shuffleMode && tracks.length > 0) {
-            // Если мы только что включили режим перемешивания или состав треков изменился
-            if (originalQueue.length === 0 || 
-                originalQueue.length !== tracks.length || 
-                !originalQueue.every((track, i) => track.id === tracks[i].id)) {
-                
-                // Сохраняем оригинальную очередь треков
-                setOriginalQueue([...tracks]);
-                
-                // Создаем массив индексов всех треков для перемешивания
-                const indices = Array.from({length: tracks.length}, (_, i) => i);
-                
-                // Если есть текущий трек, удаляем его из перемешивания и добавим его отдельно
-                if (currentTrackIndex >= 0) {
-                    indices.splice(currentTrackIndex, 1);
-                }
-                
-                // Перемешиваем индексы (алгоритм Фишера-Йейтса)
-                for (let i = indices.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [indices[i], indices[j]] = [indices[j], indices[i]];
-                }
-                
-                // Если есть текущий трек, добавляем его в начало перемешанной очереди
-                if (currentTrackIndex >= 0) {
-                    indices.unshift(currentTrackIndex);
-                    
-                    // Добавляем текущий трек в список уже использованных
-                    setShuffleUsedTracks(new Set([currentTrackIndex]));
-                } else {
-                    // Сбрасываем список использованных треков
-                    setShuffleUsedTracks(new Set());
-                }
-                
-                // Сохраняем перемешанную очередь индексов
-                setShuffledQueue(indices);
-            }
-        } else if (!shuffleMode) {
-            // При выключении режима перемешивания, восстанавливаем исходную очередь
-            if (originalQueue.length > 0) {
-                // Находим текущий трек в оригинальной очереди, если он есть
-                let originalIndex = -1;
-                if (currentTrack) {
-                    originalIndex = originalQueue.findIndex(t => t.id === currentTrack.id);
-                }
-                
-                // Восстанавливаем исходную очередь
-                setTracks([...originalQueue]);
-                
-                // Обновляем индекс текущего трека
-                if (originalIndex !== -1) {
-                    setCurrentTrackIndex(originalIndex);
-                }
-                
-                // Очищаем сохраненные данные о перемешивании
-                setOriginalQueue([]);
-                setShuffledQueue([]);
-                setShuffleUsedTracks(new Set());
-            }
+        
+        const prevTrackData = getPreviousTrack();
+        if (!prevTrackData) return;
+        
+        const prevIndex = queue.findIndex(t => t.id === prevTrackData.id);
+        if (prevIndex === -1) return;
+        
+        // Устанавливаем предыдущий трек
+        setCurrentTrack(prevTrackData);
+        setCurrentTrackIndex(prevIndex);
+        setQueueTrackIndex(prevIndex);
+        
+        // Проверяем и обеспечиваем регистрацию канала
+        ensureAudioChannelRegistered();
+        
+        // Воспроизводим через AudioChannelService
+        if (isPlaying) {
+            audioChannelService.playTrack(channelId, prevTrackData, 0, true);
         }
-    }, [shuffleMode, tracks.length, currentTrackIndex, currentTrack]);
+        
+        // Отправляем сообщение об изменении трека
+        sendSyncMessage({
+            type: 'PREV_TRACK',
+            data: { index: prevIndex }
+        });
+    };
 
-    // Переход к следующему треку по окончании текущего
-    useEffect(() => {
-        const handleEnded = () => {
-            if (repeatMode === 'one') {
-                // При повторении трека всегда начинаем сначала
-                audio.currentTime = 0;
-                audio.play().catch(e => {
-                    // Без вывода ошибки воспроизведения
-                });
-            } else {
-                // Переход к следующему треку в зависимости от режима перемешивания
-                if (shuffleMode) {
-                    // Добавляем текущий трек в список использованных
-                    if (currentTrackIndex >= 0) {
-                        const newUsedTracks = new Set(shuffleUsedTracks);
-                        newUsedTracks.add(currentTrackIndex);
-                        setShuffleUsedTracks(newUsedTracks);
-                    }
-                    
-                    // Подсчитываем количество неиспользованных треков
-                    const unusedTracks = tracks.length - shuffleUsedTracks.size;
-                    
-                    // Если все треки были использованы и включён повтор, сбрасываем счётчик
-                    if (unusedTracks === 0 && repeatMode === 'all') {
-                        // Сбрасываем список использованных треков, но оставляем текущий
-                        setShuffleUsedTracks(new Set([currentTrackIndex]));
-                        
-                        // Перемешиваем очередь заново, исключая текущий трек
-                        const indices = Array.from({length: tracks.length}, (_, i) => i)
-                            .filter(i => i !== currentTrackIndex);
-                        
-                        // Перемешиваем индексы
-                        for (let i = indices.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [indices[i], indices[j]] = [indices[j], indices[i]];
-                        }
-                        
-                        // Выбираем первый трек из новой перемешанной очереди
-                        const nextTrackIndex = indices[0];
-                        setCurrentTrack(tracks[nextTrackIndex]);
-                        setCurrentTrackIndex(nextTrackIndex);
-                        
-                        // Обновляем перемешанную очередь
-                        indices.shift(); // Удаляем выбранный трек
-                        setShuffledQueue([nextTrackIndex, ...indices]);
-                    } 
-                    // Если остались неиспользованные треки, выбираем следующий из очереди
-                    else if (unusedTracks > 0 || repeatMode === 'all') {
-                        // Находим индекс текущего трека в перемешанной очереди
-                        const currentQueueIndex = shuffledQueue.indexOf(currentTrackIndex);
-                        
-                        if (currentQueueIndex !== -1 && currentQueueIndex < shuffledQueue.length - 1) {
-                            // Если текущий трек не последний в очереди, берем следующий
-                            const nextTrackIndex = shuffledQueue[currentQueueIndex + 1];
-                            setCurrentTrack(tracks[nextTrackIndex]);
-                            setCurrentTrackIndex(nextTrackIndex);
-                        } else {
-                            // Если текущий трек последний в очереди, но есть неиспользованные треки
-                            // Перемешиваем оставшиеся неиспользованные треки
-                            const unusedIndices = Array.from({length: tracks.length}, (_, i) => i)
-                                .filter(i => !shuffleUsedTracks.has(i));
-                            
-                            if (unusedIndices.length > 0) {
-                                // Перемешиваем неиспользованные индексы
-                                for (let i = unusedIndices.length - 1; i > 0; i--) {
-                                    const j = Math.floor(Math.random() * (i + 1));
-                                    [unusedIndices[i], unusedIndices[j]] = [unusedIndices[j], unusedIndices[i]];
-                                }
-                                
-                                // Выбираем первый трек из новых неиспользованных
-                                const nextTrackIndex = unusedIndices[0];
-                                setCurrentTrack(tracks[nextTrackIndex]);
-                                setCurrentTrackIndex(nextTrackIndex);
-                            } else if (repeatMode === 'all') {
-                                // Если все треки были использованы и включён повтор, начинаем сначала
-                                // Сбрасываем список использованных треков
-                                setShuffleUsedTracks(new Set());
-                                
-                                // Перемешиваем очередь заново
-                                const indices = Array.from({length: tracks.length}, (_, i) => i);
-                                
-                                // Перемешиваем индексы
-                                for (let i = indices.length - 1; i > 0; i--) {
-                                    const j = Math.floor(Math.random() * (i + 1));
-                                    [indices[i], indices[j]] = [indices[j], indices[i]];
-                                }
-                                
-                                // Выбираем первый трек из новой перемешанной очереди
-                                const nextTrackIndex = indices[0];
-                                setCurrentTrack(tracks[nextTrackIndex]);
-                                setCurrentTrackIndex(nextTrackIndex);
-                                
-                                // Обновляем перемешанную очередь
-                                indices.shift(); // Удаляем выбранный трек
-                                setShuffledQueue([nextTrackIndex, ...indices]);
-                                
-                                // Добавляем новый трек в список использованных
-                                setShuffleUsedTracks(new Set([nextTrackIndex]));
-                            }
-                        }
-                    }
-                    // Если треки закончились и повтор выключен, останавливаем воспроизведение
-                    else {
-                        setIsPlaying(false);
-                        if (isMasterPlayer) {
-                            audio.pause();
-                            audio.currentTime = 0;
-                        }
-                    }
-                } else {
-                    // В обычном режиме просто берем следующий трек по порядку
-                    const nextIndex = (currentTrackIndex + 1) % tracks.length;
-                    // Если дошли до конца и повтор выключен, останавливаем воспроизведение
-                    if (nextIndex === 0 && repeatMode === 'none') {
-                        setIsPlaying(false);
-                        if (isMasterPlayer) {
-                            audio.pause();
-                            audio.currentTime = 0;
-                        }
-                    } else {
-                        setCurrentTrack(tracks[nextIndex]);
-                        setCurrentTrackIndex(nextIndex);
-                    }
-                }
-            }
-        };
+    // Упрощенная функция pauseTrack
+    const pauseTrack = () => {
+        if (!isPlaying) return;
+        
+        // Останавливаем воспроизведение через сервис
+        audioChannelService.pauseActiveChannel();
+        
+        setIsPlaying(false);
+        
+        // Отправляем сообщение о паузе
+        sendSyncMessage({
+            type: 'PAUSE_TRACK',
+            data: { position: audio.currentTime }
+        });
+    };
 
+    const toggleRepeat = () => {
+        if (repeatMode === 'none') {
+            setRepeatMode('all');
+        } else if (repeatMode === 'all') {
+            setRepeatMode('one');
+        } else {
+            setRepeatMode('none');
+        }
+        
+        // Синхронизируем режим повтора
+        sendSyncMessage({
+            type: 'SET_REPEAT_MODE',
+            data: { repeatMode: repeatMode === 'none' ? 'all' : repeatMode === 'all' ? 'one' : 'none' }
+        });
+    };
+
+    const toggleShuffle = () => {
+        const newShuffleMode = !shuffleMode;
+        setShuffleMode(newShuffleMode);
+        
+        // Синхронизируем режим перемешивания
+        sendSyncMessage({
+            type: 'SET_SHUFFLE_MODE',
+            data: { shuffleMode: newShuffleMode }
+        });
+        
+        // Отправляем событие в QueueContext для перемешивания
+        dispatchQueueEvent({
+            type: newShuffleMode ? 'QUEUE_UPDATED' : 'QUEUE_UPDATED',
+            data: { shuffleMode: newShuffleMode }
+        });
+    };
+
+    const setVolume = (volume: number) => {
         if (audio) {
-            audio.addEventListener('ended', handleEnded);
+            audio.volume = volume;
+            
+            // Синхронизируем громкость
+            sendSyncMessage({
+                type: 'SET_VOLUME',
+                data: { volume }
+            });
         }
+    };
 
-        return () => {
-            if (audio) {
-                audio.removeEventListener('ended', handleEnded);
-            }
-        };
-    }, [
-        audio, 
-        currentTrackIndex, 
-        repeatMode, 
-        shuffleMode, 
-        tracks, 
-        shuffledQueue, 
-        shuffleUsedTracks, 
-        isMasterPlayer,
-        currentTrack
-    ]);
+    // Функция для перемотки к указанному времени
+    const seekTo = (time: number) => {
+        if (audio) {
+            audio.currentTime = time;
+            
+            // Синхронизируем позицию
+            sendSyncMessage({
+                type: 'SEEK_TO',
+                data: { position: time }
+            });
+        }
+    };
 
-    // Загрузка треков при первом рендере
+    // Функция для получения URL обложки
+    const getTrackCover = useCallback((coverUrl: string): string => {
+        if (!coverUrl || coverUrl === '') {
+            return DEFAULT_COVER_URL;
+        }
+        
+        // Проверяем, есть ли обложка в кеше
+        if (coverCache[coverUrl]) {
+            return coverCache[coverUrl];
+        }
+        
+        let resultUrl: string;
+        
+        // Проверяем, содержит ли URL уже полный путь
+        if (coverUrl.startsWith('http')) {
+            resultUrl = coverUrl;
+        } 
+        // Если путь уже относительный или с /api/, не меняем его
+        else if (coverUrl.startsWith('/api/')) {
+            resultUrl = coverUrl;
+        }
+        // Если путь просто имя файла, добавляем относительный путь к API
+        else {
+            resultUrl = `/api/music/cover/${coverUrl}`;
+        }
+        
+        // Сохраняем в кеш
+        setCoverCache(prev => ({
+            ...prev,
+            [coverUrl]: resultUrl
+        }));
+        
+        return resultUrl;
+    }, [coverCache]);
+
+    // Функция для добавления трека в очередь - делегируем в QueueContext
+    const addToQueue = (track: Track) => {
+        console.log('[PlayerContext] Перенаправление запроса добавления трека в очередь в QueueContext');
+        queueAddToQueue(track);
+    };
+
+    // Функция для удаления трека из очереди - делегируем в QueueContext
+    const removeTrackFromQueue = (trackId: number) => {
+        console.log('[PlayerContext] Перенаправление запроса удаления трека из очереди в QueueContext');
+        queueRemoveFromQueue(trackId);
+    };
+
+    // Функция для очистки очереди - делегируем в QueueContext
+    const clearQueue = () => {
+        console.log('[PlayerContext] Перенаправление запроса очистки очереди в QueueContext');
+        queueClearQueue();
+    };
+
+    // Функция для установки треков - делегируем в QueueContext
+    const setTracks = (tracks: SetStateAction<Track[]>) => {
+        if (typeof tracks === 'function') {
+            const newTracks = tracks(queue);
+            queueReplaceQueue(newTracks);
+        } else {
+            queueReplaceQueue(tracks);
+        }
+    };
+
+    // Функция для становления мастер-плеером с использованием useRef
+    const becomeMasterPlayer = useCallback(() => {
+        // Устанавливаем флаг для обработки в useEffect
+        becomeMasterRequestRef.current = true;
+        
+        // Возвращаем true, если мы уже мастер, или если запрос установлен
+        return isMasterPlayer || becomeMasterRequestRef.current;
+    }, [isMasterPlayer]);
+
+    // Эффект для обработки запроса на становление мастер-плеером
     useEffect(() => {
-        const fetchTracks = async () => {
-            try {
-                // Загружаем все треки без пагинации
-                const data = await api.get('/music?limit=1000');
-                
-                // Проверяем новую структуру данных
-                const tracksData = data.tracks || data;
-                
-                if (!tracksData || !Array.isArray(tracksData) || tracksData.length === 0) {
-                    console.log('[PlayerContext] No tracks found');
-                    return;
-                }
-                
-                const validatedTracks = tracksData.map((track: any) => {
-                    return {
-                        id: track.id || 0,
-                        title: track.title || 'Неизвестный трек',
-                        artist: track.artist || 'Неизвестный исполнитель',
-                        duration: track.duration || '0:00',
-                        coverUrl: track.coverUrl || DEFAULT_COVER_URL,
-                        audioUrl: track.filename ? `${API_URL}/music/file/${track.filename}` : '',
-                        playCount: track.playCount || 0
-                    };
-                });
-                
-                // Устанавливаем все треки в очередь
-                setTracks(validatedTracks);
-                
-                // Если треки загружены, но нет текущего трека, устанавливаем первый трек как текущий
-                if (validatedTracks.length > 0 && !currentTrack) {
-                    console.log('[PlayerContext] Автоматически устанавливаем первый трек:', validatedTracks[0]);
-                    setCurrentTrack(validatedTracks[0]);
-                    setCurrentTrackIndex(0);
-                }
-            } catch (err) {
-                console.error('[PlayerContext] Ошибка при загрузке треков:', err);
+        if (becomeMasterRequestRef.current) {
+            console.log('[PlayerContext] Обработка запроса на становление мастер-плеером');
+            
+            // Проверяем, зарегистрирован ли канал
+            if (!audioChannelService.isChannelRegistered(channelId)) {
+                console.log(`[PlayerContext] Повторная регистрация аудио канала при становлении мастером: ${channelId}`);
+                audioChannelService.registerAudio(channelId, audio, true);
+            } else {
+                console.log(`[PlayerContext] Установка канала ${channelId} как мастера`);
+                audioChannelService.setMasterChannel(channelId);
             }
-        };
-
-        fetchTracks();
-    }, []);
+            
+            // Устанавливаем себя как мастер-плеер
+            setIsMasterPlayer(true);
+            
+            // Отправляем сообщение другим плеерам
+            sendSyncMessage({
+                type: 'BECOME_MASTER',
+                data: {
+                    timestamp: Date.now()
+                }
+            });
+            
+            // Сохраняем информацию в localStorage
+            localStorage.setItem(ACTIVE_PLAYER_STORAGE_KEY, instanceId);
+            
+            // Сбрасываем флаг запроса
+            becomeMasterRequestRef.current = false;
+        }
+    }, [audio, channelId, instanceId, becomeMasterRequestRef.current, sendSyncMessage]);
 
     // Добавляем прослушиватель для обнаружения открытия плеера в отдельном окне
     useEffect(() => {
@@ -884,27 +843,14 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
                     if (isPlayerWindow) {
                         console.log('[PlayerContext] Получена команда воспроизведения трека:', trackId);
                         
-                        // Найти трек в плейлисте
-                        const trackIndex = tracks.findIndex(t => t.id === trackId);
+                        // Найти трек в очереди
+                        const trackIndex = queue.findIndex(t => t.id === trackId);
                         if (trackIndex !== -1) {
-                            // Воспроизводим найденный трек
-                            const trackToPlay = tracks[trackIndex];
-                            console.log('[PlayerContext] Воспроизведение трека из команды:', trackToPlay.title);
-                            
-                            // Обновляем текущий трек и начинаем воспроизведение
-                            setCurrentTrack(trackToPlay);
-                            setCurrentTrackIndex(trackIndex);
-                            setIsPlaying(true);
-                            
-                            if (audio.src !== trackToPlay.audioUrl) {
-                                audio.src = trackToPlay.audioUrl;
-                            }
-                            audio.muted = false;
-                            audio.play().catch(err => {
-                                console.error('Ошибка воспроизведения по команде:', err);
-                                setIsPlaying(false);
-                            });
+                            playTrackByIndex(trackIndex);
                         }
+                    } else {
+                        // В других окнах глушим звук
+                        audio.muted = true;
                     }
                 } catch (error) {
                     console.error('[PlayerContext] Ошибка при обработке команды воспроизведения:', error);
@@ -924,695 +870,8 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
             window.removeEventListener('storage', handleStorageEvent);
             clearInterval(checkInterval);
         };
-    }, [audio, becomeMasterPlayer, isPlayerWindowOpen]);
+    }, [audio, becomeMasterPlayer, isPlayerWindowOpen, queue]);
 
-    // Управление воспроизведением
-    const togglePlay = () => {
-        if (!audio) return;
-
-        const isPlayerWindow = window.location.pathname.includes('/player');
-        const playerWindowOpened = localStorage.getItem('player_window_opened');
-        const playerWindowClosed = localStorage.getItem('player_window_closed');
-        let isPlayerWindowActive = false;
-        
-        if (playerWindowOpened && playerWindowClosed) {
-            const openedTime = parseInt(playerWindowOpened);
-            const closedTime = parseInt(playerWindowClosed);
-            isPlayerWindowActive = openedTime > closedTime;
-        } else if (playerWindowOpened && !playerWindowClosed) {
-            isPlayerWindowActive = true;
-        }
-
-        if (isPlaying) {
-            // При паузе останавливаем воспроизведение везде
-            setIsPlaying(false);
-            if (!audio.paused) {
-                audio.pause();
-            }
-            
-            sendSyncMessage({
-                type: 'PAUSE_TRACK',
-                data: { position: audio.currentTime }
-            });
-        } else {
-            setIsPlaying(true);
-            
-            // Если открыто отдельное окно плеера
-            if (isPlayerWindowActive) {
-                if (!isPlayerWindow) {
-                    // Если мы не в окне плеера, глушим звук
-                    audio.muted = true;
-                    if (!audio.paused) {
-                        audio.pause();
-                    }
-                } else if (isMasterPlayer) {
-                    // Если мы в окне плеера и мастер, воспроизводим
-                    audio.muted = false;
-                    audio.play().catch(err => {
-                        console.error('Ошибка воспроизведения:', err);
-                        setIsPlaying(false);
-                    });
-                }
-            } else if (isMasterPlayer) {
-                // Если отдельное окно не открыто и мы мастер-плеер
-                audio.muted = false;
-                audio.play().catch(err => {
-                    console.error('Ошибка воспроизведения:', err);
-                    setIsPlaying(false);
-                });
-            }
-            
-            sendSyncMessage({
-                type: 'PLAY_TRACK',
-                data: { 
-                    track: currentTrack,
-                    position: audio.currentTime 
-                }
-            });
-        }
-    };
-
-    // Обновляем playTrack для гарантии воспроизведения в окне плеера
-    const playTrack = (track: Track) => {
-        console.log('[PlayerContext] Запрос на воспроизведение трека:', track.title);
-        console.log('[PlayerContext] Аудио URL:', track.audioUrl);
-        
-        // Проверяем, открыто ли окно плеера
-        const isPlayerWindow = window.location.pathname.includes('/player');
-        const playerWindowOpened = localStorage.getItem('player_window_opened');
-        const playerWindowClosed = localStorage.getItem('player_window_closed');
-        let isPlayerWindowActive = false;
-        
-        if (playerWindowOpened && playerWindowClosed) {
-            const openedTime = parseInt(playerWindowOpened);
-            const closedTime = parseInt(playerWindowClosed);
-            isPlayerWindowActive = openedTime > closedTime;
-        } else if (playerWindowOpened && !playerWindowClosed) {
-            isPlayerWindowActive = true;
-        }
-        
-        console.log('[PlayerContext] Окно плеера активно:', isPlayerWindowActive);
-        console.log('[PlayerContext] Текущее окно:', isPlayerWindow ? 'плеер' : 'другое окно');
-
-        // Принудительное отключение всех аудио, кроме плеера в отдельном окне
-        if (isPlayerWindowActive) {
-            if (isPlayerWindow) {
-                // Если это окно плеера, заглушаем все остальные аудио
-                audioManager.muteAllExcept(audio);
-            } else {
-                // Если это не окно плеера, заглушаем все аудио включая свое
-                audioManager.muteAll();
-                audio.muted = true;
-                if (!audio.paused) {
-                    audio.pause();
-                }
-            }
-        }
-
-        // Проверяем, есть ли трек уже в плейлисте
-        const existingTrackIndex = tracks.findIndex(t => t.id === track.id);
-        console.log('[PlayerContext] Трек в плейлисте:', existingTrackIndex !== -1 ? 'да' : 'нет');
-
-        // Если открыто отдельное окно плеера и мы не в окне плеера, 
-        // только отправляем команду через localStorage
-        if (isPlayerWindowActive && !isPlayerWindow) {
-            // Добавляем трек в плейлист, если его там еще нет
-            if (existingTrackIndex === -1) {
-                setTracks(prevTracks => [...prevTracks, track]);
-            }
-
-            console.log('[PlayerContext] Отправка команды через localStorage для воспроизведения в окне плеера');
-            
-            // Отправить команду воспроизведения через localStorage
-            localStorage.setItem('play_track_command', JSON.stringify({
-                trackId: track.id,
-                timestamp: Date.now()
-            }));
-            
-            // Обновляем локальное состояние (но без воспроизведения)
-            const trackToPlay = existingTrackIndex !== -1 ? tracks[existingTrackIndex] : track;
-            const indexToPlay = existingTrackIndex !== -1 ? existingTrackIndex : tracks.length;
-            
-            setCurrentTrack(trackToPlay);
-            setCurrentTrackIndex(indexToPlay);
-            setIsPlaying(true);
-            
-            // Принудительно убедимся, что звук заглушен
-            audio.muted = true;
-            audio.pause();
-            
-            return; // Прерываем выполнение, чтобы избежать дальнейшей логики
-        }
-        
-        // Если мы в окне плеера или отдельное окно не открыто, продолжаем стандартную логику
-        // Добавляем трек в плейлист, если его там еще нет
-        let trackToPlay = track;
-        let indexToPlay = tracks.length;
-        
-        if (existingTrackIndex !== -1) {
-            trackToPlay = tracks[existingTrackIndex];
-            indexToPlay = existingTrackIndex;
-        } else {
-            setTracks(prevTracks => [...prevTracks, track]);
-        }
-        
-        // Обновляем состояние
-        setCurrentTrack(trackToPlay);
-        setCurrentTrackIndex(indexToPlay);
-        setIsPlaying(true);
-        
-        // Воспроизводим только если:
-        // 1. Мы в окне плеера (и окно плеера активно)
-        // 2. Или отдельное окно не открыто и мы мастер-плеер
-        if ((isPlayerWindow && isPlayerWindowActive) || 
-            (!isPlayerWindowActive && isMasterPlayer)) {
-            
-            console.log('[PlayerContext] Начинаем воспроизведение:', isPlayerWindow ? 'в окне плеера' : 'в мастер-плеере');
-            
-            if (audio.src !== trackToPlay.audioUrl) {
-                audio.src = trackToPlay.audioUrl;
-            }
-            audio.muted = false;
-            audio.play().catch(err => {
-                console.error('Ошибка воспроизведения:', err);
-                setIsPlaying(false);
-            });
-        } else {
-            // В других случаях глушим звук
-            console.log('[PlayerContext] Заглушаем звук в текущем окне');
-            audio.muted = true;
-            if (!audio.paused) {
-                audio.pause();
-            }
-        }
-        
-        // Синхронизируем с другими окнами
-        sendSyncMessage({
-            type: 'PLAY_TRACK',
-            data: { 
-                track: trackToPlay,
-                index: indexToPlay
-            }
-        });
-    };
-
-    // Регистрируем аудио в менеджере при создании
-    useEffect(() => {
-        // Регистрируем аудио элемент при создании
-        audioManager.register(audio);
-        
-        // Отписываемся при размонтировании
-        return () => {
-            audioManager.unregister(audio);
-        };
-    }, [audio]);
-
-    // Модифицируем playTrackByIndex для проверки активного окна плеера
-    const playTrackByIndex = (index: number) => {
-        if (index < 0 || index >= tracks.length) return;
-        
-        // Проверяем, открыто ли окно плеера и находимся ли мы в нем
-        const isPlayerWindow = window.location.pathname.includes('/player');
-        const playerWindowOpened = localStorage.getItem('player_window_opened');
-        const playerWindowClosed = localStorage.getItem('player_window_closed');
-        let isPlayerWindowActive = false;
-        
-        if (playerWindowOpened && playerWindowClosed) {
-            const openedTime = parseInt(playerWindowOpened);
-            const closedTime = parseInt(playerWindowClosed);
-            isPlayerWindowActive = openedTime > closedTime;
-        } else if (playerWindowOpened && !playerWindowClosed) {
-            isPlayerWindowActive = true;
-        }
-        
-        // Если окно плеера открыто, но мы не находимся в нем, только отправляем команду
-        if (isPlayerWindowActive && !isPlayerWindow) {
-            const track = tracks[index];
-            
-            // Обновляем локальное состояние
-            setCurrentTrack(track);
-            setCurrentTrackIndex(index);
-            setIsPlaying(true);
-            
-            // Отправляем команду воспроизведения
-            sendSyncMessage({
-                type: 'PLAY_TRACK',
-                data: { track, index }
-            });
-            return;
-        }
-        
-        const track = tracks[index];
-        setCurrentTrack(track);
-        setCurrentTrackIndex(index);
-        setIsPlaying(true);
-        
-        // Синхронизируем воспроизведение
-        sendSyncMessage({
-            type: 'PLAY_TRACK',
-            data: { track, index }
-        });
-    };
-
-    // Модифицируем nextTrack для проверки активного окна плеера
-    const nextTrack = () => {
-        if (tracks.length === 0) return;
-        
-        // Проверяем, открыто ли окно плеера и находимся ли мы в нем
-        const isPlayerWindow = window.location.pathname.includes('/player');
-        const playerWindowOpened = localStorage.getItem('player_window_opened');
-        const playerWindowClosed = localStorage.getItem('player_window_closed');
-        let isPlayerWindowActive = false;
-        
-        if (playerWindowOpened && playerWindowClosed) {
-            const openedTime = parseInt(playerWindowOpened);
-            const closedTime = parseInt(playerWindowClosed);
-            isPlayerWindowActive = openedTime > closedTime;
-        } else if (playerWindowOpened && !playerWindowClosed) {
-            isPlayerWindowActive = true;
-        }
-        
-        // Если окно плеера открыто, но мы не находимся в нем, только отправляем команду
-        if (isPlayerWindowActive && !isPlayerWindow) {
-            // Просто отправляем команду на следующий трек
-            sendSyncMessage({
-                type: 'NEXT_TRACK',
-                data: null
-            });
-            return;
-        }
-        
-        // Определяем следующий трек в зависимости от режима воспроизведения
-        let nextIndex: number;
-        
-        // Если включен режим перемешивания
-        if (shuffleMode) {
-            // Определяем следующий трек в перемешанной очереди
-            const currentPosition = shuffledQueue.indexOf(currentTrackIndex);
-            if (currentPosition === -1 || currentPosition === shuffledQueue.length - 1) {
-                // Если текущий трек не найден или последний, берем первый трек
-                nextIndex = shuffledQueue[0];
-            } else {
-                // Иначе берем следующий трек в перемешанной очереди
-                nextIndex = shuffledQueue[currentPosition + 1];
-            }
-        }
-        // Если не включен режим перемешивания
-        else {
-            // Если режим повтора всего плейлиста или нет повтора
-            if (repeatMode === 'all' || repeatMode === 'none') {
-                // Если это последний трек
-                if (currentTrackIndex === tracks.length - 1) {
-                    // Если режим повтора всего плейлиста, начинаем с начала
-                    if (repeatMode === 'all') {
-                        nextIndex = 0;
-                    } 
-                    // Если нет повтора, останавливаемся на текущем треке
-                    else {
-                        return;
-                    }
-                } 
-                // Если не последний трек, переходим к следующему
-                else {
-                    nextIndex = currentTrackIndex + 1;
-                }
-            }
-            // Если режим повтора одного трека, остаемся на текущем треке
-            else {
-                nextIndex = currentTrackIndex;
-            }
-        }
-        
-        // Получаем данные о следующем треке
-        const nextTrackData = tracks[nextIndex];
-        
-        // Переключаем на следующий трек
-        setCurrentTrack(nextTrackData);
-        setCurrentTrackIndex(nextIndex);
-        setIsPlaying(true);
-        
-        // Если мы мастер-плеер, воспроизводим трек
-        if (isMasterPlayer) {
-            // Сбрасываем текущее время
-            audio.currentTime = 0;
-            
-            // Воспроизводим новый трек
-            if (isPlaying) {
-                audio.play().catch(err => {
-                    console.error('[PlayerContext] Ошибка при воспроизведении следующего трека:', err);
-                });
-            }
-        }
-        
-        // Синхронизируем переключение с другими окнами
-        sendSyncMessage({
-            type: 'NEXT_TRACK',
-            data: { index: nextIndex }
-        });
-    };
-
-    // Модифицируем prevTrack для проверки активного окна плеера
-    const prevTrack = () => {
-        if (tracks.length === 0) return;
-        
-        // Проверяем, открыто ли окно плеера и находимся ли мы в нем
-        const isPlayerWindow = window.location.pathname.includes('/player');
-        const playerWindowOpened = localStorage.getItem('player_window_opened');
-        const playerWindowClosed = localStorage.getItem('player_window_closed');
-        let isPlayerWindowActive = false;
-        
-        if (playerWindowOpened && playerWindowClosed) {
-            const openedTime = parseInt(playerWindowOpened);
-            const closedTime = parseInt(playerWindowClosed);
-            isPlayerWindowActive = openedTime > closedTime;
-        } else if (playerWindowOpened && !playerWindowClosed) {
-            isPlayerWindowActive = true;
-        }
-        
-        // Если окно плеера открыто, но мы не находимся в нем, только отправляем команду
-        if (isPlayerWindowActive && !isPlayerWindow) {
-            // Просто отправляем команду на предыдущий трек
-            sendSyncMessage({
-                type: 'PREV_TRACK',
-                data: null
-            });
-            return;
-        }
-        
-        // Если прошло более 3 секунд или трек короче 10 секунд, перематываем в начало
-        const shouldRestart = audio.currentTime > 3 || (audio.duration && audio.duration < 10);
-        
-        // Если надо просто перемотать в начало текущего трека
-        if (shouldRestart) {
-            // Если мы мастер-плеер, перематываем в начало
-            if (isMasterPlayer) {
-                audio.currentTime = 0;
-                if (isPlaying) {
-                    audio.play().catch(err => {
-                        console.error('[PlayerContext] Ошибка при перезапуске текущего трека:', err);
-                    });
-                }
-            }
-            
-            // Синхронизируем с другими окнами
-            sendSyncMessage({
-                type: 'SEEK_TO',
-                data: { time: 0 }
-            });
-            return;
-        }
-        
-        // Иначе переходим к предыдущему треку
-        let prevIndex: number;
-        
-        // Если включен режим перемешивания
-        if (shuffleMode) {
-            // Определяем предыдущий трек в перемешанной очереди
-            const currentPosition = shuffledQueue.indexOf(currentTrackIndex);
-            if (currentPosition === -1 || currentPosition === 0) {
-                // Если текущий трек не найден или первый, берем последний трек
-                prevIndex = shuffledQueue[shuffledQueue.length - 1];
-            } else {
-                // Иначе берем предыдущий трек в перемешанной очереди
-                prevIndex = shuffledQueue[currentPosition - 1];
-            }
-        }
-        // Если не включен режим перемешивания
-        else {
-            // Если первый трек в плейлисте
-            if (currentTrackIndex === 0) {
-                // Если режим повтора всего плейлиста, переходим к последнему треку
-                if (repeatMode === 'all') {
-                    prevIndex = tracks.length - 1;
-                } 
-                // Иначе остаемся на первом треке
-                else {
-                    prevIndex = 0;
-                }
-            } 
-            // Если не первый трек, переходим к предыдущему
-            else {
-                prevIndex = currentTrackIndex - 1;
-            }
-        }
-        
-        // Получаем данные о предыдущем треке
-        const prevTrackData = tracks[prevIndex];
-        
-        // Если мы мастер-плеер и сейчас воспроизводится музыка
-        if (isMasterPlayer && isPlaying) {
-            // Обновляем состояние плеера
-            setCurrentTrack(prevTrackData);
-            setCurrentTrackIndex(prevIndex);
-            
-            // Воспроизводим предыдущий трек с начала
-            audio.currentTime = 0;
-            audio.play().catch(err => {
-                console.error('[PlayerContext] Ошибка при воспроизведении предыдущего трека:', err);
-                setIsPlaying(false);
-            });
-            
-            // Синхронизируем с другими окнами
-            sendSyncMessage({
-                type: 'PREV_TRACK',
-                data: { index: prevIndex }
-            });
-        } else {
-            // Если не воспроизводится или не мастер-плеер, просто обновляем состояние
-            // Всегда начинаем предыдущий трек с начала
-            setCurrentTrack(prevTrackData);
-            setCurrentTrackIndex(prevIndex);
-            setIsPlaying(true);
-            
-            // Синхронизируем с другими окнами
-            sendSyncMessage({
-                type: 'PLAY_TRACK',
-                data: { 
-                    track: prevTrackData,
-                    index: prevIndex,
-                    position: 0
-                }
-            });
-        }
-    };
-
-    const pauseTrack = () => {
-        setIsPlaying(false);
-        
-        // Сохраняем текущую позицию трека
-        const currentPosition = audio ? audio.currentTime : 0;
-        
-        // Синхронизируем паузу с сохраненной позицией
-        sendSyncMessage({
-            type: 'PAUSE_TRACK',
-            data: { position: currentPosition }
-        });
-    };
-
-    const toggleRepeat = () => {
-        if (repeatMode === 'none') {
-            setRepeatMode('all');
-        } else if (repeatMode === 'all') {
-            setRepeatMode('one');
-        } else {
-            setRepeatMode('none');
-        }
-        
-        // Синхронизируем режим повтора
-        sendSyncMessage({
-            type: 'SET_REPEAT_MODE',
-            data: { repeatMode: repeatMode === 'none' ? 'all' : repeatMode === 'all' ? 'one' : 'none' }
-        });
-    };
-
-    const toggleShuffle = () => {
-        // Переключаем режим
-        const newShuffleMode = !shuffleMode;
-        setShuffleMode(newShuffleMode);
-        
-        // Если включаем перемешивание
-        if (newShuffleMode) {
-            // Сохраняем оригинальную очередь треков
-            setOriginalQueue([...tracks]);
-            
-            // Создаем массив индексов всех треков для перемешивания
-            const indices = Array.from({length: tracks.length}, (_, i) => i);
-            
-            // Если есть текущий трек, удаляем его из перемешивания
-            if (currentTrackIndex >= 0) {
-                indices.splice(indices.indexOf(currentTrackIndex), 1);
-            }
-            
-            // Перемешиваем индексы
-            for (let i = indices.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [indices[i], indices[j]] = [indices[j], indices[i]];
-            }
-            
-            // Если есть текущий трек, добавляем его в начало перемешанной очереди
-            if (currentTrackIndex >= 0) {
-                indices.unshift(currentTrackIndex);
-                
-                // Добавляем текущий трек в список уже использованных
-                setShuffleUsedTracks(new Set([currentTrackIndex]));
-            } else {
-                // Сбрасываем список использованных треков
-                setShuffleUsedTracks(new Set());
-            }
-            
-            // Сохраняем перемешанную очередь индексов
-            setShuffledQueue(indices);
-            
-            // Сохраняем очередь в localStorage для синхронизации между вкладками
-            localStorage.setItem(SHUFFLE_QUEUE_KEY, JSON.stringify(indices));
-            
-            console.log('[PlayerContext] Режим перемешивания включен, очередь перемешана');
-        } else {
-            // Если выключаем перемешивание и есть оригинальная очередь
-            if (originalQueue.length > 0) {
-                // Находим текущий трек в оригинальной очереди
-                let originalIndex = -1;
-                if (currentTrack) {
-                    originalIndex = originalQueue.findIndex(t => t.id === currentTrack.id);
-                }
-                
-                // Восстанавливаем исходную очередь
-                setTracks([...originalQueue]);
-                
-                // Обновляем индекс текущего трека
-                if (originalIndex !== -1) {
-                    setCurrentTrackIndex(originalIndex);
-                }
-                
-                // Очищаем сохраненные данные о перемешивании
-                setOriginalQueue([]);
-                setShuffledQueue([]);
-                setShuffleUsedTracks(new Set());
-                
-                // Удаляем сохраненную очередь из localStorage
-                localStorage.removeItem(SHUFFLE_QUEUE_KEY);
-                
-                console.log('[PlayerContext] Режим перемешивания выключен, исходная очередь восстановлена');
-            }
-        }
-        
-        // Синхронизируем режим перемешивания
-        sendSyncMessage({
-            type: 'SET_SHUFFLE_MODE',
-            data: { shuffleMode: newShuffleMode }
-        });
-    };
-
-    const setVolume = (volume: number) => {
-        if (audio) {
-            audio.volume = volume;
-            
-            // Синхронизируем громкость
-            sendSyncMessage({
-                type: 'SET_VOLUME',
-                data: { volume }
-            });
-        }
-    };
-
-    // Функция для перемотки к указанному времени
-    const seekTo = (time: number) => {
-        if (audio) {
-            audio.currentTime = time;
-            
-            // Синхронизируем позицию
-            sendSyncMessage({
-                type: 'SEEK_TO',
-                data: { time }
-            });
-        }
-    };
-
-    // Функция для получения URL обложки
-    const getTrackCover = (coverUrl: string): string => {
-        if (!coverUrl || coverUrl === '') {
-            return DEFAULT_COVER_URL;
-        }
-        
-        // Проверяем, содержит ли URL уже полный путь
-        if (coverUrl.startsWith('http')) {
-            return coverUrl;
-        }
-        
-        // Если путь уже относительный или с /api/, не меняем его
-        if (coverUrl.startsWith('/api/')) {
-            return coverUrl;
-        }
-        
-        // Если путь просто имя файла, добавляем относительный путь к API
-        return `/api/music/cover/${coverUrl}`;
-    };
-
-    // Функция для добавления трека в очередь
-    const addToQueue = (track: Track) => {
-        // Проверка, есть ли такой трек уже в очереди
-        const trackExists = tracks.some(t => t.id === track.id);
-        
-        if (!trackExists) {
-            console.log('[PlayerContext] Добавление трека в очередь:', track.title, track.artist);
-            const newTracks = [...tracks, track];
-            setTracks(newTracks);
-            
-            // Если очередь была пустой, устанавливаем текущий трек
-            if (tracks.length === 0 && !currentTrack) {
-                setCurrentTrack(track);
-                setCurrentTrackIndex(0);
-            }
-            
-            // Синхронизируем очередь
-            sendSyncMessage({
-                type: 'UPDATE_QUEUE',
-                data: { tracks: newTracks }
-            });
-        } else {
-            console.log('[PlayerContext] Трек уже есть в очереди:', track.title, track.artist);
-        }
-    };
-
-    // Функция для удаления трека из очереди
-    const removeTrackFromQueue = (trackId: number) => {
-        const indexToRemove = tracks.findIndex(t => t.id === trackId);
-        if (indexToRemove === -1) return;
-        
-        const isRemovingCurrentTrack = currentTrack && currentTrack.id === trackId;
-        const updatedTracks = tracks.filter(t => t.id !== trackId);
-        
-        setTracks(updatedTracks);
-        
-        // Если удаляем текущий трек
-        if (isRemovingCurrentTrack) {
-            if (updatedTracks.length === 0) {
-                // Если больше треков нет, сбрасываем текущий трек
-                setCurrentTrack(null);
-                setCurrentTrackIndex(-1);
-                setIsPlaying(false);
-            } else {
-                // Если есть другие треки, воспроизводим следующий
-                // Используем тот же индекс, потому что трек был удален и все сдвинулось
-                const nextIndex = Math.min(indexToRemove, updatedTracks.length - 1);
-                setCurrentTrack(updatedTracks[nextIndex]);
-                setCurrentTrackIndex(nextIndex);
-            }
-        } else {
-            // Если удаляем трек, который шел перед текущим, корректируем индекс
-            if (indexToRemove < currentTrackIndex) {
-                setCurrentTrackIndex(currentTrackIndex - 1);
-            }
-        }
-        
-        // Синхронизируем очередь
-        sendSyncMessage({
-            type: 'UPDATE_QUEUE',
-            data: { tracks: updatedTracks }
-        });
-    };
-
-    // После определения функции loadPlayerSession
     // Проверяем наличие активного плеера при инициализации
     useEffect(() => {
         const checkActiveMaster = () => {
@@ -1673,10 +932,6 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
                         setIsMasterPlayer(true);
                         audio.muted = false;
                     }
-                    
-                    if (updateMasterHeartbeatRef.current) {
-                        updateMasterHeartbeatRef.current();
-                    }
                 } else {
                     // Есть активный мастер, и это не мы
                     if (isMasterPlayer) {
@@ -1712,64 +967,72 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
         };
     }, [instanceId, audio, becomeMasterPlayer, isMasterPlayer]);
 
-    // Инициализация плеера с загрузкой сессии
+    // Добавляем слушатель событий для аудио элемента
     useEffect(() => {
-        if (isInitialized && tracks.length > 0) {
-            // Если нет текущего трека, пытаемся загрузить его из сессии
-            if (!currentTrack) {
-                const sessionLoaded = loadPlayerSession();
-                
-                // Если не удалось загрузить сессию, устанавливаем первый трек
-                if (!sessionLoaded) {
-                    setCurrentTrack(tracks[0]);
-                    setCurrentTrackIndex(0);
+        if (!audio) return;
+        
+        // При загрузке метаданных аудио
+        const handleLoadedMetadata = () => {
+            // Всегда начинаем воспроизведение с начала трека
+            if (currentTrack) {
+                audio.currentTime = 0;
+            }
+        };
+        
+        // Когда будет загружено достаточно данных для начала воспроизведения
+        const handleCanPlay = () => {
+            // Если должен воспроизводиться, но пока не воспроизводится,
+            // значит это перезагрузка - восстанавливаем воспроизведение
+            if (isPlaying && audio.paused && isMasterPlayer) {
+                console.log('[PlayerContext] Автоматическое восстановление воспроизведения');
+                audioChannelService.playTrack(channelId, currentTrack!, audio.currentTime);
+            }
+        };
+        
+        // Добавляем обработчик окончания трека
+        const handleEnded = () => {
+            console.log('[PlayerContext] Трек закончился, проверка режима повтора:', repeatMode);
+            if (repeatMode === 'one') {
+                // Повтор текущего трека
+                audio.currentTime = 0;
+                if (isMasterPlayer) {
+                    audio.play().catch(err => {
+                        console.error('[PlayerContext] Ошибка при повторе трека:', err);
+                    });
+                }
+            } else if (repeatMode === 'all') {
+                // При режиме повтора всей очереди
+                if (currentTrackIndex >= queue.length - 1) {
+                    // Если это последний трек, возвращаемся к первому
+                    console.log('[PlayerContext] Конец очереди, повторяем с начала');
+                    playTrackByIndex(0);
+                } else {
+                    // Иначе просто переходим к следующему треку
+                    nextTrack();
                 }
             } else {
-                // Если трек уже установлен, но мы только что инициализировались,
-                // проверяем нет ли более свежей сессии
-                try {
-                    const sessionData = localStorage.getItem(PLAYER_SESSION_KEY);
-                    if (sessionData) {
-                        const session: PlayerSession = JSON.parse(sessionData);
-                        // Если текущая сессия отличается от нашего состояния и не слишком старая (не более 1 часа)
-                        const isSessionRecent = Date.now() - session.lastUpdate < 60 * 60 * 1000;
-                        if (isSessionRecent && 
-                            (session.currentTrackIndex !== currentTrackIndex || 
-                             session.isPlaying !== isPlaying)) {
-                            loadPlayerSession();
-                        }
-                    }
-                } catch (e) {
-                    // Игнорируем ошибки при проверке сессии
+                // Режим без повтора - просто переходим к следующему треку
+                if (currentTrackIndex < queue.length - 1) {
+                    nextTrack();
+                } else {
+                    console.log('[PlayerContext] Воспроизведение завершено, достигнут конец очереди');
+                    // Если это последний трек и нет повтора, останавливаем воспроизведение
+                    setIsPlaying(false);
                 }
             }
-        }
-    }, [isInitialized, tracks.length, currentTrack, loadPlayerSession, currentTrackIndex, isPlaying]);
-
-    // Обновляем перемешанную очередь из localStorage при инициализации компонента
-    useEffect(() => {
-        // Проверяем, есть ли сохраненная перемешанная очередь
-        if (shuffleMode) {
-            try {
-                const storedQueue = localStorage.getItem(SHUFFLE_QUEUE_KEY);
-                if (storedQueue) {
-                    const parsedQueue = JSON.parse(storedQueue);
-                    if (Array.isArray(parsedQueue) && parsedQueue.length > 0) {
-                        setShuffledQueue(parsedQueue);
-                    }
-                }
-            } catch (e) {
-                console.warn('[PlayerContext] Ошибка при загрузке перемешанной очереди:', e);
-            }
-        }
-    }, [shuffleMode]);
-
-    // Сохраняем обновления shuffledQueue в localStorage
-    useEffect(() => {
-        if (shuffleMode && shuffledQueue.length > 0) {
-            localStorage.setItem(SHUFFLE_QUEUE_KEY, JSON.stringify(shuffledQueue));
-        }
-    }, [shuffleMode, shuffledQueue]);
+        };
+        
+        audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+        audio.addEventListener('canplay', handleCanPlay);
+        audio.addEventListener('ended', handleEnded);
+        
+        // Очистка при размонтировании
+        return () => {
+            audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            audio.removeEventListener('canplay', handleCanPlay);
+            audio.removeEventListener('ended', handleEnded);
+        };
+    }, [audio, currentTrack, isPlaying, isMasterPlayer, channelId, repeatMode, currentTrackIndex, queue, nextTrack, playTrackByIndex, setIsPlaying]);
 
     // Экспортируем API плеера в глобальное пространство для доступа из других окон
     useEffect(() => {
@@ -1783,151 +1046,159 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
             becomeMasterPlayer
         };
 
+        // Экспортируем данные для QueueContext
+        window.playerContextData = {
+            tracks: queue,
+            currentTrackIndex,
+            isPlaying
+        };
+
         return () => {
             delete window.playerApi;
+            delete window.playerContextData;
         };
-    }, [playTrack, togglePlay, nextTrack, prevTrack, setVolume, becomeMasterPlayer]);
+    }, [playTrack, togglePlay, nextTrack, prevTrack, setVolume, becomeMasterPlayer, currentTrackIndex, isPlaying, queue]);
 
-    // Обработка команды воспроизведения трека из localStorage
+    // Добавим эффект для подписки на события QueueContext
     useEffect(() => {
-        const handlePlayTrackCommand = (event: StorageEvent) => {
-            if (event.key === 'play_track_command' && event.newValue) {
-                try {
-                    const commandData = JSON.parse(event.newValue);
-                    const trackId = commandData.trackId;
-                    const isPlayerWindow = window.location.pathname.includes('/player');
-                    
-                    // Только окно плеера должно реагировать на эту команду
-                    if (isPlayerWindow) {
-                        console.log('[PlayerContext] Получена команда воспроизведения трека:', trackId);
-                        
-                        // Найти трек в плейлисте
-                        const trackIndex = tracks.findIndex(t => t.id === trackId);
-                        if (trackIndex !== -1) {
-                            // Воспроизводим найденный трек
-                            const trackToPlay = tracks[trackIndex];
-                            console.log('[PlayerContext] Воспроизведение трека из команды:', trackToPlay.title);
-                            
-                            // Обновляем текущий трек и начинаем воспроизведение
-                            setCurrentTrack(trackToPlay);
-                            setCurrentTrackIndex(trackIndex);
-                            setIsPlaying(true);
-                            
-                            // Принудительная проверка: только окно плеера может иметь незаглушенный звук
-                            const allAudioElements = document.querySelectorAll('audio');
-                            allAudioElements.forEach(audioEl => {
-                                if (audioEl !== audio) {
-                                    audioEl.muted = true;
-                                    if (!audioEl.paused) {
-                                        audioEl.pause();
-                                    }
-                                }
-                            });
-                            
-                            // Воспроизводим аудио только в окне плеера
-                            if (audio.src !== trackToPlay.audioUrl) {
-                                audio.src = trackToPlay.audioUrl;
-                            }
-                            audio.muted = false;
-                            audio.play().catch(err => {
-                                console.error('Ошибка воспроизведения по команде:', err);
-                                setIsPlaying(false);
-                            });
-                            
-                            // Также отправляем сообщение другим окнам для синхронизации UI
-                            sendSyncMessage({
-                                type: 'PLAY_TRACK',
-                                data: { 
-                                    track: trackToPlay,
-                                    index: trackIndex
-                                }
-                            });
+        // Обработчик событий от QueueContext
+        const handleQueueEvent = (event: CustomEvent) => {
+            if (!event.detail) return;
+            
+            const queueEvent = event.detail;
+            console.log('[PlayerContext] Получено событие от QueueContext:', queueEvent.type);
+            
+            // Обработка различных типов событий
+            switch (queueEvent.type) {
+                case 'TRACK_PLAYED':
+                    // Если QueueContext сообщает о воспроизведении трека, синхронизируем состояние
+                    if (queueEvent.data && queueEvent.data.track) {
+                        setCurrentTrack(queueEvent.data.track);
+                        if (queueEvent.data.index !== undefined) {
+                            setCurrentTrackIndex(queueEvent.data.index);
                         }
-                    } else {
-                        // В других окнах глушим звук
-                        audio.muted = true;
-                        if (!audio.paused) {
-                            audio.pause();
-                        }
+                        setIsPlaying(true);
                     }
-                } catch (error) {
-                    console.error('[PlayerContext] Ошибка при обработке команды воспроизведения:', error);
-                }
+                    break;
+                    
+                case 'QUEUE_UPDATED':
+                    // Если очередь обновилась, синхронизируем наш плеер
+                    if (queueEvent.data && queueEvent.data.currentTrackIndex !== undefined) {
+                        setCurrentTrackIndex(queueEvent.data.currentTrackIndex);
+                    }
+                    
+                    // Обновляем перемешанную очередь, если она была изменена
+                    if (queueEvent.data && queueEvent.data.shuffleMode !== undefined) {
+                        setShuffleMode(queueEvent.data.shuffleMode);
+                    }
+                    break;
+                    
+                case 'TRACK_ADDED':
+                    // Если добавлен новый трек, проверяем, есть ли уже текущий трек
+                    if (!currentTrack && queueEvent.data && queueEvent.data.track) {
+                        // Если текущий трек не выбран, устанавливаем первый трек как текущий
+                        setCurrentTrack(queueEvent.data.track);
+                        setCurrentTrackIndex(0);
+                    }
+                    break;
+                    
+                case 'QUEUE_CLEARED':
+                    // Если очередь очищена, сбрасываем состояние плеера
+                    setCurrentTrack(null);
+                    setCurrentTrackIndex(-1);
+                    setIsPlaying(false);
+                    
+                    // Останавливаем воспроизведение
+                    if (!audio.paused) {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }
+                    break;
             }
         };
         
-        window.addEventListener('storage', handlePlayTrackCommand);
+        // Подписываемся на события, только если плеер инициализирован
+        if (isInitialized) {
+            document.addEventListener('queue_sync_event', handleQueueEvent as EventListener);
+            setListenToQueueEvents(true);
+        }
         
         return () => {
-            window.removeEventListener('storage', handlePlayTrackCommand);
+            document.removeEventListener('queue_sync_event', handleQueueEvent as EventListener);
         };
-    }, [audio, tracks, sendSyncMessage, setCurrentTrack, setCurrentTrackIndex, setIsPlaying]);
+    }, [isInitialized, queue, audio, currentTrack]);
 
-    // Проверка и коррекция состояния аудио для предотвращения дублирования
+    // Добавим функцию для отправки событий player_event
+    const sendPlayerEvent = (eventType: string, eventData?: any) => {
+        // Создаем событие с данными
+        const event = new CustomEvent('player_event', {
+            detail: {
+                type: eventType,
+                data: eventData,
+                source: 'PlayerContext',
+                timestamp: Date.now()
+            }
+        });
+        
+        // Отправляем событие
+        document.dispatchEvent(event);
+    };
+
+    // Добавим обработчик beforeunload чтобы не сохранять позицию при выходе
     useEffect(() => {
-        // Проверяем, открыто ли окно плеера
-        const isPlayerWindow = window.location.pathname.includes('/player');
-        const playerWindowActive = isPlayerWindowOpen;
-        
-        // Если окно плеера открыто, но мы не в нем - заглушаем звук
-        if (playerWindowActive && !isPlayerWindow) {
-            audio.muted = true;
-            
-            // Логируем состояние для отладки
-            console.log('[PlayerContext] Проверка аудио: окно плеера открыто, звук заглушен в текущем окне');
-            
-            // Если до этого мы были мастер-плеером, утрачиваем этот статус
-            if (isMasterPlayer) {
-                setIsMasterPlayer(false);
+        const handleBeforeUnload = () => {
+            // Удаляем сохраненную позицию текущего трека перед закрытием окна
+            if (currentTrack) {
+                const positionKey = `player_position_${currentTrack.id}`;
+                localStorage.removeItem(positionKey);
             }
-        }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
         
-        // Если мы окно плеера и активны, становимся мастер-плеером
-        if (isPlayerWindow && playerWindowActive) {
-            if (!isMasterPlayer) {
-                becomeMasterPlayer();
-            }
-            
-            // Логируем состояние для отладки
-            console.log('[PlayerContext] Проверка аудио: текущее окно - окно плеера, становимся мастером');
-        }
-    }, [audio, isPlayerWindowOpen, isMasterPlayer, becomeMasterPlayer]);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [currentTrack]);
+
+    // Контекст для предоставления дочерним компонентам
+    const contextValue: PlayerContextProps = {
+        currentTrack,
+        currentTrackIndex,
+        isPlaying,
+        audio,
+        repeatMode,
+        shuffleMode,
+        isMasterPlayer,
+        isPlayerWindowOpen,
+        tracks: queue,
+        shuffledQueue,
+        setCurrentTrack,
+        setCurrentTrackIndex,
+        setIsPlaying,
+        setTracks,
+        setRepeatMode,
+        playTrack,
+        playTrackByIndex,
+        pauseTrack,
+        nextTrack,
+        prevTrack,
+        togglePlay,
+        toggleRepeat,
+        toggleShuffle,
+        setVolume,
+        seekTo,
+        getTrackCover,
+        addToQueue,
+        removeTrackFromQueue,
+        clearQueue,
+        instanceId,
+        channelId,
+        becomeMasterPlayer
+    };
 
     return (
-        <PlayerContext.Provider
-            value={{
-                tracks,
-                currentTrack,
-                currentTrackIndex,
-                isPlaying,
-                audio,
-                repeatMode,
-                shuffleMode,
-                isMasterPlayer,
-                isPlayerWindowOpen,
-                shuffledQueue,
-                setTracks,
-                setCurrentTrack,
-                setCurrentTrackIndex,
-                setIsPlaying,
-                playTrack,
-                playTrackByIndex,
-                pauseTrack,
-                nextTrack,
-                prevTrack,
-                togglePlay,
-                toggleRepeat,
-                setRepeatMode,
-                toggleShuffle,
-                setVolume,
-                getTrackCover,
-                addToQueue,
-                removeTrackFromQueue,
-                seekTo,
-                instanceId,
-                becomeMasterPlayer
-            }}
-        >
+        <PlayerContext.Provider value={contextValue}>
             {children}
         </PlayerContext.Provider>
     );

@@ -1,30 +1,28 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Post as PostType } from '../../types/post.types';
 import { Post } from '../Post/Post';
 import styles from './PostFeed.module.css';
 import { API_URL } from '../../config';
+import { useInfiniteScroll } from '../../utils/useInfiniteScroll';
 
-export const PostFeed: React.FC = () => {
-    const [posts, setPosts] = useState<PostType[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const isLoadingRef = useRef(false);
-    const abortControllerRef = useRef<AbortController | null>(null);
+interface PostFeedProps {
+    showOnlySubscribedGroups?: boolean;
+}
 
-    const fetchPosts = useCallback(async () => {
-        // Если уже идет загрузка, не делаем новый запрос
-        if (isLoadingRef.current) {
-            console.log('Загрузка постов уже выполняется...');
-            return;
-        }
+export const PostFeed: React.FC<PostFeedProps> = ({ showOnlySubscribedGroups = false }) => {
+    const PAGE_SIZE = 10;
 
+    const loadMorePosts = useCallback(async (page: number) => {
         try {
-            isLoadingRef.current = true;
-            setLoading(true);
-            setError(null);
+            // Определяем URL в зависимости от параметра showOnlySubscribedGroups
+            const baseUrl = showOnlySubscribedGroups 
+                ? `${API_URL}/posts/subscribed-groups` 
+                : `${API_URL}/posts`;
             
-            console.log(`Отправка запроса на получение постов ${API_URL}/posts...`);
-            const response = await fetch(`${API_URL}/posts`, {
+            const url = `${baseUrl}?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`;
+            
+            console.log(`Отправка запроса на получение постов ${url}...`);
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
@@ -48,62 +46,76 @@ export const PostFeed: React.FC = () => {
             }
             
             console.log(`Загружено ${data.length} постов`);
-            setPosts(data);
+            return data;
         } catch (err) {
             console.error('Ошибка при загрузке постов:', err);
-            setError(err instanceof Error ? err.message : 'Произошла ошибка');
-        } finally {
-            isLoadingRef.current = false;
-            setLoading(false);
+            throw err;
         }
-    }, []);
+    }, [showOnlySubscribedGroups, PAGE_SIZE]);
 
-    useEffect(() => {
-        console.log('PostFeed: Компонент смонтирован, начинаем загрузку постов');
-        fetchPosts();
+    const hasMorePosts = useCallback((data: PostType[]) => {
+        return data.length === PAGE_SIZE;
+    }, [PAGE_SIZE]);
 
-        return () => {
-            console.log('PostFeed: Компонент размонтирован');
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-            }
-        };
-    }, [fetchPosts]);
-
-    if (loading) {
-        return (
-            <div className={styles.loading}>
-                <div className={styles.loadingSpinner}></div>
-                <p>Загрузка постов...</p>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className={styles.error}>
-                <p>😕 {error}</p>
-                <button 
-                    className={styles.retryButton}
-                    onClick={() => fetchPosts()}
-                >
-                    Попробовать снова
-                </button>
-            </div>
-        );
-    }
+    const {
+        data: posts,
+        loading,
+        error,
+        lastElementRef,
+        hasMore
+    } = useInfiniteScroll<PostType>({
+        loadMore: loadMorePosts,
+        hasMore: hasMorePosts,
+        pageSize: PAGE_SIZE
+    });
 
     return (
         <div className={styles.container}>
-            {posts.length === 0 ? (
+            {posts.length === 0 && !loading && !error ? (
                 <div className={styles.empty}>
                     <p>Пока нет постов 😔</p>
                 </div>
             ) : (
                 <div className={styles.feed}>
-                    {posts.map(post => (
-                        <Post key={post.id} post={post} />
-                    ))}
+                    {posts.map((post, index) => {
+                        // Если это последний элемент и есть еще данные для загрузки,
+                        // добавляем ref для отслеживания
+                        if (index === posts.length - 1 && hasMore) {
+                            return (
+                                <div key={post.id} ref={lastElementRef}>
+                                    <Post post={post} />
+                                </div>
+                            );
+                        }
+                        return <Post key={post.id} post={post} />;
+                    })}
+                    
+                    {loading && (
+                        <div className={styles.loading}>
+                            <div className={styles.loadingSpinner}></div>
+                            <p>Загрузка постов...</p>
+                        </div>
+                    )}
+                    
+                    {error && (
+                        <div className={styles.error}>
+                            <p>😕 {error}</p>
+                            <button 
+                                className={styles.retryButton}
+                                onClick={() => window.location.reload()}
+                            >
+                                Попробовать снова
+                            </button>
+                        </div>
+                    )}
+                    
+                    {!loading && !error && posts.length > 0 && !hasMore && (
+                        <div className={styles.endOfFeed}>
+                            <div className={styles.endOfFeedLine}></div>
+                            <div className={styles.endOfFeedText}>Конец ленты</div>
+                            <div className={styles.endOfFeedLine}></div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

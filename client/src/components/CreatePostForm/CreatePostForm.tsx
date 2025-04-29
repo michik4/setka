@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Photo } from '../../types/post.types';
 import { Album } from '../../types/album.types';
 import { Track } from '../../types/music.types';
@@ -11,6 +12,8 @@ import { api } from '../../utils/api';
 import { PhotoSelector } from '../PhotoSelector/PhotoSelector';
 import { ServerImage } from '../ServerImage/ServerImage';
 import { TrackSelector } from '../TrackSelector';
+import { groupService } from '../../services/groupService';
+import { Group } from '../../types/group.types';
 
 interface CreatePostFormProps {
     onSuccess?: () => void;
@@ -40,8 +43,18 @@ interface TrackAttachment extends AttachmentBase {
 
 type Attachment = PhotoAttachment | AlbumAttachment | TrackAttachment;
 
+interface PostAuthor {
+    id: number;
+    type: 'user' | 'group';
+    name: string;
+    avatar?: string;
+}
+
 export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallOwnerId, groupId }) => {
     const { user } = useAuth();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const isFeedPage = location.pathname === '/feed';
     const [content, setContent] = useState('');
     const [attachments, setAttachments] = useState<Attachment[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,14 +65,18 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const [isDragging, setIsDragging] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [uploadAlbumId, setUploadAlbumId] = useState<number | null>(null);
+    const [adminGroups, setAdminGroups] = useState<Group[]>([]);
+    const [selectedAuthor, setSelectedAuthor] = useState<PostAuthor | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
+    const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+    const selectorRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         let isSubscribed = true;
 
         const createUploadAlbum = async () => {
             if (!user) return;
-            
+
             try {
                 // Проверяем существование альбома "Загруженное"
                 const response = await api.get(`/albums/user/${user.id}`);
@@ -76,7 +93,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                 const albums = response;
                 const uploadAlbum = albums.find((album: Album) => album.title === 'Загруженное');
                 console.log('Поиск альбома "Загруженное":', uploadAlbum);
-                
+
                 if (uploadAlbum) {
                     console.log('Найден существующий альбом:', uploadAlbum);
                     if (isSubscribed) {
@@ -127,6 +144,75 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         };
     }, [user]);
 
+    // Загрузка групп и установка начального автора
+    useEffect(() => {
+        const loadAdminGroupsAndSetAuthor = async () => {
+            if (!user) {
+                setSelectedAuthor(null);
+                return;
+            }
+
+            let authorToSet: PostAuthor | null = null;
+
+            try {
+                const groups = await groupService.getUserAdminGroups(user.id);
+                console.log('Загружены администрируемые группы:', groups);
+                setAdminGroups(groups);
+
+                if (groupId) {
+                    const group = groups.find(g => g.id === groupId);
+                    if (group) {
+                        console.log('Выбрана группа как автор:', group);
+                        console.log('Аватар группы:', group.avatar);
+                        authorToSet = {
+                            id: group.id,
+                            type: 'group',
+                            name: group.name
+                        };
+                    } else {
+                        console.warn(`Group with id ${groupId} not found, defaulting to user.`);
+                        console.log('Аватар пользователя:', user.avatar);
+                        authorToSet = {
+                            id: user.id,
+                            type: 'user',
+                            name: `${user.firstName} ${user.lastName}`
+                        };
+                    }
+                } else if (wallOwnerId && wallOwnerId !== user.id) {
+                    // Если мы на стене другого пользователя
+                    authorToSet = {
+                        id: user.id,
+                        type: 'user',
+                        name: `${user.firstName} ${user.lastName}`
+                    };
+                } else {
+                    console.log('Выбран пользователь как автор:', user);
+                    console.log('Аватар пользователя:', user.avatar);
+                    authorToSet = {
+                        id: user.id,
+                        type: 'user',
+                        name: `${user.firstName} ${user.lastName}`
+                    };
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке администрируемых групп:', error);
+                setError('Не удалось загрузить список групп');
+                if (!authorToSet) {
+                    authorToSet = {
+                        id: user.id,
+                        type: 'user',
+                        name: `${user.firstName} ${user.lastName}`
+                    };
+                }
+            } finally {
+                console.log('Установлен автор:', authorToSet);
+                setSelectedAuthor(authorToSet);
+            }
+        };
+
+        loadAdminGroupsAndSetAuthor();
+    }, [user, groupId, wallOwnerId]);
+
     // Эффект для проверки наличия прикреплений и автоматического развертывания формы
     useEffect(() => {
         if (attachments.length > 0) {
@@ -148,17 +234,17 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                 return;
             }
 
-            console.log('Начинаем добавление фото в альбом:', { 
-                photoId: photo.id, 
+            console.log('Начинаем добавление фото в альбом:', {
+                photoId: photo.id,
                 albumId: uploadAlbumId,
-                photo: photo 
+                photo: photo
             });
-            
+
             // Добавляем фото в альбом "Загруженное"
             const addToAlbumResponse = await api.post(`/albums/${uploadAlbumId}/photos`, {
                 photoIds: [photo.id]
             });
-            
+
             console.log('Ответ сервера при добавлении фото в альбом:', addToAlbumResponse);
 
             if (!addToAlbumResponse) {
@@ -168,19 +254,19 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
             console.log('Фото успешно добавлено в альбом. Обновляем UI...');
 
             const newAttachment: PhotoAttachment = { type: 'photo', id: photo.id, data: photo };
-            
+
             // Обновляем состояние с новым вложением и сохраняем обновленный массив
             const updatedAttachments = [...attachments, newAttachment];
             setAttachments(updatedAttachments);
-            
+
             // Устанавливаем состояние expanded, чтобы принудительно показать прикрепления
             setIsExpanded(true);
-            
+
             // Сбрасываем состояние перетаскивания
             setIsDragging(false);
-            
+
             setError(null);
-            
+
             console.log('Процесс добавления фото завершен успешно');
         } catch (err) {
             console.error('Ошибка при добавлении фото в альбом:', err);
@@ -205,16 +291,16 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         }
 
         const newAttachment: TrackAttachment = { type: 'track', id: track.id, data: track };
-        
+
         // Обновляем состояние с новым вложением
         setAttachments(prev => [...prev, newAttachment]);
-        
+
         // Устанавливаем состояние expanded, чтобы показать прикрепления
         setIsExpanded(true);
-        
+
         // Скрываем загрузчик аудио
         setShowAudioUploader(false);
-        
+
         setError(null);
     };
 
@@ -230,7 +316,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         // Проверяем общее количество фотографий после добавления новых
         const currentPhotoCount = attachments.filter(a => a.type === 'photo').length;
         const totalPhotos = currentPhotoCount + photos.length;
-        
+
         if (totalPhotos > 20) {
             setError('Нельзя прикрепить больше 20 фотографий к посту');
             return;
@@ -240,14 +326,14 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
             ...photos.map(photo => ({ type: 'photo' as const, id: photo.id, data: photo })),
             ...albums.map(album => ({ type: 'album' as const, id: album.id, data: album }))
         ];
-        
+
         // Применяем прямое обновление состояния
         const updatedAttachments = [...attachments, ...newAttachments];
         setAttachments(updatedAttachments);
-        
+
         // Устанавливаем состояние expanded, чтобы показать прикрепления
         setIsExpanded(true);
-        
+
         setShowPhotoSelector(false);
         setError(null);
     };
@@ -290,76 +376,42 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         // Не сбрасываем isDragging здесь, так как ImageUploader должен остаться видимым
         // для обработки загрузки файла. Он будет скрыт в handleImageUploaded
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!user) {
-            setError('Необходимо войти в систему');
-            return;
-        }
-
-        // Проверяем наличие контента или вложений
-        if (!content && attachments.length === 0) {
-            setError('Добавьте текст или выберите медиа');
-            return;
-        }
-
-        setIsSubmitting(true);
-        setError(null);
+        if (!user || !selectedAuthor) return;
 
         try {
-            console.log('Отправка поста с данными:', {
-                content: content,
-                attachments: attachments.map(a => ({ type: a.type, id: a.id })),
-                authorId: user.id,
-                ...(wallOwnerId && { wallOwnerId }),
-                ...(groupId && { groupId })
-            });
+            setIsSubmitting(true);
+            setError(null);
 
-            // Подготавливаем данные для отправки
-            const photoIds = attachments.filter((a): a is PhotoAttachment => a.type === 'photo').map(a => a.id);
-            const albumIds = attachments.filter((a): a is AlbumAttachment => a.type === 'album').map(a => a.id);
-            const trackIds = attachments.filter((a): a is TrackAttachment => a.type === 'track').map(a => a.id);
-
-            // Превращаем массивы в JSON строки
-            const photoIdsJson = JSON.stringify(photoIds);
-            const albumIdsJson = JSON.stringify(albumIds);
-            const trackIdsJson = JSON.stringify(trackIds);
-
-            console.log('Подготовленные данные для отправки:', {
-                photoIds: photoIdsJson,
-                albumIds: albumIdsJson,
-                trackIds: trackIdsJson
-            });
-
-            // Создаем объект данных для отправки
             const postData = {
-                content: content,
-                photoIds: photoIdsJson,
-                albumIds: albumIdsJson,
-                trackIds: trackIdsJson,
-                authorId: user.id,
-                ...(wallOwnerId && { wallOwnerId }),
-                ...(groupId && { groupId })
+                content,
+                attachments: attachments.map(attachment => ({
+                    type: attachment.type,
+                    id: attachment.id
+                })),
+                authorType: selectedAuthor.type,
+                authorId: selectedAuthor.id
             };
 
-            console.log('Итоговые данные поста перед отправкой:', postData);
-
-            // Отправляем запрос
             const response = await api.post('/posts', postData);
-            console.log('Ответ сервера при создании поста:', response);
-            
-            setContent('');
-            setAttachments([]);
-            onSuccess?.();
-        } catch (err: any) {
+
+            if (response) {
+                setContent('');
+                setAttachments([]);
+                setIsExpanded(false);
+                if (onSuccess) {
+                    onSuccess();
+                }
+            }
+        } catch (err) {
             console.error('Ошибка при создании поста:', err);
-            setError(err.message || 'Произошла ошибка при публикации поста');
+            setError('Не удалось создать пост');
         } finally {
             setIsSubmitting(false);
         }
@@ -379,7 +431,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         // Проверяем количество уже прикрепленных треков
         const currentTrackCount = attachments.filter(a => a.type === 'track').length;
         const totalTracks = currentTrackCount + tracks.length;
-        
+
         if (totalTracks > 10) {
             setError('Нельзя прикрепить больше 10 треков к посту');
             setShowTrackSelector(false);
@@ -391,19 +443,66 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
             const newAttachments = tracks.map(track => {
                 return { type: 'track' as const, id: track.id, data: track };
             });
-            
+
             // Обновляем состояние с новыми вложениями
             setAttachments(prev => [...prev, ...newAttachments]);
-            
+
             // Устанавливаем состояние expanded, чтобы показать прикрепления
             setIsExpanded(true);
-            
+
             // Скрываем селектор треков
             setShowTrackSelector(false);
-            
+
             setError(null);
         } else {
             setShowTrackSelector(false);
+        }
+    };
+
+    // Обработчик для закрытия селектора при клике вне его
+    const handleClickOutside = useCallback((event: MouseEvent) => {
+        if (selectorRef.current && !selectorRef.current.contains(event.target as Node)) {
+            setIsSelectorOpen(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        // Добавляем обработчик события при монтировании
+        document.addEventListener('mousedown', handleClickOutside);
+        // Удаляем обработчик при размонтировании
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [handleClickOutside]);
+
+    // Обработчик выбора опции в селекторе
+    const handleAuthorSelect = (type: 'user' | 'group', id: number) => {
+        if (type === 'user') {
+            setSelectedAuthor({
+                id: user?.id ?? 0,
+                type: 'user',
+                name: user ? `${user.firstName} ${user.lastName}` : 'Пользователь'
+            });
+        } else {
+            const group = adminGroups.find(g => g.id === id);
+            if (group) {
+                setSelectedAuthor({
+                    id: group.id,
+                    type: 'group',
+                    name: group.name
+                });
+            }
+        }
+        setIsSelectorOpen(false);
+    };
+
+    // Функция для перехода к странице пользователя или группы
+    const handleAvatarClick = (event: React.MouseEvent, type: 'user' | 'group', id: number) => {
+        event.stopPropagation(); // Предотвращаем всплытие события
+        if (type === 'user') {
+            navigate(`/users/${id}`);
+        } else {
+            navigate(`/groups/${id}`);
         }
     };
 
@@ -421,23 +520,104 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const hasContent = content.trim().length > 0 || attachments.length > 0;
 
     return (
-        <form 
-            className={`${styles.form} ${isDragging ? styles.dragging : ''}`}
-            onSubmit={handleSubmit}
+        <form
             ref={formRef}
+            className={`${styles.createPostForm} ${isExpanded ? styles.expanded : ''}`}
+            onSubmit={handleSubmit}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
         >
-            <div className={styles.textareaContainer}>
+            <div className={styles.header}>
+                {selectedAuthor && (
+                    <div className={styles.authorSelector}>
+                        <div 
+                            className={styles.authorAvatar}
+                            onClick={(e) => handleAvatarClick(e, selectedAuthor.type, selectedAuthor.id)}
+                            style={{ cursor: 'pointer' }}
+                        >
+                            <ServerImage
+                                alt={selectedAuthor.name}
+                                className={styles.authorAvatar}
+                                fallback={selectedAuthor.type === 'group' ? '/default-group-avatar.png' : '/default-avatar.png'}
+                                userId={selectedAuthor.type === 'user' ? selectedAuthor.id : undefined}
+                                groupId={selectedAuthor.type === 'group' ? selectedAuthor.id : undefined}
+                                isAvatar={true}
+                            />
+                        </div>
+                        {isFeedPage ? (
+                            <div className={styles.customSelector} ref={selectorRef}>
+                                <div 
+                                    className={`${styles.selectorHeader} ${isSelectorOpen ? styles.open : ''}`}
+                                    onClick={() => setIsSelectorOpen(!isSelectorOpen)}
+                                >
+                                    <span>{selectedAuthor.name}</span>
+                                </div>
+                                <div className={`${styles.selectorDropdown} ${isSelectorOpen ? styles.open : ''}`}>
+                                    <div className={styles.optionCategory}>Стена</div>
+                                    <div 
+                                        className={`${styles.option} ${selectedAuthor.type === 'user' ? styles.selected : ''}`}
+                                        onClick={() => handleAuthorSelect('user', user?.id ?? 0)}
+                                    >
+                                        <div 
+                                            className={styles.optionAvatar}
+                                            onClick={(e) => handleAvatarClick(e, 'user', user?.id ?? 0)}
+                                        >
+                                            <ServerImage
+                                                alt={user ? `${user.firstName} ${user.lastName}` : 'Пользователь'}
+                                                fallback={'/default-avatar.png'}
+                                                userId={user?.id}
+                                                isAvatar={true}
+                                            />
+                                        </div>
+                                        <div className={styles.optionName}>
+                                            {user ? `${user.firstName} ${user.lastName}` : 'Загрузка...'}
+                                        </div>
+                                    </div>
+                                    
+                                    {adminGroups.length > 0 && (
+                                        <>
+                                            <div className={styles.optionCategory}>Группы</div>
+                                            {adminGroups.map(group => (
+                                                <div 
+                                                    key={group.id} 
+                                                    className={`${styles.option} ${selectedAuthor.type === 'group' && selectedAuthor.id === group.id ? styles.selected : ''}`}
+                                                    onClick={() => handleAuthorSelect('group', group.id)}
+                                                >
+                                                    <div 
+                                                        className={styles.optionAvatar}
+                                                        onClick={(e) => handleAvatarClick(e, 'group', group.id)}
+                                                    >
+                                                        <ServerImage
+                                                            alt={group.name}
+                                                            fallback={'/default-group-avatar.png'}
+                                                            groupId={group.id}
+                                                            isAvatar={true}
+                                                        />
+                                                    </div>
+                                                    <div className={styles.optionName}>{group.name}</div>
+                                                </div>
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className={styles.authorName}>
+                                {selectedAuthor.name}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+            <div className={styles.content}>
                 <textarea
-                    className={styles.textarea}
+                    placeholder="Что у вас нового?"
                     value={content}
                     onChange={handleTextareaChange}
                     onFocus={handleTextareaFocus}
-                    placeholder={wallOwnerId ? "Напишите что-нибудь на стене..." : (groupId ? "Написать от имени сообщества..." : "Что у вас нового?")}
-                    rows={isExpanded ? 4 : 1}
+                    className={styles.textarea}
                 />
             </div>
 
@@ -452,7 +632,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                 <>
                     {photoAttachments.length > 0 && (
                         <div className={styles.preview}>
-                            <PhotoGrid 
+                            <PhotoGrid
                                 photos={photoAttachments.map(a => a.data)}
                                 onPhotoDelete={(photo) => handleAttachmentDelete({ type: 'photo', id: photo.id, data: photo })}
                                 canDelete={true}
@@ -496,8 +676,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                             {trackAttachments.map(attachment => (
                                 <div key={attachment.id} className={styles.trackPreviewItem}>
                                     <div className={styles.trackCover}>
-                                        <img 
-                                            src={attachment.data.coverUrl} 
+                                        <img
+                                            src={attachment.data.coverUrl}
                                             alt={attachment.data.title}
                                             className={styles.trackCoverImage}
                                         />
@@ -582,9 +762,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                     <div className={styles.audioUploaderContainer}>
                         <div className={styles.audioUploaderHeader}>
                             <h3>Загрузка музыки</h3>
-                            <button 
-                                type="button" 
-                                className={styles.closeButton} 
+                            <button
+                                type="button"
+                                className={styles.closeButton}
                                 onClick={() => setShowAudioUploader(false)}
                             >
                                 ×

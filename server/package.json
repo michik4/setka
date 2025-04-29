@@ -13,7 +13,8 @@
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "npm run typeorm migration:generate -d src/db/db_connect.ts",
     "migration:run": "npm run typeorm migration:run -- -d src/db/db_connect.ts",
-    "migration:revert": "npm run typeorm migration:revert -- -d src/db/db_connect.ts"
+    "migration:revert": "npm run typeorm migration:revert -- -d src/db/db_connect.ts",
+    "migrations:run": "ts-node src/db/run-migrations.ts"
   },
   "repository": {
     "type": "git",

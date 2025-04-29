@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { groupService } from '../../services/groupService';
 import { Group as GroupType } from '../../types/group.types';
@@ -9,13 +9,18 @@ import styles from './GroupPage.module.css';
 import { api } from '../../utils/api';
 import { CreatePostForm } from '../../components/CreatePostForm/CreatePostForm';
 import { Post } from '../../components/Post/Post';
+import { ServerImage } from '../../components/ServerImage/ServerImage';
+import GroupSidebarModule from '../../components/GroupSidebarModule/GroupSidebarModule';
+import { useSidebarModules } from '../../contexts/SidebarModulesContext';
+import { SidebarModuleType } from '../../types/SidebarModule';
+import { useInfiniteScroll } from '../../utils/useInfiniteScroll';
+import { GroupShowcase } from '../../components/Showcase/GroupShowcase';
 
 export const GroupPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [group, setGroup] = useState<GroupType | null>(null);
     const [members, setMembers] = useState<User[]>([]);
     const [admins, setAdmins] = useState<User[]>([]);
-    const [posts, setPosts] = useState<PostType[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isMember, setIsMember] = useState(false);
@@ -23,26 +28,142 @@ export const GroupPage: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [memberKey, setMemberKey] = useState(0);
-    const [postsKey, setPostsKey] = useState(0);
+    
+    // Для принудительного обновления списка постов
+    const [refreshPostsKey, setRefreshPostsKey] = useState(0);
+    
+    // Размер страницы для постов
+    const PAGE_SIZE = 10;
+    
+    // Используем контекст сайдбар-модулей
+    const sidebarModules = useSidebarModules();
+    
+    // Храним ID модуля сайдбара
+    const sidebarModuleIdRef = useRef<string | null>(null);
 
+    // Функция загрузки постов для бесконечного скролла
+    const loadMorePosts = useCallback(async (page: number) => {
+        if (!id) throw new Error('ID группы не указан');
+        
+        try {
+            const groupId = parseInt(id, 10);
+            const postsData = await groupService.getGroupPosts(groupId, PAGE_SIZE, page * PAGE_SIZE);
+            return postsData;
+        } catch (err) {
+            console.error('[GroupPage] Ошибка при загрузке постов группы:', err);
+            throw err;
+        }
+    }, [id, PAGE_SIZE]);
+
+    // Проверка наличия дополнительных постов
+    const hasMorePosts = useCallback((data: PostType[]) => {
+        return data.length === PAGE_SIZE;
+    }, [PAGE_SIZE]);
+
+    // Используем хук для бесконечного скролла
+    const {
+        data: posts,
+        loading: postsLoading,
+        error: postsError,
+        lastElementRef,
+        hasMore: hasMorePostsToLoad,
+        reset: resetPosts
+    } = useInfiniteScroll<PostType>({
+        loadMore: loadMorePosts,
+        hasMore: hasMorePosts,
+        pageSize: PAGE_SIZE
+    });
+
+    // Эффект для сброса и перезагрузки постов при изменении refreshPostsKey
     useEffect(() => {
+        if (refreshPostsKey > 0) {
+            resetPosts();
+        }
+    }, [refreshPostsKey, resetPosts]);
+
+    // Функции для действий с группой
+    const joinGroup = async () => {
+        if (!id || !group || !user) return;
+        
+        try {
+            await groupService.joinGroup(parseInt(id, 10));
+            setIsMember(true);
+            setMembers(prev => [...prev, {
+                ...user,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            } as User]);
+            
+            // Обновляем счетчик для триггера обновления списка участников
+            setMemberKey(prev => prev + 1);
+        } catch (err) {
+            console.error('Ошибка при вступлении в группу:', err);
+        }
+    };
+
+    const leaveGroup = async () => {
+        if (!id || !user || !group) return;
+        
+        try {
+            await groupService.leaveGroup(parseInt(id, 10));
+            setIsMember(false);
+            setIsAdmin(false);
+            setMembers(prev => prev.filter(member => member.id !== user.id));
+            setAdmins(prev => prev.filter(admin => admin.id !== user.id));
+            
+            // Обновляем счетчик для триггера обновления списка участников
+            setMemberKey(prev => prev + 1);
+        } catch (err) {
+            console.error('Ошибка при выходе из группы:', err);
+        }
+    };
+
+    // Функция обновления содержимого модуля сайдбара
+    const updateSidebarModule = useCallback(() => {
+        if (!group || !sidebarModuleIdRef.current) return;
+        
+        sidebarModules.updateModule(sidebarModuleIdRef.current, {
+            component: (
+                <GroupSidebarModule
+                    group={group}
+                    members={members}
+                    admins={admins}
+                    isCurrentUserMember={isMember}
+                    onJoinGroup={joinGroup}
+                    onLeaveGroup={leaveGroup}
+                />
+            )
+        });
+    }, [group, members, admins, isMember]);
+
+    // Обновляем сайдбар при изменении данных группы или списка участников
+    useEffect(() => {
+        if (group) {
+            updateSidebarModule();
+        }
+    }, [updateSidebarModule, memberKey]);
+
+    // Основной эффект загрузки данных и инициализации модуля
+    useEffect(() => {
+        let isMounted = true;
+        
         const fetchGroupData = async () => {
             try {
                 if (!id) return;
                 
                 setLoading(true);
                 const groupId = parseInt(id, 10);
-                const [groupData, membersData, adminsData, postsData] = await Promise.all([
+                const [groupData, membersData, adminsData] = await Promise.all([
                     groupService.getGroupById(groupId),
                     groupService.getGroupMembers(groupId),
-                    groupService.getGroupAdmins(groupId),
-                    groupService.getGroupPosts(groupId)
+                    groupService.getGroupAdmins(groupId)
                 ]);
+
+                if (!isMounted) return;
 
                 setGroup(groupData);
                 setMembers(membersData);
                 setAdmins(adminsData);
-                setPosts(postsData);
 
                 // Проверяем, является ли текущий пользователь участником или админом
                 if (user) {
@@ -51,87 +172,74 @@ export const GroupPage: React.FC = () => {
                     setIsMember(userIsMember);
                     setIsAdmin(userIsAdmin);
                 }
+
+                // Создаем модуль информации о группе в правом сайдбаре (если еще не создан)
+                if (!sidebarModuleIdRef.current) {
+                    // Сначала удаляем существующие модули того же типа, если есть
+                    if (sidebarModules.hasGroupInfoModule()) {
+                        sidebarModules.removeGroupInfoModule();
+                    }
+                    
+                    // Создаем новый модуль и сохраняем его ID
+                    const moduleId = `group-info-${groupId}`;
+                    sidebarModuleIdRef.current = moduleId;
+                    
+                    // Добавляем модуль группы со специальной пометкой, что он привязан к странице
+                    sidebarModules.addModule({
+                        id: moduleId,
+                        type: SidebarModuleType.GROUP_INFO,
+                        title: `Информация о группе ${groupData.name}`,
+                        component: (
+                            <GroupSidebarModule
+                                group={groupData}
+                                members={membersData}
+                                admins={adminsData}
+                                isCurrentUserMember={user ? membersData.some(member => member.id === user.id) : false}
+                                onJoinGroup={joinGroup}
+                                onLeaveGroup={leaveGroup}
+                            />
+                        ),
+                        isVisible: true,
+                        order: 0,
+                        isPageSpecific: true,
+                        pageId: `group-${groupId}`,
+                        groupId: groupId
+                    });
+                }
             } catch (err) {
                 console.error('Ошибка при загрузке данных группы:', err);
-                setError('Не удалось загрузить информацию о группе');
+                if (isMounted) {
+                    setError('Не удалось загрузить информацию о группе');
+                }
             } finally {
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         };
 
         fetchGroupData();
-    }, [id, user]);
 
-    const handleJoinGroup = async () => {
-        if (!id) return;
-        
-        try {
-            await groupService.joinGroup(parseInt(id, 10));
-            setIsMember(true);
-            setMembers(prev => user ? [...prev, {
-                ...user,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            } as User] : prev);
-        } catch (err) {
-            console.error('Ошибка при вступлении в группу:', err);
-        }
-    };
-
-    const handleLeaveGroup = async () => {
-        if (!id || !user) return;
-        
-        try {
-            await groupService.leaveGroup(parseInt(id, 10));
-            setIsMember(false);
-            setIsAdmin(false);
-            setMembers(prev => prev.filter(member => member.id !== user.id));
-            setAdmins(prev => prev.filter(admin => admin.id !== user.id));
-        } catch (err) {
-            console.error('Ошибка при выходе из группы:', err);
-        }
-    };
-    
-    const handlePostCreated = useCallback(() => {
-        // После создания поста загружаем посты заново
-        if (!id) return;
-        
-        console.log('[GroupPage] Обновление постов после создания нового');
-        const fetchGroupPosts = async () => {
-            try {
-                const groupId = parseInt(id, 10);
-                const postsData = await groupService.getGroupPosts(groupId);
-                console.log('[GroupPage] Полученные посты:', postsData);
-                
-                // Проверяем структуру постов
-                if (postsData && postsData.length > 0) {
-                    // Логируем первый пост для отладки
-                    const firstPost = postsData[0];
-                    console.log('[GroupPage] Структура первого поста:', {
-                        id: firstPost.id,
-                        content: firstPost.content,
-                        hasPhotos: Boolean(firstPost.photos && firstPost.photos.length),
-                        photosCount: firstPost.photos?.length || 0,
-                        photoDetails: firstPost.photos?.map(p => ({
-                            id: p.id,
-                            path: p.path,
-                            fullUrl: `/api/photos/file/${p.path}`
-                        }))
-                    });
-                }
-                
-                setPosts(postsData);
-            } catch (err) {
-                console.error('[GroupPage] Ошибка при загрузке постов группы:', err);
+        // Очистка - удаляем модуль информации о группе при размонтировании компонента
+        return () => {
+            isMounted = false;
+            if (sidebarModuleIdRef.current) {
+                sidebarModules.removeModule(sidebarModuleIdRef.current);
+                sidebarModuleIdRef.current = null;
             }
         };
+    }, [id, user]);
+    
+    const handlePostCreated = useCallback(() => {
+        // После создания поста инициируем перезагрузку
+        console.log('[GroupPage] Обновление постов после создания нового');
+        setRefreshPostsKey(prev => prev + 1);
+    }, []);
 
-        fetchGroupPosts();
-    }, [id]);
-
-    const handlePostDeleted = useCallback((postId: number) => {
-        // Удаляем пост из локального состояния
-        setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+    const handlePostDeleted = useCallback(() => {
+        // Обновляем список постов
+        console.log('[GroupPage] Обновление постов после удаления');
+        setRefreshPostsKey(prev => prev + 1);
     }, []);
 
     if (loading) {
@@ -155,8 +263,8 @@ export const GroupPage: React.FC = () => {
                 <div className={styles.groupInfo}>
                     <div className={styles.avatarContainer}>
                         {group.avatar ? (
-                            <img 
-                                src={`/api/photos/${group.avatar.id}`} 
+                            <ServerImage 
+                                path={group.avatar.path}
                                 alt={group.name} 
                                 className={styles.avatar} 
                             />
@@ -168,118 +276,86 @@ export const GroupPage: React.FC = () => {
                     <div className={styles.groupDetails}>
                         <h1 className={styles.groupName}>{group.name}</h1>
                         {group.isPrivate && <span className={styles.privateBadge}>Закрытая группа</span>}
-                        <div className={styles.groupStats}>
-                            <div className={styles.statItem}>
-                                <span className={styles.statCount}>{members.length}</span>
-                                <span className={styles.statLabel}>участников</span>
-                            </div>
-                            <div className={styles.statItem}>
-                                <span className={styles.statCount}>{posts.length}</span>
-                                <span className={styles.statLabel}>записей</span>
-                            </div>
-                        </div>
-                        <div className={styles.groupActions}>
-                            {isCreator ? (
-                                <button className={styles.editButton} onClick={() => navigate(`/groups/${id}/edit`)}>
-                                    Управление сообществом
-                                </button>
-                            ) : isMember ? (
-                                <button className={styles.leaveButton} onClick={handleLeaveGroup}>
-                                    Выйти из сообщества
-                                </button>
-                            ) : (
-                                <button className={styles.joinButton} onClick={handleJoinGroup}>
-                                    Вступить в сообщество
-                                </button>
-                            )}
-                        </div>
+                        {group.description && (
+                            <div className={styles.groupDescription}>{group.description}</div>
+                        )}
                     </div>
                 </div>
             </div>
 
             <div className={styles.groupContent}>
-                <div className={styles.sidebarSection}>
-                    <div className={styles.aboutSection}>
-                        <h3 className={styles.sectionTitle}>Информация</h3>
-                        {group.description ? (
-                            <p className={styles.groupDescription}>{group.description}</p>
-                        ) : (
-                            <p className={styles.noDescription}>Описание отсутствует</p>
-                        )}
-                    </div>
-
-                    <div className={styles.membersSection}>
-                        <h3 className={styles.sectionTitle}>Участники</h3>
-                        <div className={styles.membersList}>
-                            {members.slice(0, 6).map(member => (
-                                <div key={member.id} className={styles.memberItem}>
-                                    {member.avatar ? (
-                                        <img 
-                                            src={`/api/photos/${member.avatar.id}`} 
-                                            alt={`${member.firstName} ${member.lastName}`} 
-                                            className={styles.memberAvatar} 
-                                        />
-                                    ) : (
-                                        <div className={styles.defaultMemberAvatar}>
-                                            {member.firstName[0]}
-                                        </div>
-                                    )}
-                                    <span className={styles.memberName}>
-                                        {member.firstName} {member.lastName}
-                                        {isCreator && member.id === group.creatorId && (
-                                            <span className={styles.creatorBadge}>создатель</span>
-                                        )}
-                                        {member.id !== group.creatorId && admins.some(admin => admin.id === member.id) && (
-                                            <span className={styles.adminBadge}>админ</span>
-                                        )}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                        {members.length > 6 && (
-                            <div className={styles.showAllLink}>
-                                Показать всех участников ({members.length})
-                            </div>
-                        )}
-                    </div>
+                {/* Витрина медиа-контента группы */}
+                <div className={styles.showcaseContainer}>
+                    <GroupShowcase groupId={parseInt(id!, 10)} />
                 </div>
-
-                <div className={styles.postsSection}>
-                    <h3 className={styles.sectionTitle}>Записи сообщества</h3>
-                    {isMember && (
+                {/* Форма создания поста */}
+                {(isMember || isAdmin || isCreator) && (
+                    <div className={styles.createPostForm}>
                         <CreatePostForm 
                             onSuccess={handlePostCreated}
-                            groupId={parseInt(id || '0')}
+                            groupId={parseInt(id!, 10)}
                         />
-                    )}
-
-                    {posts.length > 0 ? (
-                        <div className={styles.postsList}>
-                            {posts.map(post => {
-                                // Отладочная информация о каждом посте
-                                console.log(`[GroupPage] Пост ${post.id}:`, {
-                                    hasPhotos: Boolean(post.photos && post.photos.length), 
-                                    photos: post.photos?.map(p => ({id: p.id, path: p.path}))
-                                });
-                                
+                    </div>
+                )}
+                
+                
+                
+                {/* Лента постов */}
+                <div className={styles.postsFeed}>
+                    {posts.length === 0 && !postsLoading ? (
+                        <div className={styles.emptyPosts}>
+                            <p>В этой группе пока нет постов 😔</p>
+                        </div>
+                    ) : (
+                        <div className={styles.posts}>
+                            {posts.map((post, index) => {
+                                // Если это последний элемент и есть еще данные для загрузки,
+                                // добавляем ref для отслеживания
+                                if (index === posts.length - 1 && hasMorePostsToLoad) {
+                                    return (
+                                        <div key={post.id} ref={lastElementRef}>
+                                            <Post 
+                                                post={post} 
+                                                onDelete={() => handlePostDeleted()} 
+                                            />
+                                        </div>
+                                    );
+                                }
                                 return (
                                     <Post 
                                         key={post.id} 
                                         post={post} 
-                                        onDelete={() => handlePostDeleted(post.id)}
-                                        onUpdate={(updatedPost: PostType) => {
-                                            // Обновляем пост в локальном состоянии
-                                            setPosts(prevPosts => 
-                                                prevPosts.map(p => p.id === updatedPost.id ? updatedPost : p)
-                                            );
-                                        }}
+                                        onDelete={() => handlePostDeleted()} 
                                     />
                                 );
                             })}
-                        </div>
-                    ) : (
-                        <div className={styles.emptyPosts}>
-                            <p>В этой группе пока нет записей</p>
+                            
+                            {postsLoading && (
+                                <div className={styles.loading}>
+                                    <div className={styles.loadingSpinner}></div>
+                                    <p>Загрузка постов...</p>
+                                </div>
+                            )}
+                            
+                            {postsError && (
+                                <div className={styles.error}>
+                                    <p>😕 Ошибка при загрузке постов</p>
+                                    <button 
+                                        className={styles.retryButton}
+                                        onClick={() => setRefreshPostsKey(prev => prev + 1)}
+                                    >
+                                        Попробовать снова
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {!postsLoading && !postsError && posts.length > 0 && !hasMorePostsToLoad && (
+                                <div className={styles.endOfFeed}>
+                                    <div className={styles.endOfFeedLine}></div>
+                                    <div className={styles.endOfFeedText}>Конец ленты</div>
+                                    <div className={styles.endOfFeedLine}></div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

@@ -4,11 +4,12 @@ import { CreatePostForm } from '../components/CreatePostForm/CreatePostForm';
 import styles from './FeedPage.module.css';
 
 export const FeedPage: React.FC = () => {
-    const [key, setKey] = React.useState(0);
+    // Для обновления после создания поста
+    const [refreshKey, setRefreshKey] = React.useState(0);
 
     const handlePostCreated = useCallback(() => {
         // Обновляем ключ для перезагрузки ленты
-        setKey(prev => prev + 1);
+        setRefreshKey(prev => prev + 1);
     }, []);
 
     return (
@@ -16,7 +17,10 @@ export const FeedPage: React.FC = () => {
             <div className="create-post">
                 <CreatePostForm onSuccess={handlePostCreated} />
             </div>
-            <PostFeed key={key} />
+            <PostFeed 
+                key={refreshKey} 
+                showOnlySubscribedGroups={true} 
+            />
         </div>
     );
 }; 

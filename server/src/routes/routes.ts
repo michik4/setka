@@ -8,7 +8,10 @@ import photoRoutes from './photo.routes';
 import wallRoutes from './wall.routes';
 import albumRoutes from './album.routes';
 import musicRoutes from './music.routes';
+import musicAlbumRoutes from './music_album.routes';
 import groupRoutes from './group.routes';
+import commentRoutes from './comment.routes';
+import friendRoutes from './friend.routes';
 
 export const initializeRoutes = (app: Express) => {
     const router = Router();
@@ -46,9 +49,18 @@ export const initializeRoutes = (app: Express) => {
     router.use('/music', musicRoutes);
     console.log('Подключены маршруты музыки');
 
+    router.use('/music-albums', musicAlbumRoutes);
+    console.log('Подключены маршруты музыкальных альбомов');
+
     router.use('/groups', groupRoutes);
     console.log('Подключены маршруты групп');
 
+    router.use('/comments', commentRoutes);
+    console.log('Подключены маршруты комментариев');
+
+    router.use('/friends', friendRoutes);
+    console.log('Подключены маршруты друзей');
+    
     // Подключаем все маршруты под префиксом /api
     app.use('/api', router);
 };

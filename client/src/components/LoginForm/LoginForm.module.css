@@ -2,7 +2,7 @@
     max-width: 400px;
     margin: 40px auto;
     padding: 20px;
-    background: #fff;
+    background: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
     border-radius: 12px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -20,7 +20,7 @@
     padding: 10px;
     background: #ffebee;
     border-radius: 6px;
-    color: #e64646;
+    color: var(--vseti-color-error);
     font-size: 14px;
     text-align: center;
 }
@@ -46,17 +46,17 @@
 }
 
 .field input:focus {
-    border-color: #4a76a8;
+    border-color: var(--vseti-color-blue-light);
     outline: none;
 }
 
 .submitButton {
     width: 100%;
     padding: 10px;
-    background: #4a76a8;
+    background: var(--vseti-color-blue-light);
     border: none;
     border-radius: 6px;
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -64,7 +64,7 @@
 }
 
 .submitButton:hover:not(:disabled) {
-    background: #3d6898;
+    background: var(--vseti-color-blue-light);
 }
 
 .submitButton:disabled {
@@ -82,7 +82,7 @@
 .switchForm button {
     background: none;
     border: none;
-    color: #4a76a8;
+    color: var(--vseti-color-blue-light);
     font-size: 14px;
     cursor: pointer;
     padding: 0;
@@ -91,7 +91,7 @@
 }
 
 .switchForm button:hover {
-    color: #3d6898;
+    color: var(--vseti-color-blue-light);
 }
 
 /* Адаптивность */

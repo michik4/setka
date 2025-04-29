@@ -1,0 +1,186 @@
+.moduleContainer {
+  background-color: var(--vseti-color-card);
+  border-radius: var(--border-radius);
+  box-shadow: 0 1px 0 0 var(--vseti-color-border), 0 0 0 1px var(--vseti-color-border);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.moduleContainer:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--vseti-color-hover);
+}
+
+/* Стили для модулей привязанных к странице */
+.pageSpecificModule {
+  border-left: 3px solid var(--vseti-color-light-button);
+  background-color: var(--vseti-color-green-hover);
+}
+
+.pageSpecificModule .moduleHeader {
+  background-color: var(--vseti-color-green-hover);
+}
+
+.pageSpecificModule:hover {
+  box-shadow: 0 2px 12px rgba(24, 167, 95, 0.25), 0 0 0 1px var(--vseti-color-green-active);
+}
+
+.pageSpecificModule .moduleTitle {
+  color: var(--vseti-color-light-button);
+}
+
+/* Стили для модулей с возможностью выхода за границы контейнера */
+.overflowModule {
+  position: relative;
+  border-left: 3px solid var(--vseti-color-blue);
+}
+
+.overflowModule .moduleHeader {
+  background-color: var(--vseti-color-blue-hover);
+}
+
+.overflowModule:hover {
+  box-shadow: 0 2px 12px rgba(24, 95, 167, 0.25), 0 0 0 1px var(--vseti-color-blue-active);
+}
+
+.overflowIndicator {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  font-size: 11px;
+  background-color: var(--vseti-color-blue-hover);
+  color: var(--vseti-color-blue);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.overflowIndicator svg {
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
+}
+
+.overflowContent {
+  overflow: visible !important;
+  position: relative;
+  z-index: 10;
+}
+
+/* Увеличиваем максимальную высоту для специфичных модулей */
+.pageSpecificModule .moduleContent {
+  max-height: 800px;
+  overflow-y: auto;
+}
+
+.pageSpecificModule .moduleContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pageSpecificModule .moduleContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pageSpecificModule .moduleContent::-webkit-scrollbar-thumb {
+  background-color: var(--vseti-color-scrollbar);
+  border-radius: 6px;
+}
+
+.pageSpecificModule .moduleContent{
+  padding: 0px;
+}
+
+.pageIndicator {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  font-size: 11px;
+  background-color: var(--vseti-color-green-hover);
+  color: var(--vseti-color-light-button);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.pageIndicator svg {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+}
+
+.moduleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background-color: var(--vseti-color-green-hover);
+  border-bottom: 1px solid var(--vseti-color-border);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.moduleHeader:hover {
+  background-color: var(--vseti-color-green-active);
+}
+
+.moduleTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--vseti-color-text-primary);
+  display: flex;
+  align-items: center;
+}
+
+.moduleControls {
+  display: flex;
+  gap: 5px;
+}
+
+.controlButton {
+  background: none;
+  border: none;
+  color: var(--vseti-color-text-tertiary);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  padding: 0;
+}
+
+.controlButton:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--vseti-color-light-button);
+}
+
+.collapseButton {
+  transition: transform 0.3s ease;
+}
+
+.collapseButton.collapsed {
+  transform: rotate(180deg);
+}
+
+.moduleContent {
+
+  transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.2s ease;
+  max-height: 500px;
+  opacity: 1;
+  overflow: hidden;
+}
+
+.moduleContent.collapsed {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+}
+
+/* Обеспечиваем правильное сворачивание для специфичных модулей */
+.pageSpecificModule .moduleContent.collapsed {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+} 

@@ -1,5 +1,5 @@
 .container {
-    background: #fff;
+    background: var(--vseti-color-var);
     border-radius: 12px;
     width: 100%;
     max-width: 800px;
@@ -14,7 +14,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    border-bottom: 1px solid var(--vk-color-border);
+    background-color: var(--vseti-color-blue-light);
+    border-bottom: 1px solid var(--vseti-color-border);
 }
 
 .headerControls {
@@ -26,7 +27,7 @@
 .title {
     font-size: 16px;
     font-weight: 500;
-    color: #000;
+    color: var(--vseti-color-text-primary);
     margin: 0;
 }
 
@@ -47,12 +48,12 @@
 }
 
 .closeButton:hover {
-    background-color: #F5F6F8;
+    background-color: var(--vseti-color-background-gray);
 }
 
 .uploadButton {
     background: #447BBA;
-    color: #fff;
+    color: var(--vseti-color-white);
     border: none;
     border-radius: 8px;
     padding: 8px 16px;
@@ -62,24 +63,25 @@
 }
 
 .uploadButton:hover {
-    background: #3d6898;
+    background: var(--vseti-color-blue-light);
 }
 
 .uploaderContainer {
     padding: 20px;
-    border-bottom: 1px solid var(--vk-color-border);
-    background: #F5F6F8;
+    border-bottom: 1px solid var(--vseti-color-border);
+    background-color: var(--vseti-color-background-gray);
 }
 
 .selector {
     flex: 1;
     overflow: auto;
     padding: 20px;
+    background-color: var(--vseti-color-background);
 }
 
 .section {
     padding: 20px;
-    border-bottom: 1px solid #E7E8EC;
+    border-bottom: 1px solid var(--vseti-color-border);
 }
 
 .section:last-child {
@@ -88,7 +90,7 @@
 
 .sectionTitle {
     font-size: 14px;
-    color: #626D7A;
+    color: var(--vseti-color-text-muted);
     margin: 0 0 12px 0;
     font-weight: 500;
 }
@@ -139,7 +141,7 @@
 
 .albumTitle {
     font-size: 13px;
-    color: #000;
+    color: var(--vseti-color-blue);
     margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
@@ -193,15 +195,14 @@
     right: 8px;
     width: 20px;
     height: 20px;
-    border: 2px solid #FFFFFF;
+    border: 2px solid var(--vseti-color-white);
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.3);
-    z-index: 2;
 }
 
 .selected .checkbox {
-    background: #447BBA;
-    border-color: #FFFFFF;
+    background: var(--vseti-color-blue-light);
+    border-color: var(--vseti-color-white);
 }
 
 .checkmark {
@@ -215,13 +216,13 @@
 
 .footer {
     padding: 16px 20px;
-    border-top: 1px solid #E7E8EC;
+    border-top: 1px solid var(--vseti-color-border);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
     position: sticky;
-    bottom: 0;
-    background: #FFFFFF;
+    bottom: -20px;
+    background: var(--vseti-color-background);
 }
 
 .confirmButton {
@@ -236,7 +237,7 @@
 }
 
 .confirmButton:hover {
-    background: #3d6898;
+    background: var(--vseti-color-blue-light);
 }
 
 .confirmButton:disabled {
@@ -255,7 +256,7 @@
 }
 
 .cancelButton:hover {
-    color: #3d6898;
+    color: var(--vseti-color-blue-light);
 }
 
 .loading {

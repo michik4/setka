@@ -1,8 +1,121 @@
 .post {
-    background: #fff;
+    background: var(--vseti-color-card);
     border-radius: 8px;
     padding: 15px;
-    box-shadow: 0 1px 0 0 #d3d9de, 0 0 0 1px #e7e8ec;
+    box-shadow: 0 1px 0 0 var(--vseti-color-border), 0 0 0 1px var(--vseti-color-border);
+}
+
+.postHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.authorInfo {
+    display: flex;
+    align-items: flex-start;
+}
+
+.authorAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 12px;
+    object-fit: cover;
+}
+
+.defaultAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--vseti-color-scrollbar);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--vseti-color-text-primary);
+    font-weight: bold;
+}
+
+.authorDetails {
+    display: flex;
+    flex-direction: column;
+}
+
+.nameAndGroup {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.authorName {
+    color: var(--vseti-color-text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.authorName:hover {
+    text-decoration: underline;
+}
+
+.groupInfo {
+    display: flex;
+    align-items: center;
+    margin-left: 4px;
+}
+
+.groupDivider {
+    margin: 0 4px;
+    color: var(--vseti-color-text-muted);
+}
+
+.groupName {
+    color: var(--vseti-color-light-button);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    background-color: var(--vseti-color-green-hover);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.groupName:hover {
+    text-decoration: underline;
+    background-color: var(--vseti-color-green-active);
+}
+
+.postTime {
+    color: var(--vseti-color-text-muted);
+    font-size: 12.5px;
+    margin-top: 4px;
+}
+
+.postActions {
+    display: flex;
+    gap: 8px;
+}
+
+.editButton, .deleteButton {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--vseti-color-text-muted);
+    font-size: 12.5px;
+}
+
+.editButton:hover {
+    background-color: var(--vseti-color-hover);
+}
+
+.deleteButton {
+    color: var(--vseti-color-error);
+}
+
+.deleteButton:hover {
+    background-color: rgba(230, 70, 70, 0.1);
 }
 
 .header {
@@ -12,26 +125,8 @@
     margin-bottom: 8px;
 }
 
-.authorInfo {
-    display: flex;
-    align-items: center;
-}
-
-.authorAvatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 20%;
-    margin-right: 12px;
-    object-fit: cover;
-}
-
-.authorName {
-    display: flex;
-    flex-direction: column;
-}
-
 .author {
-    color: var(--vk-color-text);
+    color: var(--vseti-color-text-primary);
     text-decoration: none;
     font-weight: 500;
     font-size: 13px;
@@ -42,7 +137,7 @@
 }
 
 .date {
-    color: #818c99;
+    color: var(--vseti-color-text-muted);
     font-size: 12.5px;
     margin-top: 2px;
 }
@@ -53,14 +148,17 @@
     word-wrap: break-word;
     font-size: 13px;
     line-height: 1.462;
-    color: #000;
+    color: var(--vseti-color-text-primary);
 }
 
 .footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-
+    margin-top: 8px;
+    padding-top: 8px;
+    padding-bottom: 4px;
+    border-top: 1px solid var(--vseti-color-border);
 }
 
 .actions {
@@ -68,45 +166,66 @@
     gap: 8px;
 }
 
-.actionButton {
-    background: none;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    color: #626d7a;
-    font-size: 12.5px;
+.postManageActions {
     display: flex;
-    align-items: center;
     gap: 4px;
 }
 
+.actionButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    color: var(--vseti-color-text-secondary);
+    font-size: 13px;
+    transition: all 0.2s ease;
+    margin-right: 0;
+}
+
 .actionButton:hover {
-    background-color: var(--vk-color-hover);
+    background-color: var(--vseti-color-hover);
+    color: var(--vseti-color-text-primary);
 }
 
-.editButton, .deleteButton, .saveButton, .cancelButton {
-    color: #626d7a;
+.likeButton {
+    color: var(--vseti-color-text-secondary);
+}
+
+.liked {
+    color: var(--vseti-color-error);
+}
+
+.actionText {
+    margin-left: 6px;
+    font-size: 13px;
+}
+
+.deleteIcon:hover {
+    color: var(--vseti-color-error);
+    background-color: rgba(230, 70, 70, 0.1);
+}
+
+.actionButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.editButton {
+    color: var(--vseti-color-text-muted);
     opacity: 0.7;
+    margin-left: auto;
 }
 
-.editButton:hover, .saveButton:hover {
+.editButton:hover {
     opacity: 1;
-    background-color: var(--vk-color-hover);
-}
-
-.deleteButton {
-    background-color: #e64646;
-    color: white;
-    margin-left: 8px;
-}
-
-.deleteButton:hover {
-    background-color: #d43f3f;
+    background-color: var(--vseti-color-hover);
 }
 
 .deleteButton:disabled {
-    background-color: #ffb3b3;
+    background-color: rgba(230, 70, 70, 0.3);
     cursor: not-allowed;
 }
 
@@ -123,32 +242,25 @@
     width: 100%;
     min-height: 100px;
     padding: 8px;
-    border: 1px solid var(--vk-color-border);
+    border: 1px solid var(--vseti-color-border);
     border-radius: 4px;
     resize: none;
     margin-bottom: 8px;
     font-size: 13px;
     font-family: inherit;
+    background-color: var(--vseti-color-dark);
+    color: var(--vseti-color-text-primary);
 }
 
 .editButtons {
     display: flex;
-    justify-content: space-between;
-    margin-top: 8px;
-}
-
-.editButtonsRight {
-    display: flex;
-    gap: 8px;
-}
-
-.editButtonsLeft {
-    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
     gap: 8px;
 }
 
 .error {
-    color: #e64646;
+    color: var(--vseti-color-error);
     margin: 8px 0;
     font-size: 13px;
 }
@@ -157,25 +269,349 @@
     margin: 8px 0;
 }
 
-.likeButton {
+/* Стили для предпросмотра поста */
+.previewContainer {
+    margin: 16px 0;
+    border: 1px solid var(--vseti-color-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.previewTitle {
+    background-color: var(--vseti-color-dark);
+    padding: 8px 12px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vseti-color-text-secondary);
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.postPreview {
+    padding: 12px;
+    background-color: var(--vseti-color-card);
+}
+
+/* Стили для медиа селектора */
+.mediaSelector {
+    margin: 16px 0;
+    border: 1px solid var(--vseti-color-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.mediaSelectorTitle {
+    background-color: var(--vseti-color-dark);
+    padding: 8px 12px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vseti-color-text-secondary);
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.mediaSelectorTabs {
     display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #626d7a;
-    transition: all 0.2s ease;
+    background-color: var(--vseti-color-dark);
+    border-bottom: 1px solid var(--vseti-color-border);
 }
 
-.likeButton:hover {
-    background-color: var(--vk-color-hover);
+.mediaSelectorTab {
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--vseti-color-text-secondary);
+    transition: background-color 0.2s;
 }
 
-.likeButton.liked {
-    color: #ff3347;
+.mediaSelectorTab:hover {
+    background-color: var(--vseti-color-hover);
 }
 
-.likeButton:disabled {
+.mediaSelectorTab.active {
+    background-color: var(--vseti-color-card);
+    font-weight: 500;
+    border-bottom: 2px solid var(--vseti-color-light-button);
+}
+
+.mediaSelectorTab:disabled {
+    color: var(--vseti-color-text-tertiary);
+    cursor: not-allowed;
+}
+
+.editPhotos {
+    padding: 12px;
+    background-color: var(--vseti-color-var(--vseti-color-var(--vseti-color-var(--vseti-color-white))));
+}
+
+.selectExistingButton {
+    margin-top: 8px;
+    padding: 6px 12px;
+    background-color: var(--vseti-color-dark);
+    border: none;
+    border-radius: 4px;
+    color: var(--vseti-color-text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+}
+
+.selectExistingButton:hover {
+    background-color: var(--vseti-color-hover);
+}
+
+.saveButton, .cancelButton {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+.saveButton {
+    background-color: var(--vseti-color-light-button);
+    color: var(--vseti-color-text-primary);
+}
+
+.saveButton:hover {
+    background-color: var(--vseti-color-header);
+}
+
+.saveButton:disabled {
+    background-color: var(--vseti-color-light-button);
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+.cancelButton {
+    background-color: var(--vseti-color-dark);
+    color: var(--vseti-color-text-secondary);
+}
+
+.cancelButton:hover {
+    background-color: var(--vseti-color-hover);
+}
+
+.cancelButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.trackItemWithControls {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.trackDeleteBtn {
+    background: none;
+    border: none;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--vseti-color-error);
+    margin-left: 8px;
+    background-color: var(--vseti-color-hover);
+    position: relative;
+}
+
+.trackDeleteBtn:hover {
+    background-color: rgba(230, 70, 70, 0.1);
+    transform: scale(1.1);
+}
+
+/* Дополнительные стили для отображения треков в посте */
+.tracks {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.trackItem {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: var(--vseti-color-hover);
+    transition: background-color 0.2s;
+}
+
+.trackItem:hover {
+    background-color: var(--vseti-color-card-active);
+}
+
+.trackItem.playing {
+    background-color: var(--vseti-color-green-hover);
+}
+
+.trackCover {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+    border-radius: 4px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.trackCoverImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.playButton {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    color: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trackCover:hover .playButton {
+    opacity: 1;
+}
+
+.playing .playButton {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.trackInfo {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.trackTitle {
+    font-weight: 500;
+    font-size: 13px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--vseti-color-text-primary);
+}
+
+.trackArtist {
+    font-size: 12px;
+    color: var(--vseti-color-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.trackDuration {
+    font-size: 11px;
+    color: var(--vseti-color-text-muted);
+    margin-top: 2px;
+}
+
+.playCount {
+    margin-left: 4px;
+}
+
+.trackActions {
+    margin-left: 12px;
+}
+
+.addToMusicButton {
+    background: none;
+    border: none;
+    color: var(--vseti-color-blue);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.addToMusicButton:hover {
+    background-color: rgba(174, 183, 194, 0.12);
+}
+
+.addToMusicButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.addedToMyMusic {
+    color: #4bb34b;
+}
+
+.savingSpinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(42, 88, 133, 0.2);
+    border-top-color: var(--vseti-color-blue);
+    border-radius: 50%;
+    animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.saveTrackToast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--vseti-color-card-active);
+    color: var(--vseti-color-text-primary);
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 2000;
+    font-size: 14px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.fadeOut {
+    animation: fadeOut 0.5s ease-in forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+    }
 }
 
 @media (max-width: 768px) {
@@ -210,56 +646,36 @@
 
 /* Стили для треков */
 .tracks {
-    margin: 12px 0;
-    border-radius: 12px;
-    background-color: #f7f8fa;
+    display: flex;
+    flex-direction: column;
+    margin: 10px 0;
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    display: flex !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    flex-wrap: nowrap !important;
+    gap: 5px;
 }
 
-/* Расширенные стили для контейнера треков */
 .trackItem {
-    display: flex !important;
+    display: flex;
+    width: -webkit-fill-available;
+    padding: 8px;
+    background-color: var(--vseti-color-background);
+    border-radius: 8px;
     align-items: center;
-    padding: 8px 10px;
-    transition: background-color 0.2s ease;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    width: 100% !important;
-    box-sizing: border-box;
-    flex-shrink: 0;
-    flex-wrap: nowrap !important;
-    flex-direction: row !important;
-}
-
-.trackItem:last-child {
-    border-bottom: none;
-}
-
-.trackItem:hover {
-    background-color: rgba(0, 0, 0, 0.03);
+    position: relative;
 }
 
 .trackItem.playing {
-    background-color: rgba(74, 118, 168, 0.08);
-}
-
-.trackItem.playing .trackTitle {
-    color: #4a76a8;
+    background-color: rgba(79, 127, 209, 0.1);
 }
 
 .trackCover {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
+    width: 50px;
+    height: 50px;
     margin-right: 12px;
+    position: relative;
+    flex-shrink: 0;
     border-radius: 4px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .trackCoverImage {
@@ -274,36 +690,36 @@
     left: 0;
     width: 100%;
     height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
+    opacity: 0;
+    transition: opacity 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
     cursor: pointer;
-    font-size: 18px;
-    opacity: 0;
-    transition: opacity 0.2s, background-color 0.2s;
-}
-
-.trackCover:hover .playButton {
-    opacity: 1;
 }
 
 .playButton:hover {
-    background-color: rgba(0, 0, 0, 0.65);
+    opacity: 1;
+}
+
+.trackItem.playing .playButton {
+    opacity: 1;
 }
 
 .trackInfo {
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-width: 0; /* Предотвращает переполнение контейнера */
+    overflow: hidden;
+    margin-right: 15px;
 }
 
 .trackTitle {
     font-weight: 500;
-    font-size: 13px;
+    font-size: 14px;
     margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
@@ -311,24 +727,118 @@
 }
 
 .trackArtist {
-    font-size: 12px;
-    color: #71757b;
-    margin-bottom: 2px;
+    font-size: 13px;
+    color: #777;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .trackDuration {
-    font-size: 11px;
-    color: #939699;
-    display: flex;
-    align-items: center;
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
 }
 
 .playCount {
-    margin-left: 4px;
-    color: #939699;
+    margin-left: 5px;
+    font-size: 11px;
+    color: #888;
+}
+
+/* Новые стили для действий с треком */
+.trackActions {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.trackItem:hover .trackActions {
+    opacity: 1;
+}
+
+.addToMusicButton {
+    background: none;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    color: #4f7fd1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    transition: all 0.2s;
+}
+
+.addToMusicButton:hover {
+    background-color: #e5e9f2;
+}
+
+.addToMusicButton:disabled {
+    cursor: default;
+}
+
+.addedToMyMusic {
+    color: #4CAF50;
+}
+
+.savingSpinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(79, 127, 209, 0.2);
+    border-top-color: #4f7fd1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Стили для уведомления о добавлении трека */
+.saveTrackToast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4CAF50;
+    color: var(--vseti-color-white);
+    padding: 10px 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    font-size: 14px;
+    animation: slideUp 0.3s ease;
+}
+
+.saveTrackToast.fadeOut {
+    animation: fadeOut 0.5s ease forwards;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translate(-50%, 20px);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
 }
 
 /* Стили для редактирования треков */
@@ -337,12 +847,12 @@
     padding: 12px;
     border-radius: 10px;
     background-color: #f7f8fa;
-    border: 1px solid #e7e8ec;
+    border: 1px solid var(--vseti-color-border-light);
 }
 
 .trackDeleteBtn {
     background-color: #f44336;
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-var(--vseti-color-white)));
     border: none;
     width: 22px;
     height: 22px;
@@ -386,5 +896,91 @@
     
     .trackDuration {
         font-size: 10px;
+    }
+}
+
+.postAuthor {
+    color: var(--vseti-color-text-muted);
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.postAuthor:hover {
+    text-decoration: underline;
+}
+
+/* Стили для модального окна */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modalContent {
+    background-color: var(--vseti-color-card);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow: auto;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.modalTitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--vseti-color-text-primary);
+}
+
+.modalClose {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--vseti-color-text-muted);
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.modalClose:hover {
+    background-color: var(--vseti-color-hover);
+    color: var(--vseti-color-text-primary);
+}
+
+.modalBody {
+    padding: 0;
+    flex: 1;
+    overflow: auto;
+}
+
+@media (max-width: 768px) {
+    .modalContent {
+        width: 95%;
+        max-width: 95%;
+        max-height: 95vh;
     }
 } 

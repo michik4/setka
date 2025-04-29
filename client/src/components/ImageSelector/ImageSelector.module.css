@@ -1,6 +1,6 @@
 .container {
     margin-top: 16px;
-    background: white;
+    background: var(--vseti-color-var(--vseti-color-white));
     border-radius: 8px;
     padding: 16px 0;
 }
@@ -15,21 +15,21 @@
 .header h3 {
     margin: 0;
     font-size: 16px;
-    color: #2a5885;
+    color: var(--vseti-color-blue);
 }
 
 .info {
     display: flex;
     align-items: center;
     gap: 12px;
-    color: #626d7a;
+    color: var(--vseti-color-text-muted);
     font-size: 14px;
 }
 
 .clearButton {
     background: none;
     border: none;
-    color: #e64646;
+    color: var(--vseti-color-error);
     cursor: pointer;
     font-size: 14px;
     padding: 4px 8px;
@@ -54,7 +54,7 @@
     border-radius: 8px;
     overflow: hidden;
     padding-bottom: 100%;
-    background-color: #f0f2f5;
+    background-color: var(--vseti-color-background-light);
 }
 
 .image {
@@ -91,7 +91,7 @@
 }
 
 .selected {
-    outline: 3px solid #2a5885;
+    outline: 3px solid var(--vseti-color-blue);
     outline-offset: -3px;
 }
 
@@ -101,7 +101,7 @@
 }
 
 .checkmark {
-    color: white;
+    color: var(--vseti-color-var(--vseti-color-white));
     font-size: 24px;
     transform: scale(0);
     transition: transform 0.2s ease;
@@ -115,7 +115,7 @@
 .loading {
     text-align: center;
     padding: 20px;
-    color: #626d7a;
+    color: var(--vseti-color-text-muted);
 }
 
 .spinner {
@@ -136,15 +136,15 @@
 .error {
     text-align: center;
     padding: 20px;
-    color: #e64646;
+    color: var(--vseti-color-error);
     background: #ffebeb;
     border-radius: 8px;
 }
 
 .retryButton {
     margin-top: 10px;
-    background: #2a5885;
-    color: white;
+    background: var(--vseti-color-blue);
+    color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     padding: 8px 16px;
     border-radius: 4px;

@@ -1,16 +1,15 @@
 .showcase {
-    background: #FFFFFF;
+    background: var(--vseti-color-card);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--vseti-color-border);
     padding: 20px;
-    margin-bottom: 20px;
 }
 
 .tabs {
     display: flex;
     margin: -20px -20px 20px -20px;
-    border-bottom: 1px solid #E7E8EC;
-    background: #FAFBFC;
+    border-bottom: 1px solid var(--vseti-color-border);
+    background: var(--vseti-color-green-hover);
     border-radius: 12px 12px 0 0;
     padding: 0 20px;
 }
@@ -28,11 +27,11 @@
 }
 
 .tab:hover {
-    color: #447BBA;
+    color: var(--vseti-color-blue-light);
 }
 
 .activeTab {
-    color: #447BBA;
+    color: var(--vseti-color-white);
     font-weight: 500;
 }
 
@@ -43,7 +42,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: #447BBA;
+    background: var(--vseti-color-blue-light);
     border-radius: 2px 2px 0 0;
 }
 
@@ -63,9 +62,10 @@
 }
 
 .sectionTitle {
+    padding: 0;
+    margin: 0;
     font-size: 14px;
     color: #626D7A;
-    margin: 0;
     font-weight: 500;
 }
 
@@ -80,7 +80,7 @@
 }
 
 .showAllButton:hover {
-    color: #3d6898;
+    color: var(--vseti-color-blue-light);
 }
 
 .albumsGrid {
@@ -118,13 +118,28 @@
     object-fit: cover;
 }
 
+.defaultAlbumCover,
+.defaultTrackCover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    background: linear-gradient(135deg, #4a76a8, #2e5383);
+    color: rgba(255, 255, 255, 0.8);
+}
+
 .albumInfo {
     padding: 8px;
 }
 
 .albumTitle {
     font-size: 13px;
-    color: #000;
+    color: var(--vseti-color-blue);
     margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
@@ -161,6 +176,114 @@
     display: block;
 }
 
+/* Стили для треков */
+.tracksGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.musicGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.showcaseTrackItem {
+    /*width: 100%;*/
+}
+
+.trackItem {
+    background: var(--vseti-color-card);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.trackItem:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.trackCover {
+    position: relative;
+    padding-bottom: 100%;
+    background: var(--vseti-color-background-light);
+    overflow: hidden;
+}
+
+.trackCover img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.defaultTrackCover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: var(--vseti-color-gray);
+    background: var(--vseti-color-background-light);
+}
+
+.playOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.trackItem:hover .playOverlay {
+    opacity: 1;
+}
+
+.trackInfo {
+    padding: 8px;
+    background: var(--vseti-color-card);
+}
+
+.trackTitle {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--vseti-color-text-primary);
+}
+
+.trackArtist {
+    font-size: 12px;
+    color: var(--vseti-color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .lockIcon {
     position: absolute;
     top: 8px;
@@ -172,7 +295,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #FFFFFF;
     font-size: 14px;
     z-index: 1;
 }
@@ -187,6 +310,66 @@
     text-align: center;
     padding: 20px;
     color: #E64646;
+}
+
+/* Стили для пустых состояний */
+.emptySection {
+    padding: 30px;
+    text-align: center;
+    background: var(--vseti-color-background-light);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.emptyIcon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: var(--vseti-color-gray);
+}
+
+.emptyTitle {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 10px;
+    color: var(--vseti-color-text-primary);
+}
+
+.emptyText {
+    color: var(--vseti-color-text-secondary);
+    font-size: 14px;
+    margin-bottom: 15px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.addMusicButton {
+    background: var(--vseti-color-blue);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.addMusicButton:hover {
+    background: var(--vseti-color-blue-dark);
+}
+
+.defaultAlbumCover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: var(--vseti-color-gray);
+    background: var(--vseti-color-background-light);
 }
 
 @media (max-width: 768px) {
@@ -206,6 +389,10 @@
 
     .photosGrid {
         grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .tracksGrid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -229,5 +416,9 @@
 
     .photosGrid {
         grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .tracksGrid {
+        grid-template-columns: repeat(1, 1fr);
     }
 } 

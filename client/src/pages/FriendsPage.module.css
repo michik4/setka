@@ -1,0 +1,254 @@
+.container {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 800px;
+
+  background-color: var(--vseti-color-background);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: var(--vseti-color-text-primary);
+  border-bottom: 1px solid var(--vseti-color-border);
+  padding-bottom: 16px;
+}
+
+.toggleContainer {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  background-color: var(--vseti-color-card);
+  padding: 6px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.activeButton, .inactiveButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  text-align: center;
+}
+
+.activeButton {
+  background-color: var(--vseti-color-primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(var(--vseti-color-primary-rgb), 0.3);
+}
+
+.inactiveButton {
+  background-color: transparent;
+  color: var(--vseti-color-text-secondary);
+}
+
+.inactiveButton:hover {
+  background-color: var(--vseti-color-background-hover);
+  color: var(--vseti-color-text-primary);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  font-size: 16px;
+  color: var(--vseti-color-text-secondary);
+}
+
+.error {
+  color: var(--vseti-color-error);
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: rgba(var(--vseti-color-error-rgb), 0.1);
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.emptyState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  font-size: 16px;
+  color: var(--vseti-color-text-secondary);
+  text-align: center;
+  background-color: var(--vseti-color-card);
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px dashed var(--vseti-color-border);
+}
+
+.friendsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.friendCard {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background-color: var(--vseti-color-card);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  border: 1px solid var(--vseti-color-border);
+}
+
+/*
+.friendCard:hover {
+  background-color: var(--vseti-color-background-hover);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+*/
+
+.friendAvatarContainer {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--border-radius);
+}
+
+.friendAvatarContainer img{
+  border-radius: var(--border-radius);
+}
+
+
+/*
+.friendCard:hover,
+.requestCard:hover {
+  background-color: var(--vseti-color-card-hover);
+}
+*/
+
+.friendLink {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  text-decoration: none;
+  color: var(--vseti-color-text-primary);
+  gap: var(--std-gap);
+}
+
+.avatarContainer {
+  width: 60px;
+  height: 60px;
+  margin-right: 16px;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.defaultAvatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: var(--background-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.friendInfo {
+  flex: 1;
+}
+
+.friendName {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.friendStatus {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.actionButton {
+  background-color: var(--background-tertiary);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.deleteFriendButton button {
+  background-color: var(--vseti-color-error);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.deleteFriendButton button:hover {
+  background-color: var(--vseti-color-error-hover);
+}
+
+.actionButton:hover {
+  background-color: var(--background-quaternary);
+}
+
+.requestButtons{
+  display: flex;
+  gap: 8px;
+}
+
+.requestActions {
+  display: flex;
+  gap: 8px;
+}
+
+.acceptButton {
+  background-color: var(--vseti-color-card);
+  border: 1px solid var(--vseti-color-border);
+  color: white;
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  font-size: 14px;
+}
+
+.acceptButton:hover {
+  background-color: var(--vseti-color-card-hover);
+  border: 1px solid var(--vseti-color-border);
+}
+
+.rejectButton {
+  background-color: var(--vseti-color-error);
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  font-size: 14px;
+}
+
+.rejectButton:hover {
+  background-color: var(--vseti-color-error-hover);
+} 

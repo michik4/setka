@@ -12,7 +12,13 @@ import { Like } from "../entities/like.entity"
 import { MusicTrack } from "../entities/music.entity"
 import { Album } from "../entities/album.entity"
 import { Group } from "../entities/group.entity"
+import { GroupMember } from "../entities/group-member.entity"
 import { PostAlbum } from "../entities/post_album.entity"
+import { Comment } from "../entities/comment.entity"
+import { Friend } from "../entities/friend.entity"
+import { FriendRequest } from "../entities/friend-request.entity"
+import { Conversation } from "../entities/conversation.entity"
+import { MusicAlbum } from "../entities/music_album.entity"
 import { AddUserStatus1710000000000 } from "../migrations/1710000000000-AddUserStatus"
 import { AddUserAvatar1710000000001 } from "../migrations/1710000000001-AddUserAvatar"
 import { AddWallPostIdToPhotos1710000000002 } from "../migrations/1710000000002-AddWallPostIdToPhotos"
@@ -21,6 +27,9 @@ import { AddPhotoExtensionAndIsDeleted1709123456789 } from "../migrations/170912
 import { CreateMusicTable1680078632000 } from "../migrations/1680078632000-CreateMusicTable"
 import { CreatePostsTracks1680078633000 } from "../migrations/1680078633000-CreatePostsTracks"
 import { CreateGroups1743000000000 } from "../migrations/1743000000000-CreateGroups"
+import { AddWallOwnerIdToPosts1742846973457 } from "../migrations/1742846973457-AddWallOwnerIdToPosts"
+import { CreateFriendsSystem1743001000000 } from "../migrations/1743001000000-CreateFriendsSystem"
+import { CreateMusicAlbums1720000000001 } from "../migrations/1720000000001-CreateMusicAlbums"
 
 // Загружаем переменные окружения
 dotenv.config()
@@ -36,7 +45,7 @@ export const AppDataSource = new DataSource({
     synchronize: false,
     dropSchema: false,
     logging: process.env.NODE_ENV !== "production",
-    entities: [User, Post, Photo, Session, Chat, Message, WallPost, Like, Album, MusicTrack, Group, PostAlbum],
+    entities: [User, Post, Photo, Session, Chat, Message, WallPost, Like, Album, MusicTrack, Group, GroupMember, PostAlbum, Comment, Friend, FriendRequest, Conversation, MusicAlbum],
     migrations: [
         AddUserStatus1710000000000,
         AddUserAvatar1710000000001,
@@ -45,7 +54,10 @@ export const AppDataSource = new DataSource({
         AddPhotoExtensionAndIsDeleted1709123456789,
         CreateMusicTable1680078632000,
         CreatePostsTracks1680078633000,
-        CreateGroups1743000000000
+        CreateGroups1743000000000,
+        AddWallOwnerIdToPosts1742846973457,
+        CreateFriendsSystem1743001000000,
+        CreateMusicAlbums1720000000001
     ],
     subscribers: [],
     migrationsTableName: "migrations"

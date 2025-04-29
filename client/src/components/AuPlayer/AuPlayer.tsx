@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import { api } from '../../utils/api';
@@ -6,6 +6,8 @@ import { Track } from '../../types/music.types';
 import AuOrder from './AuOrder';
 import styles from './AuPlayer.module.css';
 import { usePlayer } from '../../contexts/PlayerContext';
+import { formatTime as formatTrackTime } from '../../utils/formatTime';
+import audioChannelService from '../../services/AudioChannelService';
 // import 'react-h5-audio-player/lib/styles.less' Use LESS
 // import 'react-h5-audio-player/src/styles.scss' Use SASS
 
@@ -15,13 +17,6 @@ const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || '/api/media';
 
 // Константа для обложки по умолчанию
 const DEFAULT_COVER_URL = '/api/music/cover/default.png';
-
-// Функция для форматирования времени в формат MM:SS
-const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-};
 
 // Функция для обновления длительности трека на сервере
 const updateTrackDuration = async (trackId: number, duration: string) => {
@@ -38,7 +33,7 @@ const getAudioDuration = (url: string, trackId?: number): Promise<string> => {
     return new Promise((resolve) => {
         const audio = new Audio();
         audio.addEventListener('loadedmetadata', () => {
-            const duration = formatTime(audio.duration);
+            const duration = formatTrackTime(audio.duration);
             resolve(duration);
             
             // Если указан ID трека, отправляем длительность на сервер
@@ -73,7 +68,8 @@ const AuPlayer = () => {
         toggleRepeat,
         toggleShuffle,
         setVolume,
-        getTrackCover
+        getTrackCover,
+        channelId
     } = usePlayer();
     const [isLoading, setIsLoading] = useState(false);
     const playerRef = useRef<any>(null);
@@ -124,6 +120,26 @@ const AuPlayer = () => {
             audio.removeEventListener('loadedmetadata', updateProgress);
         };
     }, [audio]);
+
+    // Регистрируем аудио в сервисе при монтировании
+    useEffect(() => {
+        if (!channelId) {
+            console.error('[AuPlayer] channelId не определен');
+            return;
+        }
+        
+        console.log(`[AuPlayer] Использование канала из PlayerContext: ${channelId}`);
+        
+        // Проверяем, зарегистрирован ли уже канал
+        if (!audioChannelService.isChannelRegistered(channelId)) {
+            console.log(`[AuPlayer] Регистрация аудио канала: ${channelId}`);
+            audioChannelService.registerAudio(channelId, audio);
+        } else {
+            console.log(`[AuPlayer] Канал ${channelId} уже зарегистрирован`);
+        }
+        
+        // При размонтировании не удаляем регистрацию, так как канал используется PlayerContext
+    }, [audio, channelId]);
 
     // Обработчики событий для UI-элементов
     const handlePlay = useCallback(() => {
@@ -367,6 +383,28 @@ const AuPlayer = () => {
         // Теперь все синхронизируется через BroadcastChannel
     }, []);
 
+    // Обработчик для управления воспроизведением через сервис
+    const handlePlayPause = useCallback(() => {
+        if (!channelId) {
+            console.error('[AuPlayer] channelId не определен для воспроизведения');
+            return;
+        }
+        
+        if (isPlaying) {
+            audioChannelService.pauseActiveChannel();
+            setIsPlaying(false);
+        } else if (currentTrack) {
+            // Проверяем, зарегистрирован ли канал перед воспроизведением
+            if (!audioChannelService.isChannelRegistered(channelId)) {
+                console.log(`[AuPlayer] Повторная регистрация аудио канала: ${channelId}`);
+                audioChannelService.registerAudio(channelId, audio);
+            }
+            
+            audioChannelService.playTrack(channelId, currentTrack, audio.currentTime);
+            setIsPlaying(true);
+        }
+    }, [isPlaying, currentTrack, audio, channelId, setIsPlaying]);
+
     if (isLoading) {
         return <div>Загрузка...</div>;
     }
@@ -398,14 +436,6 @@ const AuPlayer = () => {
 
     // Получаем URL обложки
     const coverUrl = currentTrack ? (coverError ? DEFAULT_COVER_URL : getTrackCover(currentTrack.coverUrl)) : '';
-
-    // Форматируем время для отображения
-    const formatTime = (time: number) => {
-        if (isNaN(time)) return "0:00";
-        const minutes = Math.floor(time / 60);
-        const seconds = Math.floor(time % 60);
-        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-    };
 
     return (
         <div className={`${styles.auPlayerContainer} ${expandedMode ? styles.expandedMode : ''} ${popupMode ? styles.popupMode : ''} ${showTracks ? styles.showTracks : ''} ${isPlaying ? styles.isPlaying : ''}`}>
@@ -511,7 +541,7 @@ const AuPlayer = () => {
                         
                         <button 
                             className={`${styles.controlButton} ${styles.playButton}`} 
-                            onClick={() => setIsPlaying(!isPlaying)}
+                            onClick={handlePlayPause}
                             aria-label={isPlaying ? "Пауза" : "Воспроизвести"}
                         >
                             {isPlaying ? (
@@ -607,7 +637,7 @@ const AuPlayer = () => {
                     </div>
                     
                     <div className={styles.progressControls}>
-                        <span className={styles.timeText}>{formatTime(currentTime)}</span>
+                        <span className={styles.timeText}>{formatTrackTime(currentTime)}</span>
                         
                         <input 
                             type="range" 
@@ -619,7 +649,7 @@ const AuPlayer = () => {
                             ref={progressSliderRef}
                         />
                         
-                        <span className={styles.timeText}>{formatTime(duration)}</span>
+                        <span className={styles.timeText}>{formatTrackTime(duration)}</span>
                     </div>
                 </div>
             </div>

@@ -1,0 +1,2 @@
+ALTER TABLE posts ADD COLUMN "wallOwnerId" integer;
+ALTER TABLE posts ADD CONSTRAINT "FK_posts_wallOwnerId" FOREIGN KEY ("wallOwnerId") REFERENCES users(id) ON DELETE NO ACTION ON UPDATE NO ACTION; 

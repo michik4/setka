@@ -38,4 +38,7 @@ export class MusicTrack {
 
     @UpdateDateColumn()
     updatedAt: Date;
+    
+    // Виртуальное свойство для URL аудио файла
+    audioUrl?: string;
 } 

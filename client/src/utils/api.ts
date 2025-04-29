@@ -1,4 +1,4 @@
-import { API_URL } from '../config';
+import { API_URL } from '../config/constants';
 
 interface FetchOptions extends RequestInit {
     body?: any;
@@ -41,8 +41,9 @@ export const api = {
             });
 
             if (!response.ok) {
-                const error = await response.json().catch(() => ({ message: 'Произошла ошибка при выполнении запроса' }));
-                throw new Error(error.message);
+                const errorData = await response.json().catch(() => ({ message: 'Произошла ошибка при выполнении запроса' }));
+                console.error('API Error Response:', errorData);
+                throw new Error(errorData.error || errorData.message || 'Произошла ошибка при выполнении запроса');
             }
 
             if (response.status === 204) {

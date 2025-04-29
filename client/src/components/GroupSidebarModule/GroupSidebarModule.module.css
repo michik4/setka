@@ -1,0 +1,583 @@
+.groupSidebarModule {
+  background-color: var(--vseti-color-card);
+
+  box-shadow: 0 1px 0 0 var(--vseti-color-shadow-light), 0 0 0 1px var(--vseti-color-border-light);
+
+  overflow: hidden;
+}
+
+/* Применяем особые стили когда модуль внутри pageSpecificModule */
+:global(.pageSpecificModule) .groupSidebarModule {
+  box-shadow: none;
+  margin-bottom: 0;
+  border-radius: 0;
+}
+
+.header {
+  padding: 12px 15px 10px;
+  border-bottom: 1px solid var(--vseti-color-border);
+}
+
+/* Скрываем внутренний заголовок при отображении в специфичном модуле */
+:global(.pageSpecificModule) .header {
+  display: none;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.groupInfo {
+  display: flex;
+  padding: 15px;
+  align-items: center;
+}
+
+/* Улучшаем отображение группы в специфичном модуле */
+:global(.pageSpecificModule) .groupInfo {
+  padding: 20px;
+  background-color: rgba(74, 118, 168, 0.05);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+:global(.pageSpecificModule) .avatarWrapper {
+  width: 100px;
+  height: 100px;
+}
+
+:global(.pageSpecificModule) .groupName {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+:global(.pageSpecificModule) .stats {
+  margin-top: 10px;
+}
+
+.avatarWrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 15px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.editAvatarBtn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--vseti-color-light-button);
+  color: var(--vseti-color-white);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, transform 0.2s;
+  opacity: 0;
+  transform: scale(0.8);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.avatarWrapper:hover .editAvatarBtn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.editAvatarBtn:hover {
+  background-color: var(--vseti-color-header);
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.defaultAvatar {
+  width: 100%;
+  height: 100%;
+  background-color: var(--vseti-color-header);
+  color: var(--vseti-color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: bold;
+}
+
+.groupDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.groupNameContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editNameBtn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--vseti-color-text-tertiary);
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.editNameBtn:hover {
+  background-color: rgba(74, 118, 168, 0.1);
+  color: var(--vseti-color-light-button);
+}
+
+.groupName {
+  margin: 0 0 5px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.privateBadge {
+  display: inline-block;
+  padding: 2px 6px;
+  background-color: rgba(74, 118, 168, 0.1);
+  color: var(--vseti-color-header);
+  border-radius: 3px;
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+
+.stats {
+  display: flex;
+  gap: 12px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.statValue {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--vseti-color-text-primary);
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--vseti-color-text-tertiary);
+}
+
+.description {
+  padding: 0 15px 15px;
+  border-bottom: 1px solid var(--vseti-color-border);
+  position: relative;
+}
+
+.editDescriptionBtn {
+  position: absolute;
+  top: 0;
+  right: 15px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--vseti-color-text-tertiary);
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s;
+  opacity: 0;
+}
+
+.description:hover .editDescriptionBtn {
+  opacity: 1;
+}
+
+.editDescriptionBtn:hover {
+  background-color: rgba(74, 118, 168, 0.1);
+  color: var(--vseti-color-light-button);
+}
+
+.description p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vseti-color-text-gray);
+}
+
+:global(.pageSpecificModule) .description {
+  padding: 15px 20px;
+  background-color: rgba(74, 118, 168, 0.02);
+  border-radius: 8px;
+  margin: 0 15px 15px;
+  border: 1px solid var(--vseti-color-border);
+}
+
+:global(.pageSpecificModule) .description p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.actions {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid var(--vseti-color-border);
+}
+
+/* Делаем кнопки действий в специфичном модуле в строку */
+:global(.pageSpecificModule) .actions {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+}
+
+:global(.pageSpecificModule) .joinButton,
+:global(.pageSpecificModule) .leaveButton,
+:global(.pageSpecificModule) .editLink {
+  width: auto;
+  flex: 1;
+  margin: 0 5px;
+}
+
+/* В мобильных возвращаемся к колонке */
+@media (max-width: 460px) {
+  :global(.pageSpecificModule) .actions {
+    flex-direction: column;
+  }
+}
+
+.joinButton,
+.leaveButton {
+  width: 100%;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 0;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.joinButton {
+  background-color: var(--vseti-color-light-button);
+  color: var(--vseti-color-white);
+}
+
+.joinButton:hover {
+  background-color: var(--vseti-color-blue-light);
+}
+
+.leaveButton {
+  background-color: var(--vseti-color-hover);
+  color: var(--vseti-color-text-muted);
+}
+
+.leaveButton:hover {
+  background-color: var(--vseti-color-border-light);
+}
+
+.editLink {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: var(--vseti-color-text);
+  font-size: 13px;
+  padding: 8px 0;
+  border-radius: 4px;
+  background-color: var(--vseti-color-background-light);
+}
+
+.editLink:hover {
+  background-color: var(--vseti-color-background-gray);
+}
+
+.membersSection {
+  padding: 15px;
+}
+
+/* Добавляем границу между секциями в специфичном модуле */
+:global(.pageSpecificModule) .membersSection:not(:last-child) {
+  border-bottom: 1px solid var(--vseti-color-border);
+  padding-bottom: 20px;
+  margin-bottom: 5px;
+}
+
+/* Делаем список участников более компактным */
+:global(.pageSpecificModule) .membersList {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* В мобильных устройствах возвращаемся к одной колонке */
+@media (max-width: 460px) {
+  :global(.pageSpecificModule) .membersList {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.membersList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.memberItem {
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.memberItem:hover {
+  background-color: rgba(74, 118, 168, 0.05);
+}
+
+.memberAvatarWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 10px;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.memberItem:hover .memberAvatarWrapper {
+  transform: scale(1.05);
+}
+
+.memberAvatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.memberAvatar:hover {
+  transform: scale(1.1);
+}
+
+.defaultMemberAvatar {
+  width: 100%;
+  height: 100%;
+  background-color: var(--vseti-color-header);
+  color: var(--vseti-color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.defaultMemberAvatar:hover {
+  background-color: var(--vseti-color-blue-light);
+}
+
+.memberInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.memberName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberBadge,
+.adminBadge {
+  display: inline-block;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 10px;
+  margin-top: 2px;
+  width: fit-content;
+}
+
+.memberBadge {
+  background-color: #ffc107;
+  color: var(--vseti-color-text-primary);
+}
+
+.adminBadge {
+  background-color: var(--vseti-color-header);
+  color: var(--vseti-color-white);
+}
+
+.showAllLink {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: var(--vseti-color-text);
+  font-size: 13px;
+  padding: 8px 0;
+  margin-top: 10px;
+  border-radius: 4px;
+  background-color: var(--vseti-color-background-light);
+}
+
+.showAllLink:hover {
+  background-color: var(--vseti-color-background-gray);
+}
+
+.viewAllLink {
+  float: right;
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--vseti-color-text-tertiary);
+  text-decoration: none;
+}
+
+.viewAllLink:hover {
+  text-decoration: underline;
+}
+
+.createdInfo {
+  padding: 15px;
+  border-bottom: 1px solid var(--vseti-color-border);
+}
+
+:global(.pageSpecificModule) .createdInfo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  background-color: var(--vseti-color-card);
+  border-radius: 8px;
+  margin: 0 15px 15px;
+  padding: 12px 15px;
+  border: none;
+}
+
+:global(.pageSpecificModule) .infoRow {
+  flex: 1;
+  min-width: 150px;
+  margin-bottom: 0;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.infoRow:last-child {
+  margin-bottom: 0;
+}
+
+.infoLabel {
+  color: var(--vseti-color-text-tertiary);
+}
+
+.infoValue {
+  color: var(--text-primary);
+}
+
+.creatorLink {
+  color: var(--vseti-color-text);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.creatorLink:hover {
+  color: var(--vseti-color-light-button);
+  text-decoration: underline;
+}
+
+.manageMembersLink {
+  float: right;
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--vseti-color-text-tertiary);
+  text-decoration: none;
+  margin-right: 8px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.manageMembersLink:hover {
+  background-color: rgba(74, 118, 168, 0.1);
+  text-decoration: none;
+  color: var(--vseti-color-light-button);
+}
+
+.showAllButton {
+  width: 100%;
+  border: none;
+  background-color: var(--vseti-color-background-light);
+  color: var(--vseti-color-text);
+  border-radius: 4px;
+  padding: 8px 0;
+  margin-top: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-align: center;
+}
+
+.showAllButton:hover {
+  background-color: var(--vseti-color-background-gray);
+}
+
+/* Стили для аватаров участников */
+:global(.pageSpecificModule) .memberAvatarWrapper {
+  width: 40px;
+  height: 40px;
+}
+
+:global(.pageSpecificModule) .membersList {
+  row-gap: 15px;
+}
+
+.editButton {
+  background-color: #f1f5f9;
+  border: 1px solid var(--vseti-color-border-light);
+  color: var(--vseti-color-blue);
+  margin-top: 8px;
+}
+
+.editButton:hover {
+  background-color: var(--vseti-color-hover);
+} 

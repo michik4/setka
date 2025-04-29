@@ -4,6 +4,7 @@ import { groupService } from '../../services/groupService';
 import { Group } from '../../types/group.types';
 import styles from './GroupsPage.module.css';
 import { useAuth } from '../../contexts/AuthContext';
+import { ServerImage } from '../../components/ServerImage/ServerImage';
 
 export const GroupsPage: React.FC = () => {
     const [allGroups, setAllGroups] = useState<Group[]>([]);
@@ -119,7 +120,11 @@ export const GroupsPage: React.FC = () => {
             <div key={group.id} className={styles.groupItem}>
                 <div className={styles.groupAvatar}>
                     {group.avatar ? (
-                        <img src={`/api/photos/${group.avatar.id}`} alt={group.name} />
+                        <ServerImage 
+                            path={group.avatar.path} 
+                            alt={group.name}
+                            className={styles.groupAvatarImage} 
+                        />
                     ) : (
                         <div className={styles.defaultAvatar}>{group.name.charAt(0)}</div>
                     )}
@@ -128,7 +133,7 @@ export const GroupsPage: React.FC = () => {
                     <Link to={`/groups/${group.id}`} className={styles.groupName}>{group.name}</Link>
                     <div className={styles.groupDescription}>{group.description}</div>
                     <div className={styles.groupStats}>
-                        <span>{isMember ? (userGroups.find(g => g.id === group.id)?.membersCount || 1) : (group.membersCount || 0)} участников</span>
+                        <span>{(group.membersCount || 0)} участников</span>
                         <span>{group.postsCount || 0} записей</span>
                     </div>
                 </div>

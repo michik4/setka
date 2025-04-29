@@ -6,13 +6,30 @@ interface Track {
     coverUrl: string;
     audioUrl: string;
     playCount: number;
+    filename?: string;
     source?: {
         type: string;
         postId?: number;
         authorId?: number;
         authorName?: string;
+        
         // Другие возможные поля, характеризующие источник
     };
+    trackAlbumId?: number;
+    trackAlbumName?: string;
 }
 
-export type { Track };
+interface MusicAlbum {
+    id: number;
+    title: string;
+    description?: string;
+    userId: number;
+    coverUrl?: string;
+    tracksCount: number;
+    isPrivate: boolean;
+    createdAt: string;
+    updatedAt: string;
+    tracks?: Track[];
+}
+
+export type { Track, MusicAlbum };

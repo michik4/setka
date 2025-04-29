@@ -527,4 +527,67 @@ router.put('/duration/:id', async (req, res) => {
     }
 });
 
+// Добавить трек в свою библиотеку
+router.post('/:id/add-to-library', authenticateSession, async (req: any, res) => {
+    try {
+        const trackId = parseInt(req.params.id);
+        
+        if (isNaN(trackId)) {
+            return res.status(400).json({ message: 'Некорректный ID трека' });
+        }
+        
+        console.log(`[Music] Запрос на добавление трека ID:${trackId} в библиотеку пользователя ID:${req.user.id}`);
+        
+        // Используем метод контроллера для добавления трека
+        const savedTrack = await musicController.saveTrackToUserCollection(req, trackId);
+        
+        if (!savedTrack) {
+            return res.status(404).json({ message: 'Трек не найден или не может быть добавлен' });
+        }
+        
+        return res.status(200).json({
+            success: true,
+            message: 'Трек добавлен в вашу музыку',
+            track: savedTrack
+        });
+    } catch (error) {
+        console.error('[Music] Ошибка при добавлении трека в библиотеку:', error);
+        return res.status(500).json({ message: 'Не удалось добавить трек в библиотеку' });
+    }
+});
+
+// Удалить трек из своей библиотеки
+router.delete('/:id/remove-from-library', authenticateSession, async (req: any, res) => {
+    try {
+        const trackId = parseInt(req.params.id);
+        const userId = req.user.id;
+        
+        if (isNaN(trackId)) {
+            return res.status(400).json({ message: 'Некорректный ID трека' });
+        }
+        
+        console.log(`[Music] Запрос на удаление трека ID:${trackId} из библиотеки пользователя ID:${userId}`);
+        
+        // Находим трек в библиотеке пользователя
+        const track = await musicRepository.findOne({
+            where: { id: trackId, userId }
+        });
+        
+        if (!track) {
+            return res.status(404).json({ message: 'Трек не найден в вашей библиотеке' });
+        }
+        
+        // Удаляем запись из БД
+        await musicRepository.remove(track);
+        
+        return res.status(200).json({
+            success: true,
+            message: 'Трек удален из вашей музыки'
+        });
+    } catch (error) {
+        console.error('[Music] Ошибка при удалении трека из библиотеки:', error);
+        return res.status(500).json({ message: 'Не удалось удалить трек из библиотеки' });
+    }
+});
+
 export default router; 

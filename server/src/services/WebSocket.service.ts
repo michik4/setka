@@ -7,11 +7,15 @@ import { AppDataSource } from '../db/db_connect';
 import { User } from '../entities/user.entity';
 import { Photo } from '../entities/photo.entity';
 import { PhotoPlaceholder } from '../utils/placeholder';
+import { ConversationService } from './conversation.service';
+import { MessageService } from './message.service';
 
 export class WebSocketService {
   private io: Server;
   private userSockets: Map<string, string> = new Map(); // userId -> socketId
   private userService: UserService;
+  private conversationService: ConversationService;
+  private messageService: MessageService;
 
   constructor(server: HttpServer) {
     this.io = new Server(server, {
@@ -55,6 +59,8 @@ export class WebSocketService {
     });
 
     this.userService = new UserService();
+    this.conversationService = new ConversationService();
+    this.messageService = new MessageService();
     this.setupSocketHandlers();
   }
 
@@ -305,6 +311,175 @@ export class WebSocketService {
       // Печатает
       socket.on('typing', (data: { chatId: string; userId: string }) => {
         socket.to(`chat_${data.chatId}`).emit('user_typing', data.userId);
+      });
+
+      // Обработчики для мессенджера
+      
+      // Получение списка бесед пользователя
+      socket.on('get_conversations', async (userId: number) => {
+        try {
+          const conversations = await this.conversationService.getUserConversations(userId);
+          socket.emit('conversations_list', conversations);
+        } catch (error) {
+          console.error('Ошибка при получении бесед:', error);
+          socket.emit('error', { message: 'Ошибка при получении бесед' });
+        }
+      });
+
+      // Создание новой беседы
+      socket.on('create_conversation', async (data: { userIds: number[], name?: string, isGroup?: boolean }) => {
+        try {
+          const { userIds, name, isGroup } = data;
+          const conversation = await this.conversationService.createConversation(userIds, name, isGroup);
+          
+          // Оповещаем всех участников о создании новой беседы
+          userIds.forEach(userId => {
+            const socketId = this.userSockets.get(userId.toString());
+            if (socketId) {
+              this.io.to(socketId).emit('conversation_created', conversation);
+            }
+          });
+          
+          socket.emit('conversation_created', conversation);
+        } catch (error) {
+          console.error('Ошибка при создании беседы:', error);
+          socket.emit('error', { message: 'Ошибка при создании беседы' });
+        }
+      });
+
+      // Получение сообщений беседы
+      socket.on('get_messages', async (data: { conversationId: number, limit?: number, offset?: number }) => {
+        try {
+          const { conversationId, limit, offset } = data;
+          const messages = await this.messageService.getConversationMessages(conversationId, limit, offset);
+          socket.emit('messages_list', { conversationId, messages });
+        } catch (error) {
+          console.error('Ошибка при получении сообщений:', error);
+          socket.emit('error', { message: 'Ошибка при получении сообщений' });
+        }
+      });
+
+      // Отправка сообщения
+      socket.on('send_message', async (data: { conversationId: number, senderId: number, content: string }) => {
+        try {
+          const { conversationId, senderId, content } = data;
+          
+          // Проверяем, что пользователь является участником беседы
+          const conversation = await this.conversationService.getConversationById(conversationId);
+          if (!conversation || !conversation.participants.some(p => p.id === senderId)) {
+            socket.emit('error', { message: 'Вы не являетесь участником этой беседы' });
+            return;
+          }
+          
+          const message = await this.messageService.createMessage({ conversationId, senderId, content });
+          
+          // Получаем сообщение с данными отправителя
+          const fullMessage = await this.messageService.getMessageById(message.id);
+          
+          // Отправляем сообщение всем участникам беседы
+          conversation.participants.forEach(participant => {
+            const socketId = this.userSockets.get(participant.id.toString());
+            if (socketId) {
+              this.io.to(socketId).emit('new_message', fullMessage);
+            }
+          });
+          
+        } catch (error) {
+          console.error('Ошибка при отправке сообщения:', error);
+          socket.emit('error', { message: 'Ошибка при отправке сообщения' });
+        }
+      });
+
+      // Отметка сообщений как прочитанных
+      socket.on('mark_messages_read', async (data: { conversationId: number, userId: number }) => {
+        try {
+          const { conversationId, userId } = data;
+          const count = await this.messageService.markMessagesAsRead(conversationId, userId);
+          
+          // Оповещаем всех участников беседы об изменении статуса сообщений
+          const conversation = await this.conversationService.getConversationById(conversationId);
+          if (conversation) {
+            conversation.participants.forEach(participant => {
+              const socketId = this.userSockets.get(participant.id.toString());
+              if (socketId) {
+                this.io.to(socketId).emit('messages_read', { conversationId, userId, count });
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Ошибка при отметке сообщений как прочитанных:', error);
+          socket.emit('error', { message: 'Ошибка при отметке сообщений как прочитанных' });
+        }
+      });
+
+      // Получение количества непрочитанных сообщений
+      socket.on('get_unread_counts', async (userId: number) => {
+        try {
+          const counts = await this.messageService.getUnreadMessagesCount(userId);
+          socket.emit('unread_counts', counts);
+        } catch (error) {
+          console.error('Ошибка при получении количества непрочитанных сообщений:', error);
+          socket.emit('error', { message: 'Ошибка при получении количества непрочитанных сообщений' });
+        }
+      });
+
+      // Добавление участника в беседу
+      socket.on('add_participant', async (data: { conversationId: number, userId: number }) => {
+        try {
+          const { conversationId, userId } = data;
+          const updatedConversation = await this.conversationService.addParticipant(conversationId, userId);
+          
+          if (updatedConversation) {
+            // Оповещаем всех участников о добавлении нового участника
+            updatedConversation.participants.forEach(participant => {
+              const socketId = this.userSockets.get(participant.id.toString());
+              if (socketId) {
+                this.io.to(socketId).emit('participant_added', { 
+                  conversationId, 
+                  userId, 
+                  conversation: updatedConversation 
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Ошибка при добавлении участника:', error);
+          socket.emit('error', { message: 'Ошибка при добавлении участника' });
+        }
+      });
+
+      // Удаление участника из беседы
+      socket.on('remove_participant', async (data: { conversationId: number, userId: number }) => {
+        try {
+          const { conversationId, userId } = data;
+          
+          // Сохраняем список участников до удаления
+          const conversation = await this.conversationService.getConversationById(conversationId);
+          if (!conversation) {
+            socket.emit('error', { message: 'Беседа не найдена' });
+            return;
+          }
+          
+          const participantsBefore = [...conversation.participants];
+          
+          const success = await this.conversationService.removeParticipant(conversationId, userId);
+          
+          if (success) {
+            // Оповещаем всех бывших участников об удалении участника
+            participantsBefore.forEach(participant => {
+              const socketId = this.userSockets.get(participant.id.toString());
+              if (socketId) {
+                this.io.to(socketId).emit('participant_removed', { 
+                  conversationId, 
+                  userId 
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Ошибка при удалении участника:', error);
+          socket.emit('error', { message: 'Ошибка при удалении участника' });
+        }
       });
 
       // Отключение

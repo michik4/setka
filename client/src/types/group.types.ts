@@ -1,6 +1,9 @@
 import { User } from './user.types';
 import { Photo } from './photo.types';
 
+// Реэкспортируем тип User для удобства использования в других модулях
+export type { User };
+
 export interface Group {
     id: number;
     name: string;
