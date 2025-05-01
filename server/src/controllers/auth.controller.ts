@@ -24,7 +24,7 @@ export class AuthController {
 
     // Генерация JWT токена
     private generateToken(userId: number, sessionId: string): string {
-        return jwt.sign(
+        const token = jwt.sign(
             { 
                 userId, 
                 sessionId 
@@ -32,6 +32,9 @@ export class AuthController {
             JWT_SECRET,
             { expiresIn: TOKEN_EXPIRES_IN }
         );
+        
+        console.log("[Auth Controller] Генерация токена для пользователя:", userId, "сессия:", sessionId);
+        return token;
     }
 
     register = async (req: Request, res: Response) => {
@@ -108,14 +111,19 @@ export class AuthController {
             // Генерируем JWT токен
             const token = this.generateToken(user.id, session.sessionId);
 
-            return res.json({
+            // Проверяем, что токен сгенерирован
+            console.log("[Auth Controller] Сгенерирован токен:", token ? "✓" : "✗");
+
+            const responseData = {
                 token,
                 id: user.id,
                 email: user.email,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 nickname: user.nickname
-            });
+            };
+            console.log("[Auth Controller] Отправляем ответ:", JSON.stringify(responseData));
+            return res.json(responseData);
         } catch (error) {
             console.error('Ошибка при авторизации:', error);
             return res.status(500).json({ message: 'Ошибка сервера при авторизации' });
