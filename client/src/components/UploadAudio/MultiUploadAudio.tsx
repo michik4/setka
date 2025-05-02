@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './UploadAudio.module.css';
+import { tokenService } from '../../utils/api';
 
 // API URL из переменных окружения
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
@@ -202,8 +203,19 @@ const MultiUploadAudio: React.FC<MultiUploadAudioProps> = ({ onTracksUploaded })
             
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `${API_URL}/music/upload/multiple`, true);
-            xhr.withCredentials = true;
+            
+            // Получаем JWT токен
+            const token = tokenService.getToken();
+            
+            // Удаляем withCredentials, так как используем JWT
+            // xhr.withCredentials = true;
+            
             xhr.setRequestHeader('Accept', 'application/json');
+            
+            // Добавляем токен в заголовок
+            if (token) {
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            }
             
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) {

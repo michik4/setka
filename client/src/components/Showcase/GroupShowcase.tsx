@@ -17,6 +17,7 @@ import { User } from '../../types/user.types';
 import UniversalTrackItem from '../UniversalTrackItem';
 import styles from './Showcase.module.css';
 import { useQueue } from '../../contexts/QueueContext';
+import { NoPhotography } from '@mui/icons-material';
 
 interface GroupShowcaseProps {
     groupId: number;
@@ -341,7 +342,9 @@ export const GroupShowcase: React.FC<GroupShowcaseProps> = ({ groupId }) => {
                         </div>
                     ) : (!albums.length && !photos.length) && (
                         <div className={styles.emptySection}>
-                            <div className={styles.emptyIcon}>🖼️</div>
+                            <div className={styles.emptyIcon}>
+                                <NoPhotography />
+                            </div>
                             <div className={styles.emptyTitle}>Нет фотографий</div>
                             {isAdmin ? (
                                 <div className={styles.emptyText}>

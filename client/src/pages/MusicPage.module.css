@@ -86,7 +86,7 @@
     margin-bottom: 30px;
     position: relative;
     z-index: 2;
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: var(--vseti-color-card);
     padding: 15px;
     border-radius: 10px;
     backdrop-filter: blur(5px);
@@ -105,7 +105,7 @@
 }
 
 .content {
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--vseti-color-card);
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     padding: 20px;
@@ -330,7 +330,7 @@
     font-size: 13px;
     font-weight: 500;
     color: var(--vseti-color-blue);
-    var(--vseti-color-var(--vseti-color-white))-space: nowrap;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -338,7 +338,7 @@
 .trackArtist {
     font-size: 12px;
     color: var(--vseti-color-text-tertiary);
-    var(--vseti-color-var(--vseti-color-white))-space: nowrap;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -959,7 +959,7 @@
     overflow: auto;
     font-family: monospace;
     font-size: 0.9rem;
-    var(--vseti-color-var(--vseti-color-white))-space: pre-wrap;
+    white-space: pre-wrap;
     word-break: break-all;
 }
 
@@ -1127,4 +1127,94 @@
 
 .uploadOptionsList li {
     margin-bottom: 8px;
+}
+
+/* Стили для поисковой строки */
+.searchContainer {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    margin: 15px 0;
+    position: relative;
+}
+
+.searchInput {
+    flex: 1;
+    padding: 10px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color, #ddd);
+    background-color: var(--input-bg, rgba(255, 255, 255, 0.9));
+    color: var(--text-color, #333);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.searchInput:focus {
+    border-color: var(--accent-color, #7c5dfa);
+    box-shadow: 0 0 0 2px rgba(124, 93, 250, 0.2);
+}
+
+.searchButton {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--icon-color, #666);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.searchButton:hover {
+    color: var(--accent-color, #7c5dfa);
+}
+
+.searchButton:disabled {
+    color: var(--disabled-color, #ccc);
+    cursor: not-allowed;
+}
+
+/* Стили для результатов поиска */
+.searchResults {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.searchSection {
+    width: 100%;
+}
+
+.searchSectionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: var(--vseti-color-text-primary);
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted, #999);
+}
+
+.emptyState p {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.tracksList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 } 

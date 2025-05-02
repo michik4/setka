@@ -261,9 +261,16 @@ p {
   text-align: center;
   background: var(--vseti-color-background);
   border-radius: 8px;
-  box-shadow: 0 1px 0 0 var(--vseti-color-shadow-light), 0 0 0 1px var(--vseti-color-border-light);
+  border: 1px solid var(--vseti-color-border);
   color: var(--vseti-color-text-gray);
   font-size: 13px;
+}
+
+.emptyPosts p {
+  margin: 0;
+  padding: 0;
+  color: var(--vseti-color-text-gray);
+  font-size: 14px;
 }
 
 /* Стили для закрытой группы */
@@ -491,9 +498,8 @@ body {
 .emptyPosts {
     text-align: center;
     padding: 30px;
-    background-color: #f9f9f9;
+    background-color: var(--vseti-color-background);
     border-radius: 8px;
-    margin: 20px 0;
 }
 
 .groupContent {

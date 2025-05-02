@@ -69,7 +69,7 @@ export const TestModePage: React.FC = () => {
                 <div className={styles.featureInfo}>
                   <h3 className={styles.featureTitle}>Плеер в отдельном окне</h3>
                   <p className={styles.featureDescription}>
-                    Позволяет открыть музыкальный плеер в отдельном окне браузера (появляется кнопка в мини плеере)
+                    Позволяет открыть музыкальный плеер в отдельном окне браузера (появляется кнопка в мини плеере) <br /> <span style={{color: 'var(--vseti-color-error)'}}>На данный момент не работает.</span>
                   </p>
                 </div>
                 <div className={styles.toggleWrapper}>

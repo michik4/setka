@@ -5,6 +5,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { useQueue } from '../../contexts/QueueContext';
 import { MusicService } from '../../services/music.service';
 import styles from './UniversalTrackItem.module.css';
+import { DeleteForever, LibraryAdd, LibraryAddCheck, Pause as PauseIcon, PlayArrow as PlayArrowIcon, ViewList } from '@mui/icons-material';
 
 interface UniversalTrackItemProps {
     track: Track;
@@ -119,18 +120,29 @@ const UniversalTrackItem: React.FC<UniversalTrackItemProps> = ({
             )}
             
             {showCover && (
-                <div className={styles.trackCover}>
-                    <img 
-                        src={track.coverUrl || DEFAULT_COVER_URL} 
-                        alt={track.title}
-                        onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_COVER_URL }} 
-                    />
-                    {isCurrentlyPlaying && (
-                        <div className={styles.playingOverlay}>
-                            <span className={styles.playingIndicator}></span>
-                        </div>
-                    )}
-                </div>
+                <button 
+                    className={styles.trackCoverButton}
+                    onClick={handlePlayClick}
+                    title={isCurrentlyPlaying ? 'Пауза' : 'Воспроизвести'}
+                >
+                    <div className={styles.trackCover}>
+                        <img 
+                            src={track.coverUrl || DEFAULT_COVER_URL} 
+                            alt={track.title}
+                            onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_COVER_URL }} 
+                        />
+                        {isCurrentlyPlaying && (
+                            <div className={styles.playingOverlay}>
+                                <span className={styles.playingIndicator}></span>
+                            </div>
+                        )}
+                        {!isCurrentlyPlaying && (
+                            <div className={styles.playOverlay}>
+                                <PlayArrowIcon className={styles.playIcon} />
+                            </div>
+                        )}
+                    </div>
+                </button>
             )}
             
             <div className={styles.trackInfo}>
@@ -148,37 +160,15 @@ const UniversalTrackItem: React.FC<UniversalTrackItemProps> = ({
             
             <div className={styles.trackControls}>
                 <button 
-                    className={styles.trackControlButton}
-                    onClick={handlePlayClick}
-                    title={isCurrentlyPlaying ? 'Пауза' : 'Воспроизвести'}
-                >
-                    {isCurrentlyPlaying ? (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/>
-                            <rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/>
-                        </svg>
-                    ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 4.99998L19 12L5 19V4.99998Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                        </svg>
-                    )}
-                </button>
-                
-                <button 
                     className={`${styles.trackControlButton} ${isInLib ? styles.inLibrary : ''}`}
                     onClick={handleLibraryAction}
                     disabled={isProcessing}
                     title={isInLib ? 'Удалить из Моей музыки' : 'Добавить в Мою музыку'}
                 >
                     {isInLib ? (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12L10 17L19 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                        <LibraryAddCheck />
                     ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 6V18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                            <path d="M18 12L6 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
+                        <LibraryAdd />
                     )}
                 </button>
                 
@@ -187,12 +177,7 @@ const UniversalTrackItem: React.FC<UniversalTrackItemProps> = ({
                     onClick={handleAddToQueueClick}
                     title="Добавить в очередь"
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 6H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        <path d="M3 12H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        <path d="M3 18H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        <path d="M19 15L22 18L19 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                    <ViewList />
                 </button>
                 
                 {onRemove && (
@@ -201,10 +186,7 @@ const UniversalTrackItem: React.FC<UniversalTrackItemProps> = ({
                         onClick={() => onRemove(track.id)}
                         title="Удалить"
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                        <DeleteForever />
                     </button>
                 )}
             </div>

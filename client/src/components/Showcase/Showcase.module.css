@@ -3,6 +3,12 @@
     border-radius: 12px;
     border: 1px solid var(--vseti-color-border);
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.showcase > *:nth-child(n+3) {
+    margin-top: 20px;
 }
 
 .tabs {
@@ -47,7 +53,7 @@
 }
 
 .section {
-    margin-bottom: 20px;
+  
 }
 
 .section:last-child {
@@ -154,7 +160,9 @@
 .photosGrid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 0;
+    gap: 3px;
+    overflow: hidden;
+    border-radius: var(--border-radius);
 }
 
 .photoItem {
@@ -166,7 +174,7 @@
 }
 
 .photoItem:hover {
-    opacity: 0.9;
+    opacity: 0.8;
 }
 
 .photoItem img {
@@ -181,14 +189,12 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-bottom: 15px;
 }
 
 .musicGrid {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-bottom: 15px;
 }
 
 .showcaseTrackItem {
@@ -316,13 +322,12 @@
 .emptySection {
     padding: 30px;
     text-align: center;
-    background: var(--vseti-color-background-light);
+    background: var(--vseti-color-background);
     border-radius: 8px;
-    margin-bottom: 20px;
 }
 
 .emptyIcon {
-    font-size: 48px;
+
     margin-bottom: 15px;
     color: var(--vseti-color-gray);
 }

@@ -117,4 +117,15 @@ export class MusicService {
             throw error;
         }
     }
+    
+    // Поиск треков
+    static async searchTracks(query: string): Promise<{ libraryTracks: Track[], serverTracks: Track[] }> {
+        try {
+            const result = await api.get(`${this.API_ENDPOINT}/search?query=${encodeURIComponent(query)}`);
+            return result;
+        } catch (error) {
+            console.error('Ошибка при поиске треков:', error);
+            return { libraryTracks: [], serverTracks: [] };
+        }
+    }
 } 

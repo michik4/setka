@@ -4,6 +4,10 @@ node_modules/
 # выводы
 coverage/
 
+# публичные файлы и файлы сборки
+public/
+build/
+
 # хранения файлов
 uploads/
 
@@ -11,6 +15,10 @@ uploads/
 .env
 .env.local
 .env.*.local
+
+# скрипты
+*.sh
+
 
 # Логи
 npm-debug.log*

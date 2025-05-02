@@ -323,13 +323,75 @@ router.post('/upload/multiple', authenticateSession, multer({
     }
 });
 
+// Поиск треков - должен быть ПЕРЕД маршрутом /:id
+router.get('/search', authenticateSession, async (req: any, res) => {
+    console.log('[API Music] GET /search - Запрос на поиск треков');
+    
+    try {
+        if (!req.user || !req.user.id) {
+            console.error('[API Music] Пользователь не аутентифицирован или ID отсутствует');
+            return res.status(401).json({ message: 'Пользователь не аутентифицирован' });
+        }
+        
+        const userId = req.user.id;
+        const query = req.query.query as string || '';
+        
+        if (!query.trim()) {
+            return res.json({
+                libraryTracks: [],
+                serverTracks: []
+            });
+        }
+        
+        console.log(`[API Music] Поиск треков по запросу: "${query}" для пользователя ${userId}`);
+        
+        // Поиск треков в библиотеке пользователя с нечувствительностью к регистру
+        const libraryTracks = await musicRepository
+            .createQueryBuilder('track')
+            .where('track.userId = :userId', { userId })
+            .andWhere('(LOWER(track.title) LIKE LOWER(:query) OR LOWER(track.artist) LIKE LOWER(:query))', 
+                     { query: `%${query}%` })
+            .orderBy('track.createdAt', 'DESC')
+            .getMany();
+        
+        console.log(`[API Music] Найдено ${libraryTracks.length} треков в библиотеке пользователя`);
+        
+        // Поиск треков на сервере с нечувствительностью к регистру
+        const serverTracks = await musicRepository
+            .createQueryBuilder('track')
+            .where('track.userId != :userId', { userId })
+            .andWhere('(LOWER(track.title) LIKE LOWER(:query) OR LOWER(track.artist) LIKE LOWER(:query))', 
+                     { query: `%${query}%` })
+            .orderBy('track.playCount', 'DESC') // Сортируем по популярности
+            .limit(50) // Ограничиваем результаты, чтобы не возвращать слишком много
+            .getMany();
+        
+        console.log(`[API Music] Найдено ${serverTracks.length} треков на сервере`);
+        
+        // Возвращаем результаты поиска
+        return res.json({
+            libraryTracks,
+            serverTracks
+        });
+    } catch (error) {
+        console.error('[API Music] Ошибка при поиске треков:', error);
+        return res.status(500).json({ message: 'Ошибка сервера при поиске треков' });
+    }
+});
+
 // Получить один трек по ID
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const trackId = parseInt(id);
+        
+        // Проверяем, является ли trackId действительным числом
+        if (isNaN(trackId)) {
+            return res.status(400).json({ message: 'Неверный формат ID трека' });
+        }
         
         const track = await musicRepository.findOne({
-            where: { id: parseInt(id) }
+            where: { id: trackId }
         });
         
         if (!track) {

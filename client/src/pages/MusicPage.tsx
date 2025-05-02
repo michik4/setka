@@ -8,6 +8,10 @@ import AuOrder from '../components/AuPlayer/AuOrder';
 import { usePlayer } from '../contexts/PlayerContext';
 import UploadAudio, { MultiUploadAudio } from '../components/UploadAudio';
 import { Link } from 'react-router-dom';
+import { tokenService } from '../utils/api';
+import UniversalTrackItem from '../components/UniversalTrackItem/UniversalTrackItem';
+import { MusicService } from '../services/music.service';
+import { Search as SearchIcon } from '@mui/icons-material';
 // Получаем URL API из переменных окружения
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || '/api/media';
@@ -34,7 +38,8 @@ interface PaginationInfo {
 enum TabType {
     MyMusic = 'my-music',
     Queue = 'queue',
-    Albums = 'albums'
+    Albums = 'albums',
+    Search = 'search'
 }
 
 export const MusicPage: React.FC = () => {
@@ -62,6 +67,14 @@ export const MusicPage: React.FC = () => {
         hasMore: false
     });
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    // Состояние для поиска
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResults, setSearchResults] = useState<{
+        libraryTracks: Track[],
+        serverTracks: Track[]
+    }>({ libraryTracks: [], serverTracks: [] });
+    
     const { 
         playTrack, 
         currentTrack: playerTrack, 
@@ -183,12 +196,17 @@ export const MusicPage: React.FC = () => {
         setIsLoading(resetTracks);
         setIsLoadingMore(page > 1);
         
+        // Получаем токен из tokenService
+        const token = tokenService.getToken();
+        
         // Загружаем все треки сразу, увеличив лимит
         fetch(`${API_URL}/music?page=${page}&limit=1000`, {
             headers: {
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                // Добавляем токен в заголовок Authorization, если он есть
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             },
-            credentials: 'include'
+            // Удаляем credentials: 'include', так как теперь используем токены, а не куки
         })
             .then(response => {
                 if (!response.ok) {
@@ -263,11 +281,16 @@ export const MusicPage: React.FC = () => {
             // Загружаем все треки пользователя без пагинации
             setIsLoading(true);
             
+            // Получаем токен из tokenService
+            const token = tokenService.getToken();
+            
             const response = await fetch(`${API_URL}/music?limit=1000`, {
                 headers: {
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    // Добавляем токен в заголовок Authorization, если он есть
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
-                credentials: 'include'
+                // Удаляем credentials: 'include', так как теперь используем токены, а не куки
             });
             
             if (!response.ok) {
@@ -335,12 +358,17 @@ export const MusicPage: React.FC = () => {
         }
         
         try {
+            // Получаем токен из tokenService
+            const token = tokenService.getToken();
+            
             const response = await fetch(`${API_URL}/music/${trackId}`, {
                 method: 'DELETE',
                 headers: {
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    // Добавляем токен в заголовок Authorization, если он есть
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
-                credentials: 'include'
+                // Удаляем credentials: 'include', так как теперь используем токены, а не куки
             });
             
             if (response.ok) {
@@ -387,12 +415,17 @@ export const MusicPage: React.FC = () => {
         }
         
         try {
+            // Получаем токен из tokenService
+            const token = tokenService.getToken();
+            
             const response = await fetch(`${API_URL}/music/user/all`, {
                 method: 'DELETE',
-                credentials: 'include',
                 headers: {
-                    'Accept': 'application/json'
-                }
+                    'Accept': 'application/json',
+                    // Добавляем токен в заголовок Authorization, если он есть
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                // Удаляем credentials: 'include', так как теперь используем токены, а не куки
             });
             
             if (!response.ok) {
@@ -515,89 +548,17 @@ export const MusicPage: React.FC = () => {
                                 </div>
                             </div>
                             
-                            <div className={styles.modernTrackList}>
-                                {tracks.map((track, index) => {
-                                    const isCurrentTrack = playerTrack && playerTrack.id === track.id;
-                                    const coverUrl = getTrackCover(track.coverUrl);
-                                    
-                                    return (
-                                        <div 
-                                            key={track.id} 
-                                            className={`${styles.trackItem} ${isCurrentTrack ? styles.activeTrack : ''}`}
-                                        >
-                                            <div 
-                                                className={styles.trackMainInfo}
-                                                onClick={() => handleSelectTrack(track)}
-                                            >
-                                                <div className={styles.trackCoverContainer}>
-                                                    <img 
-                                                        src={coverUrl} 
-                                                        alt={track.title} 
-                                                        className={styles.trackCover}
-                                                        onError={(e) => {
-                                                            (e.target as HTMLImageElement).src = '/api/music/cover/default.png';
-                                                        }}
-                                                    />
-                                                    {isCurrentTrack && playerIsPlaying ? (
-                                                        <div className={styles.playingOverlay}>
-                                                            <div className={styles.playingWaveform}>
-                                                                <span></span>
-                                                                <span></span>
-                                                                <span></span>
-                                                                <span></span>
-                                                                <span></span>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className={styles.playOverlay}>
-                                                            <div className={styles.playIcon}>
-                                                                <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
-                                                                    <path d="M8 5v14l11-7z"/>
-                                                                </svg>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                
-                                                <div className={styles.trackMetadata}>
-                                                    <div className={styles.trackTitle}>
-                                                        {track.title}
-                                                    </div>
-                                                    <div className={styles.trackArtist}>
-                                                        {track.artist}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className={styles.trackSecondaryInfo}>
-                                                <div className={styles.trackDuration}>
-                                                    {track.duration}
-                                                </div>
-                                                
-                                                <div className={styles.trackActions}>
-                                                    <button 
-                                                        className={styles.queueButton}
-                                                        onClick={(e) => handleAddToQueue(track, e)}
-                                                        title="Добавить в очередь"
-                                                    >
-                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                                            <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/>
-                                                        </svg>
-                                                    </button>
-                                                    <button 
-                                                        className={styles.deleteButton}
-                                                        onClick={(e) => handleDeleteTrack(track.id, e)}
-                                                        title="Удалить трек"
-                                                    >
-                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5l-1-1h-5l-1 1H5v2h14V4h-3.5z"/>
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                            <div className={styles.tracksList}>
+                                {tracks.map((track, index) => (
+                                    <UniversalTrackItem
+                                        key={track.id}
+                                        track={track}
+                                        isInLibrary={true}
+                                        onLibraryStatusChange={() => fetchTracks(1, true)}
+                                        onPlayClick={() => handleSelectTrack(track)}
+                                        onRemove={(trackId) => handleDeleteTrack(trackId, new MouseEvent('click') as any)}
+                                    />
+                                ))}
                             </div>
                             
                             {/* Индикатор загрузки дополнительных треков */}
@@ -632,11 +593,6 @@ export const MusicPage: React.FC = () => {
             );
         }
         
-        // Определяем индекс текущего трека
-        const currentQueueIndex = playerTrack 
-            ? queueTracks.findIndex(track => track.id === playerTrack.id) 
-            : -1;
-        
         return (
             <div className={styles.queueContainer}>
                 <div className={styles.queueHeader}>
@@ -646,20 +602,22 @@ export const MusicPage: React.FC = () => {
                     </div>
                 </div>
                 
-                <AuOrder 
-                    tracks={queueTracks} 
-                    currentTrackIndex={currentQueueIndex} 
-                    onSelectTrack={(index) => {
-                        if (queueTracks[index]) {
-                            playTrack(queueTracks[index]);
-                        }
-                    }} 
-                    onDeleteTrack={(trackId) => {
-                        // Удаляем трек из очереди по ID
-                        setQueueTracks(prev => prev.filter(t => t.id !== trackId));
-                    }}
-                    expandedMode={true}
-                />
+                <div className={styles.tracksList}>
+                    {queueTracks.map((track) => (
+                        <UniversalTrackItem
+                            key={track.id}
+                            track={track}
+                            variant="queue"
+                            isInLibrary={true}
+                            onLibraryStatusChange={() => fetchTracks(1, true)}
+                            onPlayClick={() => playTrack(track)}
+                            onRemove={(trackId) => {
+                                // Удаляем трек из очереди по ID
+                                setQueueTracks(prev => prev.filter(t => t.id !== trackId));
+                            }}
+                        />
+                    ))}
+                </div>
             </div>
         );
     };
@@ -686,6 +644,109 @@ export const MusicPage: React.FC = () => {
         if (audio) {
             audio.volume = newVolume;
         }
+    };
+
+    // Функция для выполнения поиска
+    const handleSearch = async () => {
+        if (!searchQuery.trim()) {
+            setSearchResults({ libraryTracks: [], serverTracks: [] });
+            return;
+        }
+        
+        setIsSearching(true);
+        try {
+            const results = await MusicService.searchTracks(searchQuery);
+            setSearchResults(results);
+            
+            // Если есть результаты, переключаемся на вкладку поиска
+            if (activeTab !== TabType.Search) {
+                setActiveTab(TabType.Search);
+            }
+        } catch (error) {
+            console.error('Ошибка при выполнении поиска:', error);
+            // Можно добавить обработку ошибки, например показать уведомление
+        } finally {
+            setIsSearching(false);
+        }
+    };
+    
+    // Обработчик изменения поискового запроса
+    const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
+    };
+    
+    // Обработчик нажатия Enter в поисковой строке
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
+
+    // Рендер вкладки с результатами поиска
+    const renderSearchTab = () => {
+        if (isSearching) {
+            return (
+                <div className={styles.loadingContainer}>
+                    <Spinner />
+                    <p>Выполняется поиск...</p>
+                </div>
+            );
+        }
+        
+        const { libraryTracks, serverTracks } = searchResults;
+        const totalResults = libraryTracks.length + serverTracks.length;
+        
+        if (searchQuery.trim() === '') {
+            return (
+                <div className={styles.emptyState}>
+                    <p>Введите поисковый запрос, чтобы найти треки</p>
+                </div>
+            );
+        }
+        
+        if (totalResults === 0) {
+            return (
+                <div className={styles.emptyState}>
+                    <p>По запросу "{searchQuery}" ничего не найдено</p>
+                </div>
+            );
+        }
+        
+        return (
+            <div className={styles.searchResults}>
+                {libraryTracks.length > 0 && (
+                    <div className={styles.searchSection}>
+                        <h3 className={styles.searchSectionTitle}>В Вашей библиотеке</h3>
+                        <div className={styles.tracksList}>
+                            {libraryTracks.map((track) => (
+                                <UniversalTrackItem
+                                    key={`lib-${track.id}`}
+                                    track={track}
+                                    isInLibrary={true}
+                                    onLibraryStatusChange={() => fetchTracks(1, true)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+                
+                {serverTracks.length > 0 && (
+                    <div className={styles.searchSection}>
+                        <h3 className={styles.searchSectionTitle}>В сети</h3>
+                        <div className={styles.tracksList}>
+                            {serverTracks.map((track) => (
+                                <UniversalTrackItem
+                                    key={`server-${track.id}`}
+                                    track={track}
+                                    isInLibrary={false}
+                                    onLibraryStatusChange={() => fetchTracks(1, true)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     // Если страница загружается в первый раз, показываем индикатор загрузки
@@ -724,23 +785,42 @@ export const MusicPage: React.FC = () => {
                 <div className={styles.header}>
                     <h1 className={styles.title}>Музыка</h1>
                     <p className={styles.subtitle}>Слушайте и добавляйте в плейлисты</p>
-                        
-                        {/* Кнопка переключения режима отображения */}
+                    
+                    {/* Поисковая строка */}
+                    <div className={styles.searchContainer}>
+                        <input
+                            type="text"
+                            className={styles.searchInput}
+                            placeholder="Поиск треков..."
+                            value={searchQuery}
+                            onChange={handleSearchInputChange}
+                            onKeyDown={handleSearchKeyDown}
+                        />
                         <button 
-                            className={styles.viewModeToggle}
-                            onClick={toggleViewMode}
-                            title={expandedView ? "Список треков" : "Расширенный плеер"}
+                            className={styles.searchButton}
+                            onClick={handleSearch}
+                            disabled={isSearching}
                         >
-                            {expandedView ? (
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                    <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
-                                </svg>
-                            ) : (
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
-                                </svg>
-                            )}
+                            <SearchIcon />
                         </button>
+                    </div>
+                        
+                    {/* Кнопка переключения режима отображения */}
+                    <button 
+                        className={styles.viewModeToggle}
+                        onClick={toggleViewMode}
+                        title={expandedView ? "Список треков" : "Расширенный плеер"}
+                    >
+                        {expandedView ? (
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                            </svg>
+                        ) : (
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                            </svg>
+                        )}
+                    </button>
                 </div>
 
                 {debugVisible && debugInfo && (
@@ -767,13 +847,35 @@ export const MusicPage: React.FC = () => {
                         >
                             Очередь {queueTracks.length > 0 ? `(${queueTracks.length})` : ''}
                         </button>
-                        <Link to="/music/albums" className={styles.tab}>
+                        <button 
+                            className={`${styles.tab} ${activeTab === TabType.Albums ? styles.tabActive : ''}`}
+                            onClick={() => setActiveTab(TabType.Albums)}
+                        >
                             Альбомы
-                        </Link>
+                        </button>
+                        <button 
+                            className={`${styles.tab} ${activeTab === TabType.Search ? styles.tabActive : ''}`}
+                            onClick={() => setActiveTab(TabType.Search)}
+                        >
+                            Поиск
+                        </button>
                     </div>
 
                     <div className={styles.tabContent}>
-                        {activeTab === TabType.MyMusic ? renderMyMusicTab() : renderQueueTab()}
+                        {activeTab === TabType.MyMusic ? renderMyMusicTab() : activeTab === TabType.Queue ? renderQueueTab() : activeTab === TabType.Albums ? (
+                            <div className={styles.tabContent}>
+                                <div className={styles.albumsGrid}>
+                                    <div className={styles.album}>
+                                        <Link to="/music/albums/create" className={styles.createAlbumLink}>
+                                            <div className={styles.createAlbumTile}>
+                                                <div className={styles.createAlbumIcon}>+</div>
+                                                <div className={styles.createAlbumLabel}>Создать альбом</div>
+                                            </div>
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : renderSearchTab()}
                     </div>
                 </div>
 

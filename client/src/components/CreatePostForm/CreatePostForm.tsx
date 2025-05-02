@@ -397,7 +397,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                 })),
                 authorType: selectedAuthor.type,
                 authorId: selectedAuthor.id,
-                ...(wallOwnerId ? { wallOwnerId } : {})
+                ...(wallOwnerId ? { wallOwnerId } : { wallOwnerId: selectedAuthor.id })
             };
 
             console.log('Отправка данных поста:', postData);

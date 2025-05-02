@@ -14,7 +14,10 @@
     --vseti-color-button: #fff;
     --vseti-color-button-hover: #caffef;
     --vseti-color-button-active: #25c97a;
-    
+
+    --vseti-color-button-in-card-item: var(--vseti-color-card);
+    --vseti-color-button-in-card-item-hover: var(--vseti-color-card-hover);
+
     --vseti-color-card: #262c35;
     --vseti-color-card-hover: #2d333c;
     --vseti-color-card-active: #343b47;
@@ -34,6 +37,8 @@
     --vseti-color-text-accent: #18a75f;
     
     --vseti-color-icon: #757b84;
+    
+    
     --vseti-color-scrollbar: #3c444f;
     --vseti-color-scrollbar-light: #c1c9d1;
     --vseti-color-error: #e64646;
@@ -83,10 +88,11 @@ button {
     padding: 8px 16px;
 }
 
+/*
 button:hover {
     background-color: var(--vseti-color-button-hover);
 }
-
+*/
 
 
 .app {
