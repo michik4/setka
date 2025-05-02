@@ -64,11 +64,13 @@ export const UserPage: React.FC = () => {
         if (isNaN(id)) throw new Error('Неверный формат ID пользователя');
         
         try {
+            console.log(`[UserPage] Загрузка постов для стены, userId=${id}, page=${page}, offset=${page * PAGE_SIZE}`);
             const response = await api.get(`/wall/${id}?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`);
             if (!response || typeof response !== 'object' || !Array.isArray(response.posts)) {
                 console.error('Неверный формат данных постов:', response);
                 throw new Error('Неверный формат данных постов');
             }
+            console.log(`[UserPage] Загружено ${response.posts.length} постов для стены`);
             return response.posts;
         } catch (err) {
             console.error('Ошибка при получении постов:', err);
@@ -98,6 +100,7 @@ export const UserPage: React.FC = () => {
     // Эффект для сброса и перезагрузки постов при изменении refreshPostsKey
     useEffect(() => {
         if (refreshPostsKey > 0) {
+            console.log('[UserPage] Сброс и перезагрузка постов, refreshPostsKey =', refreshPostsKey);
             resetPosts();
         }
     }, [refreshPostsKey, resetPosts]);
@@ -108,11 +111,13 @@ export const UserPage: React.FC = () => {
 
     const handlePostCreated = useCallback(() => {
         // Обновляем посты после создания нового
+        console.log('[UserPage] Вызвана функция handlePostCreated после создания поста');
         setRefreshPostsKey(prev => prev + 1);
     }, []);
 
     const handlePostDeleted = useCallback((postId: number) => {
         // При удалении поста просто перезагружаем все
+        console.log('[UserPage] Вызвана функция handlePostDeleted, postId =', postId);
         setRefreshPostsKey(prev => prev + 1);
     }, []);
 

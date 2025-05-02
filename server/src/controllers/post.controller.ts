@@ -838,12 +838,8 @@ export class PostController {
                 
             const groupIds = userGroups.map(group => group.id);
             
-            // Если пользователь не подписан ни на одну группу, возвращаем пустой массив
-            if (groupIds.length === 0) {
-                res.json([]);
-                return;
-            }
-            
+            // Запрос теперь включает как посты из групп, так и собственные посты пользователя
+            // Обратите внимание на изменение условия WHERE
             const postsQuery = await this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.author', 'author')
@@ -886,7 +882,14 @@ export class PostController {
                     'tracks.filename',
                     'tracks.coverUrl'
                 ])
-                .where('post.groupId IN (:...groupIds)', { groupIds })
+                .where(
+                    // Теперь запрос включает ИЛИ: 1) посты из групп, на которые подписан пользователь,
+                    // ИЛИ 2) посты самого пользователя, где он автор
+                    groupIds.length > 0 
+                        ? '(post.groupId IN (:...groupIds) OR post.authorId = :userId)'
+                        : 'post.authorId = :userId',
+                    { groupIds, userId }
+                )
                 .orderBy('post.createdAt', 'DESC')
                 .take(limit)
                 .skip(offset)
@@ -916,7 +919,7 @@ export class PostController {
             console.log(`[PostController] Найдено ${posts.length} постов (limit=${limit}, offset=${offset})`);
             res.json(posts);
         } catch (err) {
-            console.error('Ошибка при получении постов из групп, на которые подписан пользователь:', err);
+            console.error('Ошибка при получении постов из групп и собственных постов пользователя:', err);
             res.status(500).json({ error: 'Ошибка при получении постов' });
         }
     };

@@ -8,6 +8,10 @@ const session_service_1 = require("../services/session.service");
 const user_service_1 = require("../services/user.service");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const placeholder_1 = require("../utils/placeholder");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+// JWT секретный ключ (в продакшене должен быть в .env)
+const JWT_SECRET = 'your-secret-key-should-be-in-env-file';
+const TOKEN_EXPIRES_IN = '30d'; // 30 дней
 class AuthController {
     constructor() {
         this.register = async (req, res) => {
@@ -31,16 +35,11 @@ class AuthController {
                 });
                 // Создаем сессию для нового пользователя
                 const session = await this.sessionService.createSession(user, (_a = req.ip) !== null && _a !== void 0 ? _a : 'unknown', (_b = req.headers['user-agent']) !== null && _b !== void 0 ? _b : 'unknown');
-                // Устанавливаем cookie с идентификатором сессии
-                res.cookie('session_id', session.sessionId, {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'none',
-                    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
-                    path: '/'
-                });
+                // Генерируем JWT токен
+                const token = this.generateToken(user.id, session.sessionId);
                 return res.status(201).json({
                     message: 'Регистрация успешна',
+                    token,
                     user: {
                         id: user.id,
                         email: user.email,
@@ -70,20 +69,20 @@ class AuthController {
                     return res.status(401).json({ message: 'Неверный email или пароль' });
                 }
                 const session = await this.sessionService.createSession(user, (_a = req.ip) !== null && _a !== void 0 ? _a : 'unknown', (_b = req.headers['user-agent']) !== null && _b !== void 0 ? _b : 'unknown');
-                res.cookie('session_id', session.sessionId, {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'none',
-                    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
-                    path: '/'
-                });
-                return res.json({
+                // Генерируем JWT токен
+                const token = this.generateToken(user.id, session.sessionId);
+                // Проверяем, что токен сгенерирован
+                console.log("[Auth Controller] Сгенерирован токен:", token ? "✓" : "✗");
+                const responseData = {
+                    token,
                     id: user.id,
                     email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName,
                     nickname: user.nickname
-                });
+                };
+                console.log("[Auth Controller] Отправляем ответ:", JSON.stringify(responseData));
+                return res.json(responseData);
             }
             catch (error) {
                 console.error('Ошибка при авторизации:', error);
@@ -91,19 +90,12 @@ class AuthController {
             }
         };
         this.logout = async (req, res) => {
-            var _a;
             try {
-                const sessionId = (_a = req.cookies) === null || _a === void 0 ? void 0 : _a.session_id;
-                if (sessionId) {
-                    await this.sessionService.deactivateSession(sessionId);
+                // Получаем sessionId из JWT токена (req.user устанавливается в middleware)
+                if (req.sessionId) {
+                    await this.sessionService.deactivateSession(req.sessionId);
                     // Очищаем временные файлы
                     await placeholder_1.PhotoPlaceholder.cleanupTempFiles();
-                    res.clearCookie('session_id', {
-                        httpOnly: true,
-                        secure: true,
-                        sameSite: 'none',
-                        path: '/'
-                    });
                 }
                 return res.json({ message: 'Успешный выход' });
             }
@@ -121,12 +113,6 @@ class AuthController {
                 await this.sessionService.deactivateAllUserSessions(userId);
                 // Очищаем временные файлы
                 await placeholder_1.PhotoPlaceholder.cleanupTempFiles();
-                res.clearCookie('session_id', {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'none',
-                    path: '/'
-                });
                 return res.json({ message: 'Успешный выход со всех устройств' });
             }
             catch (error) {
@@ -170,6 +156,26 @@ class AuthController {
                 res.status(500).json({ message: 'Ошибка сервера' });
             }
         };
+        // Обновление токена
+        this.refreshToken = async (req, res) => {
+            try {
+                if (!req.user || !req.sessionId) {
+                    return res.status(401).json({ message: 'Не авторизован' });
+                }
+                // Проверяем активность сессии
+                const session = await this.sessionService.validateSession(req.sessionId);
+                if (!session) {
+                    return res.status(401).json({ message: 'Недействительная сессия' });
+                }
+                // Генерируем новый токен
+                const token = this.generateToken(req.user.id, req.sessionId);
+                return res.json({ token });
+            }
+            catch (error) {
+                console.error('Ошибка при обновлении токена:', error);
+                return res.status(500).json({ message: 'Ошибка сервера при обновлении токена' });
+            }
+        };
         // Новый метод для очистки временных файлов
         this.cleanupTemp = async (req, res) => {
             try {
@@ -183,6 +189,15 @@ class AuthController {
         };
         this.userService = new user_service_1.UserService();
         this.sessionService = new session_service_1.SessionService();
+    }
+    // Генерация JWT токена
+    generateToken(userId, sessionId) {
+        const token = jsonwebtoken_1.default.sign({
+            userId,
+            sessionId
+        }, JWT_SECRET, { expiresIn: TOKEN_EXPIRES_IN });
+        console.log("[Auth Controller] Генерация токена для пользователя:", userId, "сессия:", sessionId);
+        return token;
     }
 }
 exports.AuthController = AuthController;

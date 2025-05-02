@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Track } from '../types/music.types';
+import { tokenService } from '../utils/api';
 
 // Добавим объявление типа для window.playerContextData
 declare global {
@@ -101,11 +102,17 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchUserTracks = async () => {
     try {
       console.log('[QueueContext] Загрузка треков пользователя для инициализации очереди...');
+      
+      // Получаем токен из tokenService
+      const token = tokenService.getToken();
+      
       const response = await fetch(`${API_URL}/music?limit=1000`, {
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          // Добавляем токен в заголовок Authorization, если он есть
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        credentials: 'include'
+        // Удаляем credentials: 'include', так как теперь используем токены, а не куки
       });
       
       if (!response.ok) {

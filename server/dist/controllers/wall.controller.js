@@ -178,6 +178,7 @@ class WallController {
         try {
             const { userId } = req.params;
             const { page = 1, limit = 10 } = req.query;
+            console.log(`[WallController] Запрос на получение записей со стены пользователя: ${userId}, страница ${page}, лимит ${limit}`);
             const queryBuilder = this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.author', 'author')
@@ -217,6 +218,7 @@ class WallController {
                 .take(Number(limit))
                 .skip((Number(page) - 1) * Number(limit));
             const [postsQuery, total] = await queryBuilder.getManyAndCount();
+            console.log(`[WallController] Найдено ${postsQuery.length} записей для стены пользователя ${userId} из ${total} всего`);
             // Для каждого поста загружаем альбомы
             const posts = [];
             try {
@@ -239,12 +241,14 @@ class WallController {
                 // В случае ошибки добавляем посты без альбомов
                 posts.push(...postsQuery.map(post => ({ ...post, albums: [], wallOwnerId: parseInt(userId) })));
             }
-            res.json({
+            const response = {
                 posts,
                 totalPosts: total,
                 currentPage: Number(page),
                 totalPages: Math.ceil(total / Number(limit))
-            });
+            };
+            console.log(`[WallController] Отправка ${posts.length} постов клиенту, всего страниц: ${response.totalPages}`);
+            res.json(response);
         }
         catch (error) {
             console.error('Ошибка при получении записей со стены:', error);

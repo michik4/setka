@@ -396,9 +396,11 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                     id: attachment.id
                 })),
                 authorType: selectedAuthor.type,
-                authorId: selectedAuthor.id
+                authorId: selectedAuthor.id,
+                ...(wallOwnerId ? { wallOwnerId } : {})
             };
 
+            console.log('Отправка данных поста:', postData);
             const response = await api.post('/posts', postData);
 
             if (response) {

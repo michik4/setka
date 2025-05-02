@@ -41,7 +41,7 @@ const ServerImage = forwardRef<HTMLImageElement, ServerImageProps>(({
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
     
-    // Формируем URL изображения
+    // Формируем URL изображения - вычисление при каждом рендере, но без setState
     let imageSrc = '';
     if (src) {
         imageSrc = src;
@@ -49,10 +49,6 @@ const ServerImage = forwardRef<HTMLImageElement, ServerImageProps>(({
         imageSrc = `${API_URL}/users/${userId}/avatar`;
     } else if (groupId && isAvatar) {
         imageSrc = `${API_URL}/groups/${groupId}/avatar`;
-        // Проверяем, была ли ошибка загрузки этого изображения ранее
-        if (erroredImages[imageSrc] && fallback) {
-            setImageError(true);
-        }
     } else if (imageId) {
         imageSrc = `${API_URL}/photos/${imageId}?file=true`;
     } else if (path) {
@@ -72,17 +68,29 @@ const ServerImage = forwardRef<HTMLImageElement, ServerImageProps>(({
             imageSrc = `${API_URL}/photos/file/${path}`;
         }
     }
+    
+    // Проверяем ошибочные изображения при первом рендере
+    useEffect(() => {
+        // Проверяем, была ли ошибка загрузки этого изображения ранее
+        if (imageSrc && erroredImages[imageSrc] && !imageError) {
+            setImageError(true);
+        }
+    }, [imageSrc, imageError]);
 
     // Предзагрузка изображения
     useEffect(() => {
-        if (!imageSrc || isDeleted || imageCache[imageSrc] || erroredImages[imageSrc]) {
-            // Если нет URL, изображение уже в кэше или имело ошибку ранее
-            if (imageCache[imageSrc]) {
+        if (!imageSrc || isDeleted || imageCache[imageSrc]) {
+            // Если нет URL или изображение уже в кэше
+            if (imageSrc && imageCache[imageSrc]) {
                 setImageLoaded(true);
                 onLoad?.();
-            } else if (erroredImages[imageSrc]) {
-                setImageError(true);
             }
+            return;
+        }
+        
+        // Если изображение уже помечено как ошибочное, не загружаем его снова
+        if (erroredImages[imageSrc]) {
+            setImageError(true);
             return;
         }
 
@@ -113,7 +121,7 @@ const ServerImage = forwardRef<HTMLImageElement, ServerImageProps>(({
             img.onload = null;
             img.onerror = null;
         };
-    }, [imageSrc, isDeleted, imageId, extension, path, onLoad]);
+    }, [imageSrc, isDeleted, onLoad]);
 
     useEffect(() => {
         // Добавляем обработчик для очистки временных файлов при закрытии вкладки

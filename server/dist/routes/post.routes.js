@@ -21,8 +21,8 @@ router.use((req, res, next) => {
 });
 // Получение всех постов
 router.get('/', auth_middleware_1.authenticateSession, (req, res) => {
-    console.log('[Posts] Запрос на получение всех постов');
-    initializeController().getAllPosts(req, res);
+    console.log('[Posts Routes] Запрос на получение всех постов');
+    initializeController().getPosts(req, res);
 });
 // Получение постов из групп, на которые подписан пользователь
 router.get('/subscribed-groups', auth_middleware_1.authenticateSession, (req, res) => {

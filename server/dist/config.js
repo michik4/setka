@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 exports.config = {
-    CLIENT_URL: /*process.env.CLIENT_URL || */ 'http://localhost:3001',
+    CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3001',
     PORT: process.env.PORT || 3000,
     HOST: process.env.HOST || '0.0.0.0',
     DB_HOST: process.env.DB_HOST || 'localhost',
