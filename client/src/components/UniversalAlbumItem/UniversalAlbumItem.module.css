@@ -1,0 +1,255 @@
+.albumItem {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--vseti-color-card-item);
+    border-radius: var(--border-radius);
+    transition: transform 0.2s, background-color 0.2s;
+    cursor: pointer;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.albumItem:hover {
+    background-color: var(--vseti-color-card-item-hover);
+    transform: translateY(-2px);
+}
+
+.albumItem:hover .overlay {
+    opacity: 1;
+}
+
+/* Состояние, когда альбом развернут */
+.expanded {
+    transform: none !important;
+    border: 1px solid var(--vseti-color-border);
+}
+
+.expanded:hover {
+    transform: none !important;
+    background-color: var(--vseti-color-card-item);
+}
+
+/* Заголовок альбома с обложкой */
+.albumHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px;
+    gap: 10px;
+}
+
+/* Варианты отображения */
+.default {
+    width: 100%;
+    height: auto;
+}
+
+.default .albumHeader {
+    height: auto;
+}
+
+.compact {
+    width: 120px;
+}
+
+.compact .albumHeader {
+    padding: 5px;
+    flex-direction: column;
+}
+
+.post {
+    width: 100%;
+    height: auto;
+}
+
+.post .albumHeader {
+    height: auto;
+}
+
+.grid {
+    width: 100%;
+    height: auto;
+}
+
+.albumCoverContainer {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.compact .albumCoverContainer {
+    width: 100%;
+    height: 0;
+    padding-bottom: 100%;
+}
+
+.albumCover {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.compact .albumCover {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.albumCover img {
+    border-radius: var(--border-radius);
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.albumItem:hover .albumCover img {
+    transform: scale(1.05);
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.playIcon {
+    color: var(--vseti-color-light-button);
+    font-size: 36px !important;
+}
+
+.post .playIcon {
+    font-size: 24px !important;
+}
+
+.albumInfo {
+    flex: 1;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.albumTitle {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vseti-color-text-primary);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.albumTracksCount {
+    font-size: 12px;
+    color: var(--vseti-color-text-tertiary);
+}
+
+/* Контейнер с треками */
+.tracksContainer {
+    padding: 0 10px 10px 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    border-top: 1px solid var(--vseti-color-border);
+    margin-top: 5px;
+}
+
+.tracksList {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* Элементы загрузки, ошибки и пустого списка */
+.loadingContainer, .errorContainer, .emptyContainer {
+    padding: 15px;
+    text-align: center;
+    color: var(--vseti-color-text-tertiary);
+}
+
+.errorContainer {
+    color: var(--vseti-color-error);
+}
+
+/* Элементы управления альбомом */
+.albumControls {
+    display: flex;
+    gap: 5px;
+}
+
+.playButton, .expandButton, .addToLibraryButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--vseti-color-light-button);
+    color: var(--vseti-color-text-secondary);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.playButton:hover, .expandButton:hover, .addToLibraryButton:hover {
+    background-color: var(--vseti-color-primary);
+    color: white;
+}
+
+.addToLibraryButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.addToLibraryButton.inLibrary {
+    color: var(--vseti-color-light-button);
+    background-color: var(--vseti-color-green-hover);
+}
+
+.addToLibraryButton.inLibrary:hover {
+    background-color: var(--vseti-color-green-active);
+}
+
+/* Адаптивный дизайн */
+@media (max-width: 768px) {
+    .default {
+        width: 100%;
+    }
+    
+    .compact {
+        width: 100px;
+    }
+    
+    .tracksContainer {
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .default {
+        width: 100%;
+    }
+    
+    .compact {
+        width: 90px;
+    }
+    
+    .playIcon {
+        font-size: 28px !important;
+    }
+    
+    .playButton, .expandButton {
+        width: 32px;
+        height: 32px;
+    }
+} 

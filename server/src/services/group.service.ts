@@ -4,6 +4,7 @@ import { User } from '../entities/user.entity';
 import { Post } from '../entities/post.entity';
 import { Photo } from '../entities/photo.entity';
 import { In } from 'typeorm';
+import { PostMusicAlbum } from '../entities/post_music_album.entity';
 
 export class GroupService {
     private groupRepository = AppDataSource.getRepository(Group);
@@ -290,8 +291,28 @@ export class GroupService {
             skip: offset
         });
 
-        // Обрабатываем треки для каждого поста, добавляя audioUrl
+        // Для каждого поста загружаем музыкальные альбомы и обрабатываем треки
         for (const post of posts) {
+            // Загружаем музыкальные альбомы для поста
+            const postMusicAlbums = await AppDataSource.getRepository(PostMusicAlbum)
+                .createQueryBuilder('postMusicAlbum')
+                .leftJoinAndSelect('postMusicAlbum.musicAlbum', 'musicAlbum')
+                .leftJoinAndSelect('musicAlbum.tracks', 'tracks')
+                .where('postMusicAlbum.postId = :postId', { postId: post.id })
+                .getMany();
+            
+            // Извлекаем музыкальные альбомы из связующей таблицы
+            const musicAlbums = postMusicAlbums.map(pma => {
+                const musicAlbum = pma.musicAlbum;
+                // Добавляем количество треков
+                musicAlbum.tracksCount = musicAlbum.tracks?.length || 0;
+                return musicAlbum;
+            });
+            
+            // Добавляем музыкальные альбомы к посту
+            post.musicAlbums = musicAlbums;
+            
+            // Добавляем audioUrl к каждому треку
             if (post.tracks && post.tracks.length > 0) {
                 post.tracks = post.tracks.map(track => ({
                     ...track,

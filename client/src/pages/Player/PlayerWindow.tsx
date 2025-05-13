@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { usePlayerWindow } from '../../contexts/PlayerWindowContext';
+import { useQueue } from '../../contexts/QueueContext';
 import { Track } from '../../types/music.types';
 import styles from './PlayerWindow.module.css';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
@@ -132,6 +133,12 @@ const IconBackToPlayer = () => (
   </svg>
 );
 
+// Функция для склонения слов по числам
+const getWordForm = (number: number, words: [string, string, string]): string => {
+    const cases = [2, 0, 1, 1, 1, 2];
+    return words[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[Math.min(number % 10, 5)]];
+};
+
 // Компонент для отображения очереди воспроизведения
 interface QueueViewProps {
     queue: any[];
@@ -148,28 +155,36 @@ const QueueView: React.FC<QueueViewProps> = ({
     onBackToPlayer,
     onRemoveTrack
 }) => {
-    // Референс для автоматической прокрутки до активного трека
+    console.log('[QueueView] Отображение очереди, треков:', queue.length, 
+              'текущий трек:', currentTrack?.title);
+                
     const activeItemRef = useRef<HTMLDivElement>(null);
     
-    // Прокручиваем к активному треку при монтировании
+    // Скроллим к активному треку при монтировании компонента
     useEffect(() => {
         if (activeItemRef.current) {
-            // Небольшая задержка для надежности
-            setTimeout(() => {
-                activeItemRef.current?.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center' 
-                });
-            }, 300);
+            activeItemRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
         }
     }, []);
-
+    
     return (
-        <div className={styles.queueView}>
-            <h2 className={styles.queueTitle}>
-                Очередь воспроизведения
-                <span className={styles.queueCount}>{queue.length} треков</span>
-            </h2>
+        <div className={styles.queueViewContainer}>
+            <div className={styles.queueHeader}>
+                <button className={styles.backButton} onClick={onBackToPlayer}>
+                    <IconBackToPlayer />
+                    <span>Вернуться к плееру</span>
+                </button>
+                <div className={styles.queueTitle}>
+                    <IconPlayingNow />
+                    <span>Очередь воспроизведения</span>
+                </div>
+                <div className={styles.queueTrackCount}>
+                    {queue.length} {getWordForm(queue.length, ['трек', 'трека', 'треков'])}
+                </div>
+            </div>
             
             {queue.length === 0 ? (
                 <div className={styles.queueNoTracks}>
@@ -187,52 +202,34 @@ const QueueView: React.FC<QueueViewProps> = ({
                                 onClick={() => onTrackSelect(index)}
                                 ref={isActive ? activeItemRef : null}
                             >
-                                <div className={styles.queueItemMain}>
-                                    <img 
-                                        src={track.coverUrl || DEFAULT_COVER_URL} 
-                                        alt={track.title} 
-                                        className={styles.queueItemCover}
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).src = DEFAULT_COVER_URL;
-                                        }}
-                                    />
-                                    <div className={styles.queueItemInfo}>
-                                        <div className={styles.queueItemTitle}>
-                                            {track.title}
-                                            {isActive && (
-                                                <span className={styles.queueNowPlaying}>
-                                                    <IconPlayingNow />
-                                                </span>
-                                            )}
+                                <div className={styles.queueItemIndex}>
+                                    {isActive ? (
+                                        <div className={styles.nowPlayingIcon}>
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
                                         </div>
-                                        <div className={styles.queueItemArtist}>{track.artist}</div>
-                                    </div>
+                                    ) : (
+                                        index + 1
+                                    )}
                                 </div>
-
-                                <div className={styles.queueItemControls}>
-                                    <button 
-                                        className={styles.queueItemRemove}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onRemoveTrack(track.id);
-                                        }}
-                                        title="Удалить из очереди"
-                                    >
-                                        <span>×</span>
-                                    </button>
-                                </div>
+                                <div className={styles.queueItemTitle}>{track.title}</div>
+                                <div className={styles.queueItemArtist}>{track.artist}</div>
+                                <div className={styles.queueItemDuration}>{track.duration}</div>
+                                <button 
+                                    className={styles.queueItemRemove}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onRemoveTrack(track.id);
+                                    }}
+                                >
+                                    &times;
+                                </button>
                             </div>
                         );
                     })}
                 </div>
             )}
-
-            <div className={styles.backToPlayerButton}>
-                <button onClick={onBackToPlayer}>
-                    <IconBackToPlayer />
-                    <span>Вернуться к плееру</span>
-                </button>
-            </div>
         </div>
     );
 };
@@ -257,32 +254,43 @@ const ImagePreloader: React.FC<{ src: string; onLoad?: () => void }> = ({ src, o
 };
 
 const PlayerWindow: React.FC = () => {
+    // Получаем состояние из PlayerContext
     const { 
-        playTrack, 
+        currentTrack, 
         isPlaying, 
-        setIsPlaying, 
-        audio,
-        tracks,
-        currentTrack,
-        currentTrackIndex,
-        getTrackCover,
-        togglePlay,
-        nextTrack,
+        setIsPlaying,
+        audio, 
+        togglePlay, 
+        nextTrack, 
         prevTrack,
+        playTrack,
+        playTrackByIndex,
         setVolume,
-        pauseTrack,
         seekTo,
-        isMasterPlayer,
-        becomeMasterPlayer,
-        repeatMode,
         toggleRepeat,
-        shuffleMode,
         toggleShuffle,
-        setCurrentTrackIndex,
+        repeatMode,
+        shuffleMode,
+        tracks,
+        shuffledQueue,
+        getTrackCover,
+        becomeMasterPlayer,
+        isMasterPlayer,
         removeTrackFromQueue,
-        setRepeatMode,
-        shuffledQueue
+        currentTrackIndex,
+        setCurrentTrackIndex
     } = usePlayer();
+    
+    // Добавляем использование QueueContext для доступа к актуальной очереди
+    const { queue: currentQueue, originalQueue } = useQueue();
+    
+    // Определяем, какие треки отображать в зависимости от режима перемешивания
+    const displayedQueue = shuffleMode ? currentQueue : tracks;
+    
+    console.log('[PlayerWindow] Режим shuffleMode:', shuffleMode, 
+               'tracks:', tracks.length, 
+               'currentQueue:', currentQueue.length, 
+               'displayedQueue:', displayedQueue.length);
     
     // Используем новый контекст отдельного окна плеера
     const { 
@@ -849,11 +857,18 @@ const PlayerWindow: React.FC = () => {
             }, 400);
         }
         
-        // Вызываем переключение режима перемешивания
-        toggleShuffle();
+        console.log(`[PlayerWindow] До переключения: режим перемешивания ${shuffleMode ? 'включен' : 'выключен'}`);
         
-        // Дополнительная обработка и обратная связь
-        console.log(`[PlayerWindow] Режим перемешивания ${!shuffleMode ? 'включен' : 'выключен'}`);
+        // Вызываем переключение режима перемешивания с небольшой задержкой для визуального эффекта
+        setTimeout(() => {
+            toggleShuffle();
+            
+            // Проверяем обновление состояния после переключения
+            setTimeout(() => {
+                console.log(`[PlayerWindow] После переключения: режим перемешивания ${!shuffleMode ? 'включен' : 'выключен'}`);
+                console.log(`[PlayerWindow] Длина очереди после переключения: displayedQueue=${displayedQueue.length}`);
+            }, 100);
+        }, 200);
     };
 
     // Обработчик изменения громкости через прямой доступ
@@ -1095,7 +1110,7 @@ const PlayerWindow: React.FC = () => {
                 ) : showQueue ? (
                     // Вид очереди воспроизведения с анимацией
                     <QueueView
-                        queue={tracks}
+                        queue={displayedQueue}
                         currentTrack={currentTrack}
                         onTrackSelect={handlePlayTrackFromQueue}
                         onBackToPlayer={toggleQueueView}

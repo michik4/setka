@@ -626,11 +626,18 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
             data: { shuffleMode: newShuffleMode }
         });
         
-        // Отправляем событие в QueueContext для перемешивания
+        // Отправляем событие переключения режима в QueueContext
+        // Используем отдельный параметр forceGenerate: true, чтобы гарантировать 
+        // генерацию новой перемешанной очереди
         dispatchQueueEvent({
-            type: newShuffleMode ? 'QUEUE_UPDATED' : 'QUEUE_UPDATED',
-            data: { shuffleMode: newShuffleMode }
+            type: 'TOGGLE_SHUFFLE',
+            data: { 
+                shuffleMode: newShuffleMode,
+                forceGenerate: true 
+            }
         });
+        
+        console.log(`[PlayerContext] Режим перемешивания ${newShuffleMode ? 'включен' : 'выключен'}`);
     };
 
     const setVolume = (volume: number) => {
@@ -684,11 +691,14 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }): Rea
             resultUrl = `/api/music/cover/${coverUrl}`;
         }
         
-        // Сохраняем в кеш
-        setCoverCache(prev => ({
-            ...prev,
-            [coverUrl]: resultUrl
-        }));
+        // Вместо прямого обновления кеша запоминаем URL для последующего обновления
+        // без мутации состояния во время рендеринга
+        window.setTimeout(() => {
+            setCoverCache(prev => ({
+                ...prev,
+                [coverUrl]: resultUrl
+            }));
+        }, 0);
         
         return resultUrl;
     }, [coverCache]);

@@ -5,7 +5,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { useQueue } from '../../contexts/QueueContext';
 import { MusicService } from '../../services/music.service';
 import styles from './UniversalTrackItem.module.css';
-import { DeleteForever, LibraryAdd, LibraryAddCheck, Pause as PauseIcon, PlayArrow as PlayArrowIcon, ViewList } from '@mui/icons-material';
+import { LibraryAdd, LibraryAddCheck, Pause as PauseIcon, PlayArrow as PlayArrowIcon, ViewList } from '@mui/icons-material';
 
 interface UniversalTrackItemProps {
     track: Track;
@@ -13,7 +13,6 @@ interface UniversalTrackItemProps {
     variant?: 'default' | 'compact' | 'post' | 'album' | 'queue';
     isInLibrary?: boolean;
     onLibraryStatusChange?: () => void;
-    onRemove?: (trackId: number) => void;
     className?: string;
     onPlayClick?: () => void;
 }
@@ -24,7 +23,6 @@ const UniversalTrackItem: React.FC<UniversalTrackItemProps> = ({
     variant = 'default',
     isInLibrary = false,
     onLibraryStatusChange,
-    onRemove,
     className = '',
     onPlayClick
 }) => {
@@ -37,6 +35,31 @@ const UniversalTrackItem: React.FC<UniversalTrackItemProps> = ({
     useEffect(() => {
         setIsInLib(isInLibrary);
     }, [isInLibrary]);
+    
+    // Проверка наличия трека в библиотеке при монтировании компонента
+    useEffect(() => {
+        // Если isInLibrary явно задан через пропсы, не делаем запрос
+        if (isInLibrary !== undefined && isInLibrary !== null) {
+            return;
+        }
+        
+        // Проверяем наличие ID для запроса
+        if (!track || !track.id) {
+            console.error('Невозможно проверить наличие трека в библиотеке: отсутствует ID трека');
+            return;
+        }
+        
+        const checkTrackInLibrary = async () => {
+            try {
+                const isInLibrary = await MusicService.isTrackInLibrary(track.id);
+                setIsInLib(isInLibrary);
+            } catch (error) {
+                console.error('Ошибка при проверке наличия трека в библиотеке:', error);
+            }
+        };
+        
+        checkTrackInLibrary();
+    }, [track?.id, isInLibrary]);
     
     const isCurrentlyPlaying = currentTrack?.id === track.id && isPlaying;
     const isSelected = currentTrack?.id === track.id;
@@ -179,16 +202,6 @@ const UniversalTrackItem: React.FC<UniversalTrackItemProps> = ({
                 >
                     <ViewList />
                 </button>
-                
-                {onRemove && (
-                    <button 
-                        className={styles.trackControlButton}
-                        onClick={() => onRemove(track.id)}
-                        title="Удалить"
-                    >
-                        <DeleteForever />
-                    </button>
-                )}
             </div>
         </div>
     );

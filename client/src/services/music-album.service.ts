@@ -7,9 +7,12 @@ export class MusicAlbumService {
     // Получение всех альбомов пользователя
     static async getUserAlbums(): Promise<MusicAlbum[]> {
         try {
-            return await api.get(this.API_ENDPOINT);
+            console.log('[MusicAlbumService] Запрос альбомов пользователя из библиотеки...');
+            const albums = await api.get(this.API_ENDPOINT);
+            console.log(`[MusicAlbumService] Получено ${albums.length} альбомов из библиотеки пользователя`);
+            return albums;
         } catch (error) {
-            console.error('Ошибка при получении альбомов пользователя:', error);
+            console.error('[MusicAlbumService] Ошибка при получении альбомов пользователя:', error);
             throw error;
         }
     }
@@ -160,4 +163,89 @@ export class MusicAlbumService {
             throw error;
         }
     }
-} 
+
+    // Добавление альбома в библиотеку пользователя
+    static async addAlbumToLibrary(albumId: number): Promise<{success: boolean, message: string, album?: MusicAlbum, alreadyExists?: boolean}> {
+        try {
+            console.log(`[MusicAlbumService] Добавление альбома ${albumId} в библиотеку...`);
+            const response = await api.post(`${this.API_ENDPOINT}/${albumId}/add-to-library`, {});
+            console.log(`[MusicAlbumService] Альбом ${albumId} успешно добавлен в библиотеку`);
+            return {
+                success: true,
+                message: 'Альбом успешно добавлен в библиотеку',
+                album: response
+            };
+        } catch (error: any) {
+            console.error(`[MusicAlbumService] Ошибка при добавлении альбома ${albumId} в библиотеку:`, error);
+            
+            // Обработка ошибки "альбом уже в библиотеке"
+            if (error?.message?.includes('уже существует в вашей библиотеке')) {
+                console.log(`[MusicAlbumService] Альбом ${albumId} уже в библиотеке пользователя`);
+                
+                // Если в ошибке есть информация об альбоме, извлекаем ее
+                let existingAlbum: MusicAlbum | undefined;
+                try {
+                    // Пытаемся извлечь данные альбома из ответа сервера
+                    if (error.response?.data?.album) {
+                        existingAlbum = error.response.data.album;
+                        console.log(`[MusicAlbumService] Извлечены данные существующего альбома:`, existingAlbum);
+                    }
+                } catch (parseError) {
+                    console.warn(`[MusicAlbumService] Не удалось извлечь данные альбома из ошибки:`, parseError);
+                }
+                
+                return {
+                    success: false,
+                    message: error.message || 'Альбом уже существует в вашей библиотеке',
+                    alreadyExists: true,
+                    album: existingAlbum
+                };
+            }
+            
+            // Другие ошибки
+            throw error;
+        }
+    }
+
+    // Удаление альбома из библиотеки пользователя
+    static async removeAlbumFromLibrary(albumId: number): Promise<{success: boolean, message: string}> {
+        try {
+            console.log(`[MusicAlbumService] Удаление альбома ${albumId} из библиотеки...`);
+            await api.delete(`${this.API_ENDPOINT}/${albumId}/remove-from-library`);
+            console.log(`[MusicAlbumService] Альбом ${albumId} успешно удален из библиотеки`);
+            return {
+                success: true,
+                message: 'Альбом успешно удален из библиотеки'
+            };
+        } catch (error: any) {
+            console.error(`[MusicAlbumService] Ошибка при удалении альбома ${albumId} из библиотеки:`, error);
+            throw error;
+        }
+    }
+
+    // Проверка наличия альбома в библиотеке пользователя
+    static async isAlbumInLibrary(albumId: number): Promise<boolean> {
+        try {
+            console.log(`[MusicAlbumService] Проверка наличия альбома ID:${albumId} в библиотеке...`);
+            const response = await api.get(`${this.API_ENDPOINT}/${albumId}/in-library`);
+            
+            // Проверяем структуру ответа
+            if (response && typeof response === 'object' && 'inLibrary' in response) {
+                console.log(`[MusicAlbumService] Получен ответ для альбома ID:${albumId}: inLibrary=${response.inLibrary}`);
+                return response.inLibrary === true;
+            }
+            
+            console.warn(`[MusicAlbumService] Неожиданный формат ответа от сервера при проверке наличия альбома ${albumId} в библиотеке:`, response);
+            return false;
+        } catch (error) {
+            // Подробнее логируем ошибку
+            const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+            const errorStatus = error && (error as any).response?.status || 'Неизвестный статус';
+            
+            console.error(`[MusicAlbumService] Ошибка при проверке наличия альбома ${albumId} в библиотеке через API: ${errorStatus} - ${errorMessage}`);
+            
+            // Не делаем никаких дополнительных проверок, просто возвращаем false
+            return false;
+        }
+    }
+}

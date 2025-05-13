@@ -24,11 +24,7 @@ export const tokenService = {
 export const api = {
     async fetch(endpoint: string, options: FetchOptions = {}) {
         const url = `${API_URL}${endpoint}`;
-        console.log('API Request:', {
-            url,
-            method: options.method || 'GET',
-            body: options.body,
-        });
+        
 
         const headers = new Headers(options.headers);
 
@@ -56,11 +52,7 @@ export const api = {
 
         try {
             const response = await fetch(url, config);
-            console.log('API Response:', {
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries())
-            });
+            
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Произошла ошибка при выполнении запроса' }));
@@ -73,10 +65,29 @@ export const api = {
             }
 
             const responseData = await response.json();
-            console.log('API Response Data:', responseData);
+            console.log('[API_UTILS]', url.replace(API_URL, ''), response.status, '\n',
+                'API Request:', {
+                    url,
+                    method: options.method || 'GET',
+                    body: options.body,
+                }, '\n',
+                'API Response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: Object.fromEntries(response.headers.entries())
+                }, '\n',
+                'API Response Data:', responseData);
             return responseData;
         } catch (error) {
-            console.error('API Error:', error);
+            console.error('[API_UTILS]\n',
+                'API Request:', {
+                    url,
+                    method: options.method || 'GET',
+                    body: options.body,
+                }, '\n',
+                (error instanceof Error ? error.stack : 'Unknown error')
+            );
+                
             throw error;
         }
     },

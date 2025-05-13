@@ -6,6 +6,7 @@ export const AboutPage: React.FC = () => {
         <div className={styles.aboutPage}>
             <div className={styles.aboutPageContainer}>
                 <h1>О Всети</h1>
+                <p className={styles.secondary}>v0.5.0</p>
                 <p>
                     Всем привет, меня зовут Мишаня.
                     Я создатель социальной сети <a href='/'>"Всети"</a>, программист и автор паблика <a href='https://vk.com/skksjsn'>чшыщмхиэк</a> вконтакте.
@@ -26,6 +27,7 @@ export const AboutPage: React.FC = () => {
                         <li>Телеграмм: <a href="https://t.me/mishk10">@mishk10</a> </li>
                     </ul>
                 </p>
+                
             </div>
         </div>
     );

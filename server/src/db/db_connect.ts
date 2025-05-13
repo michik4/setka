@@ -14,6 +14,7 @@ import { Album } from "../entities/album.entity"
 import { Group } from "../entities/group.entity"
 import { GroupMember } from "../entities/group-member.entity"
 import { PostAlbum } from "../entities/post_album.entity"
+import { PostMusicAlbum } from "../entities/post_music_album.entity"
 import { Comment } from "../entities/comment.entity"
 import { Friend } from "../entities/friend.entity"
 import { FriendRequest } from "../entities/friend-request.entity"
@@ -30,6 +31,7 @@ import { CreateGroups1743000000000 } from "../migrations/1743000000000-CreateGro
 import { AddWallOwnerIdToPosts1742846973457 } from "../migrations/1742846973457-AddWallOwnerIdToPosts"
 import { CreateFriendsSystem1743001000000 } from "../migrations/1743001000000-CreateFriendsSystem"
 import { CreateMusicAlbums1720000000001 } from "../migrations/1720000000001-CreateMusicAlbums"
+import { CreatePostMusicAlbums1720000000010 } from "../migrations/1720000000010-CreatePostMusicAlbums"
 
 // Загружаем переменные окружения
 dotenv.config()
@@ -45,7 +47,7 @@ export const AppDataSource = new DataSource({
     synchronize: false,
     dropSchema: false,
     logging: process.env.NODE_ENV !== "production",
-    entities: [User, Post, Photo, Session, Chat, Message, WallPost, Like, Album, MusicTrack, Group, GroupMember, PostAlbum, Comment, Friend, FriendRequest, Conversation, MusicAlbum],
+    entities: [User, Post, Photo, Session, Chat, Message, WallPost, Like, Album, MusicTrack, Group, GroupMember, PostAlbum, PostMusicAlbum, Comment, Friend, FriendRequest, Conversation, MusicAlbum],
     migrations: [
         AddUserStatus1710000000000,
         AddUserAvatar1710000000001,
@@ -57,7 +59,8 @@ export const AppDataSource = new DataSource({
         CreateGroups1743000000000,
         AddWallOwnerIdToPosts1742846973457,
         CreateFriendsSystem1743001000000,
-        CreateMusicAlbums1720000000001
+        CreateMusicAlbums1720000000001,
+        CreatePostMusicAlbums1720000000010
     ],
     subscribers: [],
     migrationsTableName: "migrations"

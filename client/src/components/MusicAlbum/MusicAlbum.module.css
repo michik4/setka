@@ -365,17 +365,17 @@
 
 /* Страница альбома */
 .albumPage {
-    margin-top: 20px;
+
     width: 100%;
 }
 
 .albumHeader {
     display: flex;
     flex-direction: column;
-    margin-bottom: 32px;
+    gap: var(--std-gap);
     background-color: var(--vseti-color-card);
     border-radius: 16px;
-    padding: 24px;
+    padding: var(--block-padding);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -457,6 +457,8 @@
 }
 
 .actionButton {
+    display: flex;
+    gap: 8px;
     padding: 10px 20px;
     border-radius: 8px;
     font-weight: 500;
@@ -469,7 +471,7 @@
 }
 
 .actionButton svg {
-    margin-right: 8px;
+
 }
 
 .primaryButton {
@@ -496,26 +498,35 @@
 }
 
 .secondaryButton {
-    background-color: transparent;
-    border: 2px solid var(--border-color);
-    color: var(--text-color-secondary);
-}
-
-.secondaryButton:hover {
-    background-color: var(--bg-color-tertiary);
-    border-color: var(--vseti-color-text-tertiary);
+    background-color: var(--vseti-color-card-item);
+    border: 1px solid var(--border-color);
     color: var(--vseti-color-text-primary);
 }
 
+.secondaryButton:hover {
+    background-color: var(--vseti-color-card-item-hover);
+}
+
+/* Стиль для кнопки альбома, который уже в библиотеке */
+.inLibrary {
+    background-color: var(--vseti-color-green-hover);
+    border-color: var(--vseti-color-green-active);
+    color: var(--vseti-color-light-button);
+    cursor: default;
+}
+
+.inLibrary:hover {
+    background-color: var(--vseti-color-green-hover);
+}
+
 .dangerButton {
-    background-color: transparent;
-    border: 2px solid var(--vseti-color-error);
-    color: var(--vseti-color-error);
+    background-color: var(--vseti-color-error);
+    border: 1px solid var(--vseti-color-error);
+    color: white;
 }
 
 .dangerButton:hover {
-    background-color: var(--vseti-color-error);
-    color: white;
+    background-color: var(--vseti-color-error-hover);
 }
 
 .tracksSection {

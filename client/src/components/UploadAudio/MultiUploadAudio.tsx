@@ -37,9 +37,11 @@ interface UploadResult {
 
 interface MultiUploadAudioProps {
     onTracksUploaded?: (newTracks: UploadedTrack[]) => void;
+    maxFileSize?: number;
+    children?: React.ReactNode;
 }
 
-const MultiUploadAudio: React.FC<MultiUploadAudioProps> = ({ onTracksUploaded }) => {
+const MultiUploadAudio: React.FC<MultiUploadAudioProps> = ({ onTracksUploaded, maxFileSize = 25 * 1024 * 1024, children }) => {
     const { user } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -299,21 +301,20 @@ const MultiUploadAudio: React.FC<MultiUploadAudioProps> = ({ onTracksUploaded })
 
     return (
         <>
-            <button 
-                className={`${styles.uploadButton} ${styles.multiUploadButton}`}
-                onClick={openModal}
-                aria-label="Загрузить музыку"
-                title="Загрузить несколько треков"
-            >
-                <svg 
-                    className={styles.uploadButtonIcon} 
-                    viewBox="0 0 24 24" 
-                    fill="currentColor"
+            {children ? (
+                <div onClick={openModal} style={{ cursor: 'pointer' }}>
+                    {children}
+                </div>
+            ) : (
+                <button 
+                    className={styles.multiUploadButton}
+                    onClick={openModal}
+                    aria-label="Загрузить музыку"
+                    title="Загрузить несколько треков"
                 >
-                    <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/>
-                </svg>
-                <span>Загрузить музыку</span>
-            </button>
+                    Загрузить треки
+                </button>
+            )}
 
             <div className={`${styles.modalOverlay} ${isModalOpen ? styles.visible : ''}`}>
                 <div className={`${styles.modalContent} ${styles.multiUploadModal}`} ref={modalRef}>

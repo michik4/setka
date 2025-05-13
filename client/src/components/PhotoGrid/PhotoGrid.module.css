@@ -1,17 +1,18 @@
 .photoGrid {
-    display: grid;
-    gap: 2px;
+    display: block;
     margin: 10px 0;
     border-radius: 6px;
     overflow: hidden;
     max-width: 100%;
+    position: relative;
 }
 
 .photoWrapper {
-    position: relative;
+    position: absolute;
     overflow: hidden;
     cursor: pointer;
-    background-color: var(--vseti-color-background-light);
+    border-radius: 2px;
+    transition: transform 0.2s ease;
 }
 
 .photo {
@@ -170,26 +171,6 @@
 }
 
 .deleteButton {
-    color: #ff5c5c;
-}
-
-/* Адаптивность для мобильных устройств */
-@media (max-width: 768px) {
-    .photoGrid {
-        max-width: 100%;
-        gap: 2px;
-    }
-
-    .singlePhoto,
-    .twoPhotos,
-    .threePhotos,
-    .fourPhotos,
-    .manyPhotos {
-        max-height: 350px;
-    }
-}
-
-.deleteButton {
     position: absolute;
     top: 8px;
     right: 8px;
@@ -198,7 +179,7 @@
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.4);
     border: none;
-    color: var(--vseti-color-var(--vseti-color-white));
+    color: var(--vseti-color-white);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -220,4 +201,28 @@
 
 .deleteButton:hover {
     background: rgba(0, 0, 0, 0.6);
+}
+
+/* Индикатор дополнительных фотографий */
+.remainingIndicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--vseti-color-white);
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .photoGrid {
+        max-width: 100%;
+    }
 }

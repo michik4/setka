@@ -11,9 +11,11 @@ const DEFAULT_COVER_URL = '/api/music/cover/default.png';
 
 interface UploadAudioProps {
     onTrackUploaded?: (newTrack: any) => void;
+    maxFileSize?: number;
+    children?: React.ReactNode;
 }
 
-const UploadAudio: React.FC<UploadAudioProps> = ({ onTrackUploaded }) => {
+const UploadAudio: React.FC<UploadAudioProps> = ({ onTrackUploaded, maxFileSize = 25 * 1024 * 1024, children }) => {
     const { user } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -219,20 +221,26 @@ const UploadAudio: React.FC<UploadAudioProps> = ({ onTrackUploaded }) => {
 
     return (
         <>
-            <button 
-                className={styles.uploadButton}
-                onClick={openModal}
-                aria-label="Загрузить аудио"
-                title="Загрузить новый трек"
-            >
-                <svg 
-                    className={styles.uploadButtonIcon} 
-                    viewBox="0 0 24 24" 
-                    fill="currentColor"
+            {children ? (
+                <div onClick={openModal} style={{ cursor: 'pointer' }}>
+                    {children}
+                </div>
+            ) : (
+                <button 
+                    className={styles.uploadButton}
+                    onClick={openModal}
+                    aria-label="Загрузить аудио"
+                    title="Загрузить новый трек"
                 >
-                    <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/>
-                </svg>
-            </button>
+                    <svg 
+                        className={styles.uploadButtonIcon} 
+                        viewBox="0 0 24 24" 
+                        fill="currentColor"
+                    >
+                        <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/>
+                    </svg>
+                </button>
+            )}
 
             <div className={`${styles.modalOverlay} ${isModalOpen ? styles.visible : ''}`}>
                 <div className={styles.modalContent} ref={modalRef}>

@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import multer from 'multer';
 import { PhotoPlaceholder } from '../utils/placeholder';
+import { ImageMetadata } from '../utils/imageMetadata';
 
 // Конфигурация multer для загрузки файлов
 const storage = multer.diskStorage({
@@ -48,16 +49,49 @@ export class PhotoController {
             }
 
             const { userId, description, albumId, skipDefaultAlbum } = req.body;
+            const filePath = path.join(process.cwd(), 'uploads/photos', req.file.filename);
             
+            // Извлекаем метаданные о размерах изображения
+            let width: number | undefined;
+            let height: number | undefined;
+            let filename = req.file.filename;
+            
+            try {
+                const metadata = await ImageMetadata.extractWithSharp(filePath);
+                if (metadata) {
+                    width = metadata.width;
+                    height = metadata.height;
+                    
+                    // Создаем новое имя файла с размерами
+                    const newFilename = ImageMetadata.createFilenameWithDimensions(
+                        req.file.filename,
+                        metadata.width,
+                        metadata.height
+                    );
+                    
+                    // Переименовываем файл, чтобы в имени были размеры
+                    const newFilePath = path.join(process.cwd(), 'uploads/photos', newFilename);
+                    fs.renameSync(filePath, newFilePath);
+                    
+                    // Обновляем имя файла в записи
+                    filename = newFilename;
+                }
+            } catch (error) {
+                console.error('Ошибка при извлечении метаданных изображения:', error);
+                // Продолжаем без метаданных в случае ошибки
+            }
+
             const photo = this.photoRepository.create({
-                filename: req.file.filename,
+                filename: filename,
                 originalName: req.file.originalname,
                 mimetype: req.file.mimetype,
                 size: req.file.size,
-                path: req.file.filename,
+                path: filename,
                 extension: path.extname(req.file.originalname),
                 userId: parseInt(userId),
-                description
+                description,
+                width, // Добавляем ширину
+                height // Добавляем высоту
             });
 
             await this.photoRepository.save(photo);
@@ -87,7 +121,7 @@ export class PhotoController {
                 try {
                     // Ищем или создаем альбом "Загруженное" для пользователя
                     let uploadedAlbum = await AppDataSource.getRepository('Album').findOne({
-                        where: { 
+                        where: {
                             userId: parseInt(userId),
                             title: 'Загруженное'
                         },
@@ -163,7 +197,42 @@ export class PhotoController {
                     const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
                     return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
                 }
+                
+                // Если в URL изображения еще нет информации о размерах, но она есть в БД
+                if (!photo.path.includes('x') && photo.width && photo.height) {
+                    // При необходимости можно было бы переименовать файл, но пока просто возвращаем как есть
+                    console.log(`[PhotoController] Файл ${photo.path} содержит размеры ${photo.width}x${photo.height}`);
+                }
+                
                 return res.sendFile(filePath);
+            }
+
+            // Если у фото нет сохраненных размеров, но есть файл, попробуем извлечь размеры
+            if (!photo.width || !photo.height) {
+                const filePath = path.join(process.cwd(), 'uploads/photos', photo.path);
+                if (fs.existsSync(filePath)) {
+                    try {
+                        const metadata = await ImageMetadata.extractWithSharp(filePath);
+                        if (metadata) {
+                            // Обновляем фото с размерами
+                            photo.width = metadata.width;
+                            photo.height = metadata.height;
+                            await this.photoRepository.save(photo);
+                        }
+                    } catch (error) {
+                        console.error(`[PhotoController] Ошибка при извлечении метаданных для фото ${id}:`, error);
+                    }
+                }
+            }
+
+            // Проверяем, можно ли извлечь размеры из имени файла
+            if ((!photo.width || !photo.height) && photo.path) {
+                const dimensions = ImageMetadata.extractDimensionsFromFilename(photo.path);
+                if (dimensions) {
+                    photo.width = dimensions.width;
+                    photo.height = dimensions.height;
+                    await this.photoRepository.save(photo);
+                }
             }
 
             return res.json(photo);
@@ -173,11 +242,51 @@ export class PhotoController {
         }
     }
 
+    async getPhotoWithWidthHeightByID(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const photo = await this.photoRepository.findOne({
+                where: { id: parseInt(id) },
+                relations: ['user']
+            });
+
+            if (!photo) {
+                return res.status(404).json({ message: 'Photo not found' });
+            }
+
+            // Если запрашивается файл изображения
+            if (req.query.file === 'true') {
+                // Если фото помечено как удаленное, создаем заглушку
+                if (photo.isDeleted) {
+                    console.log(`[PhotoController] Фото ${id} помечено как удаленное, создаем заглушку`);
+                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                    return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
+                }
+
+                const filePath = path.join(process.cwd(), 'uploads/photos', photo.path);
+                if (!fs.existsSync(filePath)) {
+                    console.log(`[PhotoController] Файл ${filePath} не найден, создаем заглушку`);
+                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                    return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
+                }
+                return res.json(filePath);
+            }
+
+            
+            return res.json({
+                
+            });
+        } catch (error) {
+            console.error('Error getting photo:', error);
+            return res.status(500).json({ message: 'Error getting photo' });
+        }
+    }
+
     async deletePhoto(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const photo = await this.photoRepository.findOne({ 
-                where: { id: parseInt(id) } 
+            const photo = await this.photoRepository.findOne({
+                where: { id: parseInt(id) }
             });
 
             if (!photo) {
@@ -207,7 +316,7 @@ export class PhotoController {
                 relations: ['user'],
                 order: { createdAt: 'DESC' }
             });
-            
+
             res.json(photos);
         } catch (error) {
             console.error('Error getting all photos:', error);
@@ -218,7 +327,7 @@ export class PhotoController {
     async getPhotoFile(req: Request, res: Response) {
         try {
             const { filename } = req.params;
-            
+
             // Находим фото по имени файла
             const photo = await this.photoRepository.findOne({
                 where: { path: filename }
@@ -238,12 +347,12 @@ export class PhotoController {
 
             const filePath = path.join(process.cwd(), 'uploads/photos', filename);
             console.log('Запрошен файл:', filePath);
-            
+
             if (!fs.existsSync(filePath)) {
                 console.error('Файл не найден:', filePath);
                 return res.status(404).json({ message: 'Файл изображения не найден' });
             }
-            
+
             return res.sendFile(filePath);
         } catch (error) {
             console.error('Ошибка при получении файла изображения:', error);
@@ -255,7 +364,7 @@ export class PhotoController {
     async unlinkPhotoFromPost(req: Request, res: Response) {
         try {
             const { photoId, postId } = req.params;
-            
+
             const post = await this.postRepository.findOne({
                 where: { id: parseInt(postId) },
                 relations: ['photos']

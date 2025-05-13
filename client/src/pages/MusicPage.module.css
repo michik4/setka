@@ -1,3 +1,10 @@
+.musicPage {
+    display: flex;
+    flex-direction: column;
+    gap: var(--std-gap);
+
+}
+
 .backgroundCover {
     position: fixed;
     top: 0;
@@ -10,6 +17,7 @@
     z-index: -1;
     transition: background-image 0.5s ease-in-out, opacity 0.5s ease-in-out;
     animation: fadeInBackground 1s forwards;
+    opacity: 0.15;
 }
 
 @keyframes fadeInBackground {
@@ -22,9 +30,11 @@
 }
 
 .container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--std-gap);
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
     position: relative;
     z-index: 1;
     transition: all 0.3s ease;
@@ -40,7 +50,7 @@
 }
 
 .expandedMode .header {
-    margin-bottom: 10px;
+
 }
 
 .viewModeToggle {
@@ -67,7 +77,7 @@
 }
 
 .viewModeToggle svg {
-    color: var(--vseti-color-blue-light);
+    color: var(--vseti-color-icons-primary-light);
 }
 
 .playerContainer {
@@ -83,32 +93,34 @@
 }
 
 .header {
-    margin-bottom: 30px;
     position: relative;
     z-index: 2;
     background-color: var(--vseti-color-card);
-    padding: 15px;
-    border-radius: 10px;
-    backdrop-filter: blur(5px);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .title {
     font-size: 28px;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     margin: 0 0 10px 0;
 }
 
 .subtitle {
     font-size: 16px;
     color: var(--vseti-color-text-tertiary);
-    margin: 0;
+    margin: 0 0 20px 0;
 }
 
-.content {
-    background: var(--vseti-color-card);
+.contentBlock {
+    display: flex;
+    flex-direction: column;
+    gap: var(--std-gap);
+    background: none;
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+
     margin-bottom: 80px; /* Место для плеера внизу */
     position: relative;
     z-index: 2;
@@ -120,7 +132,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 300px;
+    min-height: 200px;
     gap: 20px;
 }
 
@@ -168,7 +180,7 @@
 
 .activeTrack {
     background-color: rgba(81, 129, 184, 0.1);
-    border-left: 3px solid var(--vseti-color-blue-hover);
+    border-left: 3px solid var(--vseti-color-icons-primary-hover);
     position: relative;
     overflow: hidden;
 }
@@ -329,7 +341,7 @@
 .trackTitle {
     font-size: 13px;
     font-weight: 500;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -375,7 +387,7 @@
     border: none;
     padding: 8px;
     cursor: pointer;
-    color: var(--vseti-color-blue-hover);
+    color: var(--vseti-color-icons-primary-hover);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -387,7 +399,7 @@
 
 .queueButton:hover {
     background-color: rgba(81, 129, 184, 0.1);
-    color: var(--vseti-color-blue-hover);
+    color: var(--vseti-color-icons-primary-hover);
 }
 
 /* Вкладки */
@@ -411,11 +423,11 @@
 }
 
 .tab:hover {
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
 }
 
 .tabActive {
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
 }
 
 .tabActive::after {
@@ -425,7 +437,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background-color: var(--vseti-color-blue-hover);
+    background-color: var(--vseti-color-icons-primary-hover);
 }
 
 .tabContent {
@@ -456,7 +468,7 @@
 
 .trackCount {
     font-size: 16px;
-    color: var(--vseti-color-blue-hover);
+    color: var(--vseti-color-icons-primary-hover);
     font-weight: 500;
 }
 
@@ -470,21 +482,24 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px 0;
+    padding: 20px;
     gap: 10px;
 }
 
 .loadingMore p {
     color: var(--vseti-color-text-muted);
+    font-size: 14px;
     margin: 0;
 }
 
 /* Индикатор конца списка */
 .endOfList {
     text-align: center;
-    padding: 20px 0;
+    padding: 20px;
     color: var(--vseti-color-text-tertiary);
     font-size: 14px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    margin-top: 10px;
 }
 
 /* Адаптивность для мобильных устройств */
@@ -553,7 +568,7 @@
 
 .playerTitle {
     font-size: 14px;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     font-weight: 500;
 }
 
@@ -581,7 +596,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     transition: background-color 0.2s;
 }
 
@@ -593,7 +608,7 @@
 .playPauseButton {
     width: 40px;
     height: 40px;
-    background-color: var(--vseti-color-blue-light);
+    background-color: var(--vseti-color-icons-primary-light);
     color: var(--vseti-color-var(--vseti-color-white));
 }
 
@@ -626,7 +641,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: var(--vseti-color-blue-light);
+    background: var(--vseti-color-icons-primary-light);
     cursor: pointer;
 }
 
@@ -634,7 +649,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: var(--vseti-color-blue-light);
+    background: var(--vseti-color-icons-primary-light);
     cursor: pointer;
     border: none;
 }
@@ -652,7 +667,7 @@
     display: block;
     width: 3px;
     height: 8px;
-    background-color: var(--vseti-color-blue-light);
+    background-color: var(--vseti-color-icons-primary-light);
     border-radius: 1px;
     animation: sound 1.2s linear infinite;
 }
@@ -750,8 +765,10 @@
 }
 
 .sectionTitle {
+    display: flex;
+    align-items: center;
     font-size: 1.2rem;
-    margin: 0 0 15px 0;
+
     font-weight: 600;
 }
 
@@ -787,7 +804,7 @@
 .uploadButton {
     grid-column: 1 / -1;
     padding: 12px;
-    background-color: var(--vseti-color-blue-hover);
+    background-color: var(--vseti-color-icons-primary-hover);
     color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     border-radius: 4px;
@@ -799,7 +816,7 @@
 }
 
 .uploadButton:hover {
-    background-color: var(--vseti-color-blue-light);
+    background-color: var(--vseti-color-icons-primary-light);
 }
 
 .uploadButton:disabled {
@@ -819,7 +836,7 @@
 
 .progressFill {
     height: 100%;
-    background-color: var(--vseti-color-blue-hover);
+    background-color: var(--vseti-color-icons-primary-hover);
     transition: width 0.3s ease;
 }
 
@@ -858,7 +875,7 @@
 .emptyState p:first-child {
     font-size: 17px;
     font-weight: 500;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     margin-bottom: 10px;
 }
 
@@ -1046,7 +1063,7 @@
 
 .myMusicHeader h2 {
     font-size: 20px;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     margin: 0;
 }
 
@@ -1085,7 +1102,7 @@
 
 .volumeIcon {
     margin-right: 10px;
-    color: var(--vseti-color-blue-light);
+    color: var(--vseti-color-icons-primary-light);
 }
 
 .volumeSliderFixed {
@@ -1103,7 +1120,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: var(--vseti-color-blue-light);
+    background: var(--vseti-color-icons-primary-light);
     cursor: pointer;
 }
 
@@ -1111,7 +1128,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: var(--vseti-color-blue-light);
+    background: var(--vseti-color-icons-primary-light);
     cursor: pointer;
     border: none;
 }
@@ -1129,92 +1146,404 @@
     margin-bottom: 8px;
 }
 
-/* Стили для поисковой строки */
-.searchContainer {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    max-width: 400px;
-    margin: 15px 0;
-    position: relative;
-}
 
-.searchInput {
-    flex: 1;
-    padding: 10px 15px;
-    border-radius: 20px;
-    border: 1px solid var(--border-color, #ddd);
-    background-color: var(--input-bg, rgba(255, 255, 255, 0.9));
-    color: var(--text-color, #333);
-    font-size: 14px;
-    outline: none;
-    transition: all 0.2s ease;
-    width: 100%;
-}
-
-.searchInput:focus {
-    border-color: var(--accent-color, #7c5dfa);
-    box-shadow: 0 0 0 2px rgba(124, 93, 250, 0.2);
-}
-
-.searchButton {
-    position: absolute;
-    right: 10px;
-    background: none;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--icon-color, #666);
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
-
-.searchButton:hover {
-    color: var(--accent-color, #7c5dfa);
-}
-
-.searchButton:disabled {
-    color: var(--disabled-color, #ccc);
-    cursor: not-allowed;
-}
-
-/* Стили для результатов поиска */
-.searchResults {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.searchSection {
-    width: 100%;
-}
-
-.searchSectionTitle {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 15px;
-    color: var(--vseti-color-text-primary);
-}
-
-.emptyState {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--text-muted, #999);
-}
-
-.emptyState p {
-    margin: 10px 0;
-    font-size: 16px;
-}
 
 .tracksList {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+/* Секции */
+.section {
+    background: var(--vseti-color-card);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sectionIcon {
+    margin-right: 10px;
+    color: var(--vseti-color-icons-primary);
+}
+
+/* Альбомы */
+.albumsGrid {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.album {
+    transition: transform 0.2s;
+}
+
+.album:hover {
+    transform: translateY(-5px);
+}
+
+.createAlbumLink {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.createAlbumButton {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-radius: var(--border-radius);
+    color: var(--vseti-color-link);
+}
+
+.createAlbumButton:hover {
+    background-color: var(--vseti-color-icons-primary-light);
+}
+
+.createAlbumButtonText {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.createAlbumButton.active {
+    background-color: var(--vseti-color-icons-primary-light);
+}
+
+.createAlbumTile {
+    height: 180px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.2s;
+    border: 2px dashed rgba(0, 0, 0, 0.1);
+}
+
+.createAlbumTile:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+    border-color: var(--vseti-color-icons-primary-light);
+}
+
+.createAlbumIcon {
+    font-size: 48px;
+    color: var(--vseti-color-icons-primary);
+    margin-bottom: 10px;
+}
+
+.createAlbumLabel {
+    font-size: 16px;
+    color: var(--vseti-color-text-secondary);
+}
+
+/* Треки */
+.trackList {
+    position: relative;
+}
+
+.trackListHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 0 10px;
+}
+
+.trackCount {
+    font-size: 14px;
+    color: var(--vseti-color-text-tertiary);
+}
+
+.tracksList {
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Поиск */
+.searchContainer {
+    display: flex;
+    justify-content: space-between;
+}
+
+.searchInputContainer {
+    background-color: var(--vseti-color-card);
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 5px 15px;
+    border-radius: var(--border-radius);
+}
+
+.searchInput {
+    flex: 1;
+    padding: 12px 15px;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+    transition: all 0.2s;
+    color: var(--vseti-color-text-primary);
+
+}
+
+
+.searchButton {
+    background-color: var(--vseti-color-button);
+    color: var(--vseti-color-text-colorful);
+    border: none;
+    border-radius: 8px;
+    width: 42px;
+    margin-left: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    transition: background-color 0.2s;
+}
+
+.searchButton:hover {
+    color: var(--vseti-color-text-primary);
+    background-color: var(--vseti-color-icons-primary-hover);
+}
+
+.searchButton:disabled {
+    color: var(--vseti-color-text-muted);
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.clearSearchInputButton {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    background: none;
+    border: none;
+}
+
+/* Результаты поиска */
+.searchResults {
+    background: var(--vseti-color-card);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+.searchResultsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.searchResultsTitle {
+    font-size: 20px;
+    margin: 0;
+    color: var(--vseti-color-text-primary);
+}
+
+.clearSearchButton {
+    background-color: transparent;
+    color: var(--vseti-color-icons-primary);
+    border: 1px solid var(--vseti-color-icons-primary);
+    border-radius: 6px;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.clearSearchButton:hover {
+    background-color: var(--vseti-color-icons-primary);
+    color: white;
+}
+
+.searchSection {
+    margin-bottom: 30px;
+}
+
+.searchSectionTitle {
+    font-size: 18px;
+    color: var(--vseti-color-text-secondary);
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Загрузка */
+.loading {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    gap: 20px;
+}
+
+.loading p {
+    color: var(--vseti-color-text-muted);
+    font-size: 15px;
+    margin: 0;
+}
+
+.loadingMore {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 10px;
+}
+
+.loadingMore p {
+    color: var(--vseti-color-text-muted);
+    font-size: 14px;
+    margin: 0;
+}
+
+/* Ошибки и пустые состояния */
+.errorMessage {
+    padding: 20px;
+    background-color: rgba(255, 100, 100, 0.1);
+    border: 1px solid rgba(255, 50, 50, 0.2);
+    border-radius: 8px;
+    color: #e53935;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    text-align: center;
+    padding: 30px;
+    color: var(--vseti-color-text-secondary);
+}
+
+.emptyState p {
+    margin: 5px 0;
+}
+
+.emptyState p:first-child {
+    font-weight: 500;
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.emptyStateSmall {
+    padding: 20px;
+    text-align: center;
+    color: var(--vseti-color-text-secondary);
+    grid-column: 1 / -1;
+}
+
+.uploadOptionsList {
+    list-style-type: none;
+    padding: 0;
+    margin: 15px 0 0 0;
+    text-align: left;
+}
+
+.uploadOptionsList li {
+    margin-bottom: 10px;
+    position: relative;
+    padding-left: 20px;
+}
+
+.uploadOptionsList li:before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--vseti-color-icons-primary);
+}
+
+.endOfList {
+    text-align: center;
+    padding: 20px;
+    color: var(--vseti-color-text-tertiary);
+    font-size: 14px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    margin-top: 10px;
+}
+
+/* Адаптивные стили */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+    
+    .header {
+        padding: 15px;
+    }
+    
+    .albumsGrid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 15px;
+    }
+    
+    .createAlbumTile {
+        height: 140px;
+    }
+    
+    .section {
+        padding: 15px;
+    }
+    
+    .searchResultsHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .clearSearchButton {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .albumsGrid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+    
+    .createAlbumTile {
+        height: 120px;
+    }
+    
+    .createAlbumIcon {
+        font-size: 36px;
+    }
+    
+    .createAlbumLabel {
+        font-size: 14px;
+    }
+    
+    .title {
+        font-size: 24px;
+    }
+    
+    .searchInput {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
 } 

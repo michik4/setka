@@ -75,17 +75,23 @@ clone_repository() {
 create_env_files() {
   info "Создание .env файлов..."
 
+  echo "НАСТРОЙКА СЕРВЕРА"
+
+  read -p "Введите хост сервера [localhost]: " SERVER_HOST
+  SERVER_HOST=${SERVER_HOST:-localhost}
+  
   read -p "Введите порт сервера [3001]: " SERVER_PORT
   SERVER_PORT=${SERVER_PORT:-3001}
   
-  read -p "Введите хост сервера [localhost]: " SERVER_HOST
-  SERVER_HOST=${SERVER_HOST:-localhost}
+  echo "НАСТРОЙКА КЛИЕНТА"
   
   read -p "Введите хост клиента [localhost]: " CLIENT_HOST
   CLIENT_HOST=${CLIENT_HOST:-localhost}
 
   read -p "Введите порт клиента [3000]: " CLIENT_PORT
   CLIENT_PORT=${CLIENT_PORT:-3000}
+
+  echo "НАСТРОЙКА БАЗЫ ДАННЫХ"
 
   # Запрос параметров подключения к БД
   read -p "Введите имя пользователя PostgreSQL [postgres]: " DB_USER
@@ -103,15 +109,18 @@ create_env_files() {
   read -p "Введите порт БД [5432]: " DB_PORT
   DB_PORT=${DB_PORT:-5432}
   
+  echo "НАСТРОЙКА JWT"
+
   read -p "Введите секретный ключ JWT [random_key_$(date +%s)]: " JWT_SECRET
   JWT_SECRET=${JWT_SECRET:-random_key_$(date +%s)}
   
 
   # Создаем .env для клиента
   cat > client/.env <<EOL
-REACT_APP_API_URL=http://${SERVER_HOST}:${SERVER_PORT}
+REACT_APP_API_URL=http://${SERVER_HOST}:${SERVER_PORT}/api
 REACT_APP_UPLOAD_URL=http://${SERVER_HOST}:${SERVER_PORT}/uploads
 REACT_APP_MAX_FILE_SIZE=5242880
+REACT_APP_WS_URL=http://${SERVER_HOST}:${SERVER_PORT}
 EOL
   
   # Создаем .env для сервера
@@ -252,8 +261,14 @@ setup_client() {
     else
       warn "Nginx не установлен. Для раздачи статики в продакшн рекомендуется использовать Nginx"
       warn "Используем встроенную в Node.js проксирование статики"
-      mv build ../server/public/ || error "Не удалось переместить сборку в директорию сервера"
+      mv build public
+      info "удаляем директорию public на сервере"
+      rm -rf ../server/public
+      info "перемещаем сборку в директорию сервера"
+      mv public ../server/public/ || error "Не удалось переместить сборку в директорию сервера"
       info "Сборка клиента перемещена в директорию сервера"
+      info "удаляем директорию клиента, так как она больше не нужна"
+      rm -rf ../client/public
     fi
   else
     info "Для запуска клиента в режиме разработки выполните:"

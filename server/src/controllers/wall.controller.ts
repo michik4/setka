@@ -8,6 +8,12 @@ import { Album } from '../entities/album.entity';
 import { PostAlbum } from '../entities/post_album.entity';
 import { MusicTrack } from '../entities/music.entity';
 import { In } from 'typeorm';
+import { PostMusicAlbum } from '../entities/post_music_album.entity';
+import { MusicAlbum } from '../entities/music_album.entity';
+import { Group } from '../entities/group.entity';
+import { ImageMetadata } from '../utils/imageMetadata';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export class WallController {
     private postRepository = AppDataSource.getRepository(Post);
@@ -15,6 +21,7 @@ export class WallController {
     private photoRepository = AppDataSource.getRepository(Photo);
     private albumRepository = AppDataSource.getRepository(Album);
     private musicTrackRepository = AppDataSource.getRepository(MusicTrack);
+    private musicAlbumRepository = AppDataSource.getRepository(MusicAlbum);
 
     // Получение сохраненный пост со всеми связями
     private async getPostWithRelations(postId: number) {
@@ -31,159 +38,84 @@ export class WallController {
 
             if (post) {
                 try {
-                    // Загружаем альбомы напрямую через SQL-запрос
-                    const albumsQuery = await AppDataSource.query(`
-                        SELECT a.* FROM albums a
-                        JOIN post_album pa ON a.id = pa."albumId"
-                        WHERE pa."postId" = $1
-                    `, [postId]);
+                    // Загружаем альбомы для поста через TypeORM вместо SQL-запроса
+                    const postAlbums = await AppDataSource.getRepository(PostAlbum)
+                        .createQueryBuilder('postAlbum')
+                        .leftJoinAndSelect('postAlbum.album', 'album')
+                        .leftJoinAndSelect('album.photos', 'photo')
+                        .where('postAlbum.postId = :postId', { postId })
+                        .getMany();
                     
-                    if (albumsQuery && albumsQuery.length > 0) {
-                        console.log(`Загружено ${albumsQuery.length} альбомов для wall поста ${postId}`);
-                        
-                        // Если альбом один, добавляем флаг для полной ширины
-                        if (albumsQuery.length === 1) {
-                            albumsQuery[0].isFullWidth = true;
-                        }
-                        
-                        // Получаем актуальное количество фотографий для каждого альбома
-                        for (const album of albumsQuery) {
-                            try {
-                                // Сначала получаем только количество фотографий для альбома
-                                const photoCountResult = await AppDataSource.query(`
-                                    SELECT COUNT(*) as count FROM album_photos
-                                    WHERE "albumId" = $1
-                                `, [album.id]);
+                    // Извлекаем альбомы из связующей таблицы
+                    const albums = postAlbums.map(pa => pa.album);
+                    console.log(`[WallController] Для поста ${postId} найдено ${albums.length} фотоальбомов`);
+                    
+                    // Теперь обработаем фотографии и добавим photosCount
+                    for (const album of albums) {
+                        try {
+                            if (album.photos && album.photos.length > 0) {
+                                album.photosCount = album.photos.length;
+                                console.log(`Альбом ${album.id}: количество фото ${album.photosCount}`);
+                            } else {
+                                // Если фотографии не загрузились через JOINы, загрузим отдельно
+                                console.log(`Получаем фотографии для альбома ${album.id} отдельным запросом`);
+                                const photos = await AppDataSource.getRepository(Photo)
+                                    .createQueryBuilder('photo')
+                                    .innerJoin('album_photos', 'ap', 'photo.id = ap.photoId')
+                                    .where('ap.albumId = :albumId', { albumId: album.id })
+                                    .getMany();
                                 
-                                // Устанавливаем актуальное количество фотографий
-                                const actualPhotoCount = parseInt(photoCountResult[0].count, 10);
-                                album.photosCount = actualPhotoCount;
-                                
-                                console.log(`Альбом ${album.id}: актуальное количество фотографий = ${actualPhotoCount}`);
-                                
-                                // Если фотографий больше 0, загружаем их
-                                if (actualPhotoCount > 0) {
-                                    // Улучшенный запрос для загрузки фотографий из альбома
-                                    const photosQuery = await AppDataSource.query(`
-                                        SELECT p.id, p.filename, p.path, p."originalName", p.mimetype, p.size
-                                        FROM photo p
-                                        JOIN album_photos ap ON p.id = ap."photoId"
-                                        WHERE ap."albumId" = $1
-                                        ORDER BY p.id DESC
-                                        LIMIT 5
-                                    `, [album.id]);
-                                    
-                                    // Обработка результатов запроса
-                                    if (photosQuery && photosQuery.length > 0) {
-                                        console.log(`[DEBUG] Фотографии альбома ${album.id}:`, 
-                                            photosQuery.map((p: any) => ({ id: p.id, path: p.path })));
-                                        
-                                        // Обрабатываем фотографии и конвертируем id в числовой тип
-                                        const processedPhotos = photosQuery.map((photo: any) => {
-                                            photo.id = Number(photo.id);
-                                            return photo;
-                                        });
-                                        
-                                        // Записываем фотографии в альбом
-                                        album.photos = processedPhotos;
-                                        
-                                        // Обязательно устанавливаем последнюю фотографию как обложку
-                                        // Первый элемент в массиве - самая новая фотография (т.к. ORDER BY p.id DESC)
-                                        if (processedPhotos.length > 0) {
-                                            album.coverPhoto = processedPhotos[0];
-                                            console.log(`Обложка альбома ${album.id}: ID=${album.coverPhoto.id}, путь=${album.coverPhoto.path}`);
-                                        }
-                                        
-                                        console.log(`Альбом ${album.id}: загружено ${processedPhotos.length} фото для превью`);
-                                    } else {
-                                        console.log(`Предупреждение: альбом ${album.id} имеет ${actualPhotoCount} фото, но запрос не вернул данные`);
-                                        album.photos = [];
-                                        
-                                        // Пытаемся получить хотя бы обложку альбома отдельным запросом
-                                        try {
-                                            const coverQuery = await AppDataSource.query(`
-                                                SELECT p.id, p.filename, p.path, p."originalName", p.mimetype, p.size
-                                                FROM photo p
-                                                JOIN album_photos ap ON p.id = ap."photoId"
-                                                WHERE ap."albumId" = $1
-                                                ORDER BY p.id DESC
-                                                LIMIT 1
-                                            `, [album.id]);
-                                            
-                                            if (coverQuery && coverQuery.length > 0) {
-                                                const coverPhoto = coverQuery[0];
-                                                coverPhoto.id = Number(coverPhoto.id);
-                                                album.coverPhoto = coverPhoto;
-                                                console.log(`Получена обложка для альбома ${album.id}: ID=${coverPhoto.id}, путь=${coverPhoto.path}`);
-                                            }
-                                        } catch (coverError) {
-                                            console.error(`Ошибка при получении обложки для альбома ${album.id}:`, coverError);
-                                        }
-                                    }
-                                } else {
-                                    console.log(`Альбом ${album.id} не содержит фотографий`);
-                                    album.photos = [];
-                                }
-                            } catch (error) {
-                                console.error(`Ошибка при загрузке данных для альбома ${album.id}:`, error);
-                                album.photos = [];
-                                album.photosCount = 0;
+                                album.photos = photos;
+                                album.photosCount = photos.length;
+                                console.log(`Альбом ${album.id}: количество фото ${album.photosCount}`);
                             }
+                        } catch (error) {
+                            console.error(`Ошибка при загрузке данных для альбома ${album.id}:`, error);
+                            album.photos = [];
+                            album.photosCount = 0;
                         }
-                        
-                        // Добавляем albums к посту
-                        (post as any).albums = albumsQuery;
-                    } else {
-                        console.log(`Не найдено альбомов для wall поста ${postId}`);
-                        (post as any).albums = [];
                     }
+                    
+                    // Добавляем albums к посту
+                    (post as any).albums = albums;
 
-                    // Преобразуем пути к аудиофайлам для каждого трека
+                    // Загружаем музыкальные альбомы для поста
+                    const postMusicAlbums = await AppDataSource.getRepository(PostMusicAlbum)
+                        .createQueryBuilder('postMusicAlbum')
+                        .leftJoinAndSelect('postMusicAlbum.musicAlbum', 'musicAlbum')
+                        .leftJoinAndSelect('musicAlbum.tracks', 'tracks')
+                        .where('postMusicAlbum.postId = :postId', { postId })
+                        .getMany();
+                    
+                    // Извлекаем музыкальные альбомы из связующей таблицы
+                    const musicAlbums = postMusicAlbums.map(pma => {
+                        const musicAlbum = pma.musicAlbum;
+                        // Добавляем количество треков
+                        musicAlbum.tracksCount = musicAlbum.tracks?.length || 0;
+                        return musicAlbum;
+                    });
+                    console.log(`[WallController] Для поста ${postId} найдено ${musicAlbums.length} музыкальных альбомов`);
+                    
+                    // Добавляем musicAlbums к посту
+                    (post as any).musicAlbums = musicAlbums;
+                    
+                    // Добавляем аудио URL к каждому треку
                     if (post.tracks && post.tracks.length > 0) {
-                        console.log(`[WallController] Найдено ${post.tracks.length} треков для wall поста ${postId}:`, 
-                          post.tracks.map(t => ({ id: t.id, title: t.title, filename: t.filename })));
-                        
-                        post.tracks = post.tracks.map(track => {
-                            // Проверим, что у нас есть имя файла
-                            if (!track.filename) {
-                                console.error(`[WallController] Трек с ID ${track.id} не имеет имени файла! Детали трека:`, track);
-                                // Добавляем пустой audioUrl для предотвращения ошибок на клиенте
-                                return {
-                                    ...track,
-                                    audioUrl: ''
-                                };
-                            }
-                            
-                            // Создаем URL для аудио
-                            const audioUrl = `/api/music/file/${track.filename}`;
-                            console.log(`[WallController] Добавлен URL для трека ${track.id}: ${audioUrl}`);
-                            
-                            return {
-                                ...track,
-                                audioUrl
-                            };
-                        });
-                        
-                        // Проверяем, что у всех треков есть audioUrl
-                        for (const track of post.tracks) {
-                            const trackWithAudio = track as any;
-                            if (!trackWithAudio.audioUrl) {
-                                console.error(`[WallController] ОШИБКА: Трек ${track.id} не имеет audioUrl после обработки!`);
-                                trackWithAudio.audioUrl = `/api/music/file/${track.filename || 'unknown'}`; 
-                            }
-                        }
-                    } else {
-                        console.log(`[WallController] Не найдено треков для wall поста ${postId}`);
+                        (post as any).tracks = post.tracks.map(track => ({
+                            ...track,
+                            audioUrl: `/api/music/file/${track.filename}`
+                        }));
                     }
                 } catch (error) {
-                    console.error('Ошибка при загрузке альбомов для wall поста:', error);
+                    console.error(`Ошибка при загрузке альбомов для поста ${postId}:`, error);
                     (post as any).albums = [];
+                    (post as any).musicAlbums = [];
                 }
+                return post;
             }
-            
-            return post;
+            return null;
         } catch (error) {
-            console.error(`Ошибка при получении wall поста ${postId}:`, error);
+            console.error(`Ошибка при получении поста ${postId}:`, error);
             return null;
         }
     }
@@ -193,6 +125,13 @@ export class WallController {
         try {
             const { userId } = req.params;
             const { page = 1, limit = 10 } = req.query;
+            
+            // Явно преобразуем параметры в числа
+            const numPage = Number(page);
+            const numLimit = Number(limit);
+            const skip = (numPage - 1) * numLimit;
+            
+            console.log(`[WallController] Запрос на получение записей со стены пользователя: ${userId}, страница ${numPage}, лимит ${numLimit}, пропуск ${skip}`);
 
             const queryBuilder = this.postRepository
                 .createQueryBuilder('post')
@@ -230,8 +169,8 @@ export class WallController {
                 ])
                 .where('post.wallOwnerId = :userId', { userId: parseInt(userId) })
                 .orderBy('post.createdAt', 'DESC')
-                .take(Number(limit))
-                .skip((Number(page) - 1) * Number(limit));
+                .take(numLimit)
+                .skip(skip);
 
             const [postsQuery, total] = await queryBuilder.getManyAndCount();
             
@@ -271,7 +210,7 @@ export class WallController {
     // Создание записи на стене
     async createWallPost(req: AuthenticatedRequest, res: Response) {
         try {
-            const { content, photoIds, albumIds, trackIds, authorId, wallOwnerId } = req.body;
+            const { content, photoIds, albumIds, trackIds, authorId, wallOwnerId, musicAlbums } = req.body;
             const photos = req.files as Express.Multer.File[];
             
             // Обработка идентификаторов альбомов из JSON-строки
@@ -351,7 +290,37 @@ export class WallController {
                     photo.filename = file.filename;
                     photo.originalName = file.originalname;
                     photo.mimetype = file.mimetype;
-                    photo.path = `/uploads/${file.filename}`;
+                    
+                    // Получаем размеры изображения и обновляем имя файла
+                    try {
+                        const filePath = path.join(process.cwd(), 'uploads/photos', file.filename);
+                        const metadata = await ImageMetadata.extractWithSharp(filePath);
+                        
+                        if (metadata) {
+                            photo.width = metadata.width;
+                            photo.height = metadata.height;
+                            
+                            // Создаем новое имя файла с размерами
+                            const newFilename = ImageMetadata.createFilenameWithDimensions(
+                                file.filename,
+                                metadata.width,
+                                metadata.height
+                            );
+                            
+                            // Переименовываем файл с указанием размеров
+                            const newFilePath = path.join(process.cwd(), 'uploads/photos', newFilename);
+                            fs.renameSync(filePath, newFilePath);
+                            
+                            photo.filename = newFilename;
+                            photo.path = newFilename;
+                        } else {
+                            photo.path = file.filename;
+                        }
+                    } catch (error) {
+                        console.error('Ошибка при извлечении метаданных изображения:', error);
+                        photo.path = file.filename;
+                    }
+                    
                     photo.size = file.size;
                     
                     const savedPhoto = await this.photoRepository.save(photo);
@@ -385,7 +354,7 @@ export class WallController {
             
             // Обработка albumIds, если они указаны
             if (albums && albums.length > 0) {
-                console.log('Добавление альбомов к посту:', albums);
+                console.log('Добавление фотоальбомов к посту:', albums);
                 
                 for (const albumId of albums) {
                     const album = await this.albumRepository.findOneBy({ id: albumId });
@@ -397,9 +366,9 @@ export class WallController {
                         postAlbum.album = album;
                         
                         await AppDataSource.getRepository(PostAlbum).save(postAlbum);
-                        console.log(`Создана связь между постом ${savedPost.id} и альбомом ${album.id}`);
+                        console.log(`Создана связь между постом ${savedPost.id} и фотоальбомом ${album.id}`);
                     } else {
-                        console.warn(`Альбом с ID ${albumId} не найден!`);
+                        console.warn(`Фотоальбом с ID ${albumId} не найден!`);
                     }
                 }
             }
@@ -418,6 +387,27 @@ export class WallController {
                 await this.postRepository.save(post);
                 
                 console.log(`Добавлено ${tracks.length} треков к посту ${post.id}`);
+            }
+            
+            // Обработка musicAlbumIds, если они указаны
+            if (musicAlbums && musicAlbums.length > 0) {
+                console.log('Добавление музыкальных альбомов к посту:', musicAlbums);
+                
+                for (const musicAlbumId of musicAlbums) {
+                    const musicAlbum = await this.musicAlbumRepository.findOneBy({ id: musicAlbumId });
+                    
+                    if (musicAlbum) {
+                        // Создаем связь между постом и музыкальным альбомом
+                        const postMusicAlbum = new PostMusicAlbum();
+                        postMusicAlbum.post = savedPost;
+                        postMusicAlbum.musicAlbum = musicAlbum;
+                        
+                        await AppDataSource.getRepository(PostMusicAlbum).save(postMusicAlbum);
+                        console.log(`Создана связь между постом ${savedPost.id} и музыкальным альбомом ${musicAlbum.id}`);
+                    } else {
+                        console.warn(`Музыкальный альбом с ID ${musicAlbumId} не найден!`);
+                    }
+                }
             }
             
             // Получаем пост со всеми связями для ответа
@@ -480,13 +470,14 @@ export class WallController {
     async updateWallPost(req: AuthenticatedRequest, res: Response) {
         try {
             const { postId } = req.params;
-            const { content, photoIds, trackIds, albumIds } = req.body;
+            const { content, photoIds, trackIds, albumIds, musicAlbumIds } = req.body;
             
             console.log(`[WallController] Обновление wall поста ${postId}`);
             console.log('Новый контент:', content);
             console.log('Новые ID фотографий:', photoIds);
             console.log('Новые ID треков:', trackIds);
             console.log('Новые ID альбомов:', albumIds);
+            console.log('Новые ID музыкальных альбомов:', musicAlbumIds);
 
             let post = await this.postRepository.findOne({
                 where: { id: parseInt(postId) },
@@ -537,6 +528,34 @@ export class WallController {
                 }
                 
                 console.log(`[WallController] Обновлены альбомы для поста ${postId}`);
+            }
+            
+            // Обновляем музыкальные альбомы, если указаны
+            if (musicAlbumIds && Array.isArray(musicAlbumIds)) {
+                // Удаляем текущие связи с музыкальными альбомами
+                await AppDataSource.query(`
+                    DELETE FROM post_music_albums
+                    WHERE "postId" = $1
+                `, [postId]);
+
+                // Создаем новые связи с музыкальными альбомами
+                for (const musicAlbumId of musicAlbumIds) {
+                    const musicAlbum = await this.musicAlbumRepository.findOneBy({ id: Number(musicAlbumId) });
+                    
+                    if (musicAlbum) {
+                        // Создаем связь между постом и музыкальным альбомом
+                        const postMusicAlbum = new PostMusicAlbum();
+                        postMusicAlbum.post = post;
+                        postMusicAlbum.musicAlbum = musicAlbum;
+                        
+                        await AppDataSource.getRepository(PostMusicAlbum).save(postMusicAlbum);
+                        console.log(`[WallController] Создана связь между постом ${postId} и музыкальным альбомом ${musicAlbum.id}`);
+                    } else {
+                        console.warn(`[WallController] Музыкальный альбом с ID ${musicAlbumId} не найден!`);
+                    }
+                }
+                
+                console.log(`[WallController] Обновлены музыкальные альбомы для поста ${postId}`);
             }
 
             // Получаем обновленный пост со всеми связями

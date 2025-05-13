@@ -109,7 +109,7 @@
 
 .inputField:focus {
     outline: none;
-    border-color: var(--vseti-color-blue-hover);
+    border-color: var(--vseti-color-icons-primary-hover);
     box-shadow: 0 0 0 1px rgba(81, 129, 184, 0.4);
 }
 
@@ -139,7 +139,7 @@
 
 .fileInputLabel:hover {
     background-color: #333333;
-    border-color: var(--vseti-color-blue-hover);
+    border-color: var(--vseti-color-icons-primary-hover);
 }
 
 .fileInputLabel svg {
@@ -177,7 +177,7 @@
 }
 
 .submitButton {
-    background: linear-gradient(90deg, var(--vseti-color-blue-hover) 0%, #6a98cf 100%);
+    background: linear-gradient(90deg, var(--vseti-color-icons-primary-hover) 0%, #6a98cf 100%);
     color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     border-radius: 4px;
@@ -218,7 +218,7 @@
 
 .progressFill {
     height: 100%;
-    background: linear-gradient(90deg, var(--vseti-color-blue-hover) 0%, #6a98cf 100%);
+    background: linear-gradient(90deg, var(--vseti-color-icons-primary-hover) 0%, #6a98cf 100%);
     transition: width 0.2s linear;
 }
 
@@ -236,7 +236,7 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: linear-gradient(90deg, var(--vseti-color-blue-hover) 0%, #6a98cf 100%);
+    background: linear-gradient(90deg, var(--vseti-color-icons-primary-hover) 0%, #6a98cf 100%);
     color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     display: flex;

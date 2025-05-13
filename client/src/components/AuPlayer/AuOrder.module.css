@@ -27,7 +27,7 @@
 
 .activeTrack {
     background-color: rgba(81, 129, 184, 0.1);
-    border-left: 3px solid var(--vseti-color-blue-hover);
+    border-left: 3px solid var(--vseti-color-icons-primary-hover);
 }
 
 .activeTrack:hover {
@@ -70,7 +70,7 @@
 .auOrderTitle {
     font-size: 13px;
     font-weight: 500;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

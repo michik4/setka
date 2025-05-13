@@ -27,6 +27,7 @@ interface MusicAlbum {
     coverUrl?: string;
     tracksCount: number;
     isPrivate: boolean;
+    isInLibrary?: boolean;
     createdAt: string;
     updatedAt: string;
     tracks?: Track[];

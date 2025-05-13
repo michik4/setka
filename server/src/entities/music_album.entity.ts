@@ -46,6 +46,9 @@ export class MusicAlbum {
 
     @Column({ default: false })
     isPrivate: boolean;
+    
+    @Column({ default: true })
+    isInLibrary: boolean;
 
     @CreateDateColumn()
     createdAt: Date;

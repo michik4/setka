@@ -30,6 +30,12 @@ export class Photo {
     @Column({ nullable: true })
     description?: string;
 
+    @Column({ nullable: true })
+    width?: number;
+
+    @Column({ nullable: true })
+    height?: number;
+
     @Column()
     userId: number;
 

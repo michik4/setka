@@ -114,4 +114,45 @@ router.post('/:albumId/cover-from-track', authenticateSession, (req: Request, re
     musicAlbumController.setCoverFromUrl(authenticatedReq, res);
 });
 
+// Добавление альбома в библиотеку пользователя
+router.post('/:albumId/add-to-library', authenticateSession, (req: Request, res: Response, next: NextFunction) => {
+    const authenticatedReq = req as AuthenticatedRequest;
+    musicAlbumController.addAlbumToLibrary(authenticatedReq, res);
+});
+
+// Удаление альбома из библиотеки пользователя
+router.delete('/:albumId/remove-from-library', authenticateSession, (req: Request, res: Response, next: NextFunction) => {
+    const authenticatedReq = req as AuthenticatedRequest;
+    musicAlbumController.removeAlbumFromLibrary(authenticatedReq, res);
+});
+
+// Проверка наличия альбома в библиотеке пользователя
+router.get('/:albumId/in-library', authenticateSession, async (req: Request, res: Response) => {
+    try {
+        const authenticatedReq = req as AuthenticatedRequest;
+        const albumId = parseInt(req.params.albumId);
+        const userId = authenticatedReq.user?.id;
+        
+        if (isNaN(albumId)) {
+            return res.status(400).json({ message: 'Некорректный ID альбома' });
+        }
+        
+        if (!userId) {
+            return res.status(401).json({ message: 'Пользователь не аутентифицирован' });
+        }
+        
+        console.log(`[MusicAlbum] Проверка наличия альбома ID:${albumId} в библиотеке пользователя ID:${userId}`);
+        
+        // Делегируем проверку контроллеру
+        const isInLibrary = await musicAlbumController.checkAlbumInLibrary(albumId, userId);
+        
+        return res.status(200).json({
+            inLibrary: isInLibrary
+        });
+    } catch (error) {
+        console.error('[MusicAlbum] Ошибка при проверке наличия альбома в библиотеке:', error);
+        return res.status(500).json({ message: 'Не удалось проверить наличие альбома в библиотеке' });
+    }
+});
+
 export default router; 

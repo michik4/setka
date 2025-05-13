@@ -1,6 +1,6 @@
 import { Track } from './music.types';
 
-interface TrackAlbum {
+interface MusicAlbum {
     id: number;
     name: string;
     artist: string;
@@ -14,4 +14,4 @@ interface TrackAlbum {
     tracks: Track[];
 }
 
-export default TrackAlbum;
+export default MusicAlbum;

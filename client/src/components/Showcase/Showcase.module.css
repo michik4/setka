@@ -33,7 +33,7 @@
 }
 
 .tab:hover {
-    color: var(--vseti-color-blue-light);
+    color: var(--vseti-color-icons-primary-light);
 }
 
 .activeTab {
@@ -48,7 +48,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: var(--vseti-color-blue-light);
+    background: var(--vseti-color-icons-primary-light);
     border-radius: 2px 2px 0 0;
 }
 
@@ -86,7 +86,24 @@
 }
 
 .showAllButton:hover {
-    color: var(--vseti-color-blue-light);
+    color: var(--vseti-color-icons-primary-light);
+}
+
+.showMoreTracksButton {
+    font-size: 13px;
+    color: var(--vseti-color-text-colorful);
+    background: none;
+    border: 1px solid var(--vseti-color-border);
+    border-radius: var(--border-radius);
+    padding: 5px 10px;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: color 0.2s ease;
+}
+
+.showMoreTracksButton:hover {
+    background: var(--vseti-color-icons-primary-light);
+    color: var(--vseti-color-white);
 }
 
 .albumsGrid {
@@ -145,7 +162,7 @@
 
 .albumTitle {
     font-size: 13px;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
@@ -291,13 +308,12 @@
 }
 
 .lockIcon {
+    padding: 2px;
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 24px;
-    height: 24px;
     background: rgba(0, 0, 0, 0.5);
-    border-radius: 50%;
+    border-radius: 10%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -349,7 +365,7 @@
 }
 
 .addMusicButton {
-    background: var(--vseti-color-blue);
+    background: var(--vseti-color-icons-primary);
     color: white;
     border: none;
     border-radius: 4px;
@@ -360,7 +376,7 @@
 }
 
 .addMusicButton:hover {
-    background: var(--vseti-color-blue-dark);
+    background: var(--vseti-color-icons-primary-dark);
 }
 
 .defaultAlbumCover {

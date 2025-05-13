@@ -3,6 +3,8 @@ import { Photo } from '../../types/post.types';
 import { ServerImage } from '../ServerImage/ServerImage';
 import styles from './PhotoViewer.module.css';
 
+const API_URL = process.env.REACT_APP_API_URL || '/api';
+
 // Варианты отображения фотографий в очереди
 type QueueViewMode = 'single' | 'double' | 'triple';
 
@@ -340,7 +342,7 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
                     {!displayedPhoto.isDeleted && (
                         <button 
                             className={styles.menuButton}
-                            onClick={() => window.open(displayedPhoto.path, '_blank')}
+                            onClick={() => window.open(API_URL + '/photos/file/' +displayedPhoto.path, '_blank')}
                             aria-label="Открыть оригинал"
                         >
                             <span role="img" aria-hidden="true">🔍</span> Оригинал

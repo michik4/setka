@@ -652,4 +652,30 @@ router.delete('/:id/remove-from-library', authenticateSession, async (req: any, 
     }
 });
 
+// Проверить наличие трека в библиотеке пользователя
+router.get('/:id/in-library', authenticateSession, async (req: any, res) => {
+    try {
+        const trackId = parseInt(req.params.id);
+        const userId = req.user.id;
+        
+        if (isNaN(trackId)) {
+            return res.status(400).json({ message: 'Некорректный ID трека' });
+        }
+        
+        console.log(`[Music] Проверка наличия трека ID:${trackId} в библиотеке пользователя ID:${userId}`);
+        
+        // Находим трек в библиотеке пользователя
+        const track = await musicRepository.findOne({
+            where: { id: trackId, userId }
+        });
+        
+        return res.status(200).json({
+            inLibrary: !!track
+        });
+    } catch (error) {
+        console.error('[Music] Ошибка при проверке наличия трека в библиотеке:', error);
+        return res.status(500).json({ message: 'Не удалось проверить наличие трека в библиотеке' });
+    }
+});
+
 export default router; 

@@ -12,7 +12,7 @@ import { FeedPage } from './pages/FeedPage';
 import { UserPage } from './pages/UserPage/UserPage';
 import { PhotosPage } from './pages/PhotosPage';
 import { AlbumPage } from './pages/AlbumPage';
-import { MusicPage } from './pages/MusicPage';
+import MusicPage from './pages/MusicPage';
 import { MusicAlbumPage } from './pages/MusicAlbumPage';
 import { GroupsPage } from './pages/GroupsPage/GroupsPage';
 import { GroupPage } from './pages/GroupPage/GroupPage';

@@ -9,19 +9,27 @@ import { useQueue } from '../../contexts/QueueContext';
 import TrackItem from '../TrackItem/TrackItem';
 import styles from './MusicAlbum.module.css';
 import { Spinner } from '../Spinner/Spinner';
+import { PlayArrow, DeleteForever, Add as AddIcon, PlaylistAdd, Edit, PlaylistAddCheck } from '@mui/icons-material';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AlbumDetails: React.FC = () => {
     const { albumId } = useParams<{ albumId: string }>();
     const navigate = useNavigate();
     const { playTrack, currentTrack, isPlaying, togglePlay } = usePlayer();
     const { replaceQueue, addToQueue } = useQueue();
-    
+    const { user } = useAuth();
+
     const [album, setAlbum] = useState<MusicAlbum | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
-    
+    const [isAddingToLibrary, setIsAddingToLibrary] = useState(false);
+    const [isInLibrary, setIsInLibrary] = useState(false);
+
+    // Определяем, является ли текущий пользователь владельцем альбома
+    const isOwner = album && user && album.userId === user.id;
+
     // Используем ref для отслеживания, выполнен ли первоначальный запрос
     const initialFetchDone = useRef(false);
 
@@ -29,12 +37,29 @@ const AlbumDetails: React.FC = () => {
         // Сохраняем состояние плеера
         const wasPlaying = isPlaying;
         const currentlyPlayingTrack = currentTrack;
-    
+
         if (albumId && !initialFetchDone.current) {
             fetchAlbum(parseInt(albumId));
             initialFetchDone.current = true;
         }
     }, [albumId]);
+
+    // Проверка наличия альбома в библиотеке при загрузке данных альбома
+    useEffect(() => {
+        if (album && albumId) {
+            checkAlbumInLibrary(parseInt(albumId));
+        }
+    }, [album, albumId]);
+
+    // Функция для проверки наличия альбома в библиотеке
+    const checkAlbumInLibrary = async (id: number) => {
+        try {
+            const isInLib = await MusicAlbumService.isAlbumInLibrary(id);
+            setIsInLibrary(isInLib);
+        } catch (error) {
+            console.error(`Ошибка при проверке наличия альбома ${id} в библиотеке:`, error);
+        }
+    };
 
     const fetchAlbum = async (id: number) => {
         setIsLoading(true);
@@ -76,7 +101,7 @@ const AlbumDetails: React.FC = () => {
 
     const handleRemoveTrack = async (trackId: number) => {
         if (!album || !albumId) return;
-        
+
         try {
             await MusicAlbumService.removeTrackFromAlbum(parseInt(albumId), trackId);
             // Обновляем данные альбома
@@ -89,7 +114,7 @@ const AlbumDetails: React.FC = () => {
 
     const handleDeleteAlbum = async () => {
         if (!album || !albumId) return;
-        
+
         try {
             await MusicAlbumService.deleteAlbum(parseInt(albumId));
             navigate('/music/albums');
@@ -120,6 +145,39 @@ const AlbumDetails: React.FC = () => {
         return duration; // Возвращаем исходный формат, если не удалось распознать
     };
 
+    // Обработчик добавления альбома в библиотеку пользователя
+    const handleAddToLibrary = async () => {
+        if (!album || !albumId) return;
+
+        setIsAddingToLibrary(true);
+        try {
+            const result = await MusicAlbumService.addAlbumToLibrary(parseInt(albumId));
+            // Показываем уведомление об успешном добавлении
+            setError(null); // Сбрасываем ошибки
+            
+            // Устанавливаем флаг, что альбом в библиотеке
+            setIsInLibrary(true);
+            
+            if (result.success) {
+                alert('Альбом успешно добавлен в вашу библиотеку');
+            } else if (result.alreadyExists) {
+                alert('Этот альбом уже есть в вашей библиотеке');
+            }
+        } catch (error) {
+            console.error(`Ошибка при добавлении альбома ${albumId} в библиотеку:`, error);
+            
+            // Если ошибка связана с тем, что альбом уже в библиотеке
+            if (error instanceof Error && error.message.includes('уже существует в вашей библиотеке')) {
+                setIsInLibrary(true);
+                alert('Этот альбом уже есть в вашей библиотеке');
+            } else {
+                setError('Не удалось добавить альбом в библиотеку. Возможно, у вас уже есть альбом с таким названием.');
+            }
+        } finally {
+            setIsAddingToLibrary(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className={styles.loadingContainer}>
@@ -142,9 +200,9 @@ const AlbumDetails: React.FC = () => {
             <div className={styles.albumHeader}>
                 <div className={styles.albumHeaderFlex}>
                     <div className={styles.albumHeaderCover}>
-                        <img 
-                            src={album.coverUrl || DEFAULT_COVER_URL} 
-                            alt={album.title} 
+                        <img
+                            src={album.coverUrl || DEFAULT_COVER_URL}
+                            alt={album.title}
                             onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_COVER_URL }}
                         />
                     </div>
@@ -153,101 +211,111 @@ const AlbumDetails: React.FC = () => {
                             {album.title}
                             {album.isPrivate && <span className={styles.privateIndicator}>Приватный</span>}
                         </h1>
-                        
+
+                        <button
+                            className={`${styles.actionButton} ${styles.secondaryButton} ${isInLibrary ? styles.inLibrary : ''}`}
+                            onClick={handleAddToLibrary}
+                            disabled={isAddingToLibrary || isInLibrary}
+                            title={isInLibrary ? "Альбом в вашей библиотеке" : "Добавить в библиотеку"}
+                        >
+                            {isInLibrary ? (
+                                <>
+                                    <PlaylistAddCheck />
+                                    В библиотеке
+                                </>
+                            ) : (
+                                <>
+                                    <AddIcon />
+                                    {isAddingToLibrary ? 'Добавление...' : 'Добавить в библиотеку'}
+                                </>
+                            )}
+                        </button>
+
                         {album.description && (
                             <p className={styles.albumHeaderDescription}>{album.description}</p>
                         )}
-                        
+
                         <div className={styles.albumStats}>
                             <span>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M9 19V5L21 3V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    <circle cx="6" cy="19" r="3" stroke="currentColor" strokeWidth="2"/>
-                                    <circle cx="18" cy="17" r="3" stroke="currentColor" strokeWidth="2"/>
+                                    <path d="M9 19V5L21 3V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <circle cx="6" cy="19" r="3" stroke="currentColor" strokeWidth="2" />
+                                    <circle cx="18" cy="17" r="3" stroke="currentColor" strokeWidth="2" />
                                 </svg>
                                 {album.tracksCount} {getTrackWord(album.tracksCount)}
                             </span>
                             <span>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
-                                    <path d="M16 2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                                    <path d="M8 2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                                    <path d="M3 10H21" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+                                    <path d="M16 2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                    <path d="M8 2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                    <path d="M3 10H21" stroke="currentColor" strokeWidth="2" />
                                 </svg>
                                 Создан: {new Date(album.createdAt).toLocaleDateString()}
                             </span>
                         </div>
                     </div>
                 </div>
-                
+
                 <div className={styles.albumActions}>
-                    <button 
+                    <button
                         className={`${styles.actionButton} ${styles.primaryButton}`}
                         onClick={handlePlayAllTracks}
                         disabled={!album.tracks || album.tracks.length === 0}
                     >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 4.99998L19 12L5 19V4.99998Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                        </svg>
+                        <PlayArrow />
                         Воспроизвести все
                     </button>
-                    <button 
-                        className={`${styles.actionButton} ${styles.secondaryButton}`}
-                        onClick={() => setIsUploadModalOpen(true)}
-                    >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 20V10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                            <path d="M7.5 14.5L12 10L16.5 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            <path d="M16 4H19C20.1046 4 21 4.89543 21 6V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V6C3 4.89543 3.89543 4 5 4H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Добавить треки
-                    </button>
-                    <button 
-                        className={`${styles.actionButton} ${styles.dangerButton}`}
-                        onClick={() => setIsConfirmDeleteOpen(true)}
-                    >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M4 7H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                            <path d="M10 11V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                            <path d="M14 11V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                            <path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                            <path d="M9 7V4C9 3.44772 9.44772 3 10 3H14C14.5523 3 15 3.44772 15 4V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Удалить альбом
-                    </button>
+
+                    {isOwner && (
+                        <>
+                            <button
+                                className={`${styles.actionButton} ${styles.secondaryButton}`}
+                                onClick={() => setIsUploadModalOpen(true)}
+                                title="Добавить треки"
+                            >
+                                <PlaylistAdd />
+                            </button>
+                            <button
+                                className={`${styles.actionButton} ${styles.dangerButton}`}
+                                onClick={() => setIsConfirmDeleteOpen(true)}
+                                title="Удалить альбом"
+                            >
+                                <DeleteForever />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
-            
+
             <div className={styles.tracksSection}>
                 <h2>Треки в альбоме</h2>
-                
+
                 {!album.tracks || album.tracks.length === 0 ? (
                     <div className={styles.emptyTracks}>
                         <p>В этом альбоме пока нет треков.</p>
-                        <button 
-                            className={styles.uploadButton}
-                            onClick={() => setIsUploadModalOpen(true)}
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 20V10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                                <path d="M7.5 14.5L12 10L16.5 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                <path d="M16 4H19C20.1046 4 21 4.89543 21 6V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V6C3 4.89543 3.89543 4 5 4H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                            </svg>
-                            Добавить треки
-                        </button>
+                        {isOwner && (
+                            <button
+                                className={styles.uploadButton}
+                                onClick={() => setIsUploadModalOpen(true)}
+                            >
+                                <AddIcon />
+                                Добавить треки
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className={styles.tracksList}>
                         {album.tracks.map((track, index) => (
-                            <TrackItem 
+                            <TrackItem
                                 key={track.id}
                                 track={track}
                                 index={index + 1}
-                                isInLibrary={true}  
+                                isInLibrary={true}
                                 showArtist={true}
                                 showDuration={true}
                                 showControls={true}
-                                onRemove={handleRemoveTrack}
+                                onRemove={isOwner ? handleRemoveTrack : undefined}
                                 onAddToQueue={(track) => addToQueue(track)}
                                 className={styles.inTable}
                             />
@@ -255,7 +323,7 @@ const AlbumDetails: React.FC = () => {
                     </div>
                 )}
             </div>
-            
+
             {/* Модальное окно для загрузки треков */}
             <UploadTracksToAlbumModal
                 albumId={parseInt(albumId || '0')}
@@ -263,7 +331,7 @@ const AlbumDetails: React.FC = () => {
                 onClose={() => setIsUploadModalOpen(false)}
                 onUploadSuccess={handleUploadSuccess}
             />
-            
+
             {/* Модальное окно подтверждения удаления */}
             {isConfirmDeleteOpen && (
                 <div className={styles.modalOverlay}>
@@ -271,7 +339,7 @@ const AlbumDetails: React.FC = () => {
                         <h2>Удаление альбома</h2>
                         <p>Вы уверены, что хотите удалить альбом "{album.title}"?</p>
                         <p>Это действие нельзя отменить. Треки, которые были добавлены в альбом, останутся в вашей музыкальной библиотеке.</p>
-                        
+
                         <div className={styles.formActions}>
                             <button
                                 className={styles.cancelButton}
@@ -297,19 +365,19 @@ const AlbumDetails: React.FC = () => {
 function getTrackWord(count: number): string {
     const lastDigit = count % 10;
     const lastTwoDigits = count % 100;
-    
+
     if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
         return 'треков';
     }
-    
+
     if (lastDigit === 1) {
         return 'трек';
     }
-    
+
     if (lastDigit >= 2 && lastDigit <= 4) {
         return 'трека';
     }
-    
+
     return 'треков';
 }
 

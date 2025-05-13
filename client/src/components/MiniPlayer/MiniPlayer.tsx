@@ -7,7 +7,7 @@ import audioChannelService from '../../services/AudioChannelService';
 import { useQueue } from '../../contexts/QueueContext';
 import { Tooltip, CircularProgress } from '@mui/material';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import { Person, ViewList, VolumeDown, VolumeOff, VolumeUp } from '@mui/icons-material';
+import { Person, Shuffle, ViewList, VolumeDown, VolumeOff, VolumeUp } from '@mui/icons-material';
 
 // Константа для обложки по умолчанию
 const DEFAULT_COVER_URL = '/api/music/cover/default.png';
@@ -37,7 +37,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ forceExpanded = false }) => {
         playTrackByIndex
     } = usePlayer();
     
-    const { fetchUserTracks, clearQueue } = useQueue();
+    const { fetchUserTracks, clearQueue, queue: currentQueue, originalQueue } = useQueue();
     
     const { isPlayerWindowEnabled } = useTestFeatures();
     
@@ -54,6 +54,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ forceExpanded = false }) => {
     const [shouldMarquee, setShouldMarquee] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [isResettingQueue, setIsResettingQueue] = useState(false);
+    const [shouldPlayFirstTrack, setShouldPlayFirstTrack] = useState(false);
     const progressBarRef = useRef<HTMLDivElement>(null);
     const volumeSliderRef = useRef<HTMLDivElement>(null);
     const volumeHandleRef = useRef<HTMLDivElement>(null);
@@ -234,7 +235,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ forceExpanded = false }) => {
     };
     
     // Функция для сброса очереди и загрузки треков из "Моя музыка"
-    const resetQueueWithUserTracks = async () => {
+    const resetQueueWithUserTracks = useCallback(async () => {
         try {
             setIsResettingQueue(true);
             
@@ -244,21 +245,49 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ forceExpanded = false }) => {
             // Затем загружаем треки пользователя
             await fetchUserTracks();
             
-            // После успешной загрузки запускаем воспроизведение первого трека
-            setTimeout(() => {
-                playTrackByIndex(0);
-                setIsResettingQueue(false);
-            }, 500);
-            
+            // Отмечаем, что нужно запустить воспроизведение первого трека
+            setShouldPlayFirstTrack(true);
         } catch (error) {
             console.error('[MiniPlayer] Ошибка при сбросе очереди:', error);
             setIsResettingQueue(false);
         }
-    };
+    }, [clearQueue, fetchUserTracks]);
+    
+    // Эффект для запуска воспроизведения первого трека после сброса очереди
+    useEffect(() => {
+        if (shouldPlayFirstTrack) {
+            // Воспроизводим первый трек и сбрасываем флаг
+            playTrackByIndex(0);
+            setIsResettingQueue(false);
+            setShouldPlayFirstTrack(false);
+        }
+    }, [shouldPlayFirstTrack, playTrackByIndex]);
 
-    // Если нет текущего трека, не отображаем плеер
+    // Если нет текущего трека, показываем пустой плеер
     if (!currentTrack) {
-        return null;
+        return (
+            <div className={styles.miniPlayer}>
+                <div className={styles.playerMain}>
+                    <div className={styles.emptyPlayerContainer}>
+                        <div className={styles.emptyPlayerMessage}>
+                            Ваша очередь пуста
+                        </div>
+                        <button 
+                            className={`${styles.controlButton} ${styles.resetQueueButton}`}
+                            onClick={resetQueueWithUserTracks}
+                            disabled={isResettingQueue}
+                        >
+                            {isResettingQueue ? (
+                                <CircularProgress size={20} style={{ color: 'var(--vseti-color-light-button)' }} />
+                            ) : (
+                                <RestartAltIcon fontSize="small" />
+                            )}
+                            <span className={styles.resetQueueText}>Загрузить мою музыку</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     // Обработка ошибки загрузки обложки
@@ -357,6 +386,46 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ forceExpanded = false }) => {
     const trackArtistClasses = `${styles.trackArtist} ${expandedTrackInfo ? styles.expanded : ''} ${shouldMarquee ? styles.marquee : ''}`;
 
     const extraButtonFontSize = 18;
+
+    // Определяем, какие треки отображать в панели очереди
+    // Используем useQueue для получения актуальной очереди
+    const displayedTracks = shuffleMode ? currentQueue : tracks.length > 0 ? tracks : [];
+    
+    
+    
+    // Компонент рендеринга элемента очереди
+    const renderQueueItem = (track: any, index: number) => {
+        const isCurrentTrack = currentTrack && track.id === currentTrack.id;
+        const trackCoverUrl = coverErrors[track.id] 
+            ? DEFAULT_COVER_URL
+            : getTrackCover(track.coverUrl);
+            
+        return (
+            <div 
+                key={`mini-queue-${track.id}-${index}`}
+                className={`${styles.queueItem} ${isCurrentTrack ? styles.queueItemActive : ''}`}
+                onClick={() => handleTrackSelect(index)}
+            >
+                <img 
+                    src={trackCoverUrl} 
+                    alt={track.title} 
+                    className={styles.queueItemImage}
+                    onError={() => handleQueueCoverError(track.id)}
+                />
+                <div className={styles.queueItemInfo}>
+                    <div className={styles.queueItemTitle}>{track.title}</div>
+                    <div className={styles.queueItemArtist}>{track.artist}</div>
+                </div>
+                {isCurrentTrack && isPlaying && (
+                    <div className={styles.playingIndicator}>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div 
@@ -460,9 +529,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ forceExpanded = false }) => {
                         onClick={toggleShuffle}
                         aria-label="Перемешивание"
                     >
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                            <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm0.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
-                        </svg>
+                        <Shuffle sx={{ fontSize: extraButtonFontSize }}/>
                     </button>
                 </div>
                 
@@ -570,38 +637,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ forceExpanded = false }) => {
                     <div className={styles.queueCount}>{tracks.length} треков</div>
                 </div>
                 <div className={styles.queueList}>
-                    {tracks.map((track, index) => {
-                        const isCurrentTrack = currentTrack && track.id === currentTrack.id;
-                        const trackCoverUrl = coverErrors[track.id] 
-                            ? DEFAULT_COVER_URL
-                            : getTrackCover(track.coverUrl);
-                        
-                        return (
-                            <div 
-                                key={`mini-queue-${track.id}-${index}`}
-                                className={`${styles.queueItem} ${isCurrentTrack ? styles.queueItemActive : ''}`}
-                                onClick={() => handleTrackSelect(index)}
-                            >
-                                <img 
-                                    src={trackCoverUrl} 
-                                    alt={track.title} 
-                                    className={styles.queueItemImage}
-                                    onError={() => handleQueueCoverError(track.id)}
-                                />
-                                <div className={styles.queueItemInfo}>
-                                    <div className={styles.queueItemTitle}>{track.title}</div>
-                                    <div className={styles.queueItemArtist}>{track.artist}</div>
-                                </div>
-                                {isCurrentTrack && isPlaying && (
-                                    <div className={styles.playingIndicator}>
-                                        <span></span>
-                                        <span></span>
-                                        <span></span>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                    {displayedTracks.map((track, index) => renderQueueItem(track, index))}
                 </div>
             </div>
         </div>

@@ -55,7 +55,7 @@
 .trackTitle {
     font-size: 14px;
     font-weight: 500;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     margin-bottom: 5px;
     cursor: pointer;
     width: 100%;
@@ -66,7 +66,7 @@
 }
 
 .trackTitle:hover {
-    color: var(--vseti-color-blue-light);
+    color: var(--vseti-color-icons-primary-light);
 }
 
 .trackTitle.expanded {
@@ -220,7 +220,7 @@
     top: 0;
     left: 0;
     height: 100%;
-    background-color: var(--vseti-color-blue);
+    background-color: var(--vseti-color-icons-primary);
     border-radius: 2px;
     pointer-events: none;
 }
@@ -230,7 +230,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background-color: var(--vseti-color-blue);
+    background-color: var(--vseti-color-icons-primary);
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -288,7 +288,7 @@
     top: 0;
     left: 0;
     height: 100%;
-    background-color: var(--vseti-color-blue);
+    background-color: var(--vseti-color-icons-primary);
     border-radius: 2px;
     pointer-events: none;
 }
@@ -298,7 +298,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background-color: var(--vseti-color-blue);
+    background-color: var(--vseti-color-icons-primary);
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -343,7 +343,7 @@
 .queueTitle {
     font-size: 14px;
     font-weight: 500;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
 }
 
 .queueCount {
@@ -422,7 +422,7 @@
 .playingIndicator span {
     display: block;
     width: 2px;
-    background-color: var(--vseti-color-blue);
+    background-color: var(--vseti-color-icons-primary);
     border-radius: 1px;
     animation: sound 1.2s linear infinite;
 }
@@ -544,4 +544,51 @@
     to {
         transform: rotate(360deg);
     }
+}
+
+/* Стили для пустого плеера */
+.emptyPlayerContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    padding: 15px;
+    width: 100%;
+    gap: 15px;
+}
+
+.emptyPlayerMessage {
+    font-size: 14px;
+    color: var(--vseti-color-text-secondary);
+    text-align: center;
+}
+
+.resetQueueButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: var(--vseti-color-hover);
+    color: var(--vseti-color-light-button);
+    border-radius: var(--border-radius);
+    padding: 8px 16px;
+    width: auto;
+    height: auto;
+    transition: background-color 0.2s ease;
+}
+
+.resetQueueButton:hover {
+    background-color: var(--vseti-color-green-hover);
+    color: var(--vseti-color-light-button);
+}
+
+.resetQueueButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.resetQueueText {
+    font-size: 13px;
+    font-weight: 500;
 } 

@@ -64,8 +64,8 @@ export const UserPage: React.FC = () => {
         if (isNaN(id)) throw new Error('Неверный формат ID пользователя');
         
         try {
-            console.log(`[UserPage] Загрузка постов для стены, userId=${id}, page=${page}, offset=${page * PAGE_SIZE}`);
-            const response = await api.get(`/wall/${id}?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`);
+            console.log(`[UserPage] Загрузка постов для стены, userId=${id}, page=${page+1}`);
+            const response = await api.get(`/wall/${id}?limit=${PAGE_SIZE}&page=${page+1}`);
             if (!response || typeof response !== 'object' || !Array.isArray(response.posts)) {
                 console.error('Неверный формат данных постов:', response);
                 throw new Error('Неверный формат данных постов');
@@ -397,7 +397,7 @@ export const UserPage: React.FC = () => {
                     </div>
                     <div className={styles.userDetails}>
                         <h1>{`${user.firstName} ${user.lastName}`}</h1>
-                        <p className={styles.email}>{user.email}</p>
+                        
                         
                         {/* Кнопка добавления в друзья */}
                         <FriendshipButton />
@@ -420,7 +420,9 @@ export const UserPage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className={styles.statusDisplay}>
-                                    <p>{user.status || 'Нет статуса'}</p>
+                                    <div className={styles.statusText}>
+                                        <p>{user.status || 'Нет статуса'}</p>
+                                    </div>
                                     {isCurrentUser && (
                                         <button
                                             className={styles.editButton}

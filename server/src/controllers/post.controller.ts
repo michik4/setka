@@ -10,6 +10,8 @@ import { PostAlbum } from '../entities/post_album.entity';
 import { MusicTrack } from '../entities/music.entity';
 import { In } from 'typeorm';
 import { Group } from '../entities/group.entity';
+import { MusicAlbum } from "../entities/music_album.entity";
+import { PostMusicAlbum } from "../entities/post_music_album.entity";
 
 export class PostController {
     private get postRepository() {
@@ -78,85 +80,64 @@ export class PostController {
                 .getOne();
                 
             if (post) {
-                // Загружаем альбомы через SQL-запрос для этого поста
-                console.log(`[PostController] Загружаем альбомы для поста ${postId} через SQL`);
-                const albumsQuery = await AppDataSource.query(`
-                    SELECT a.* FROM albums a 
-                    JOIN post_album pa ON a.id = pa."albumId"
-                    WHERE pa."postId" = $1
-                `, [postId]);
+                // Загружаем фотоальбомы для поста через TypeORM
+                const postAlbums = await AppDataSource.getRepository(PostAlbum)
+                    .createQueryBuilder('postAlbum')
+                    .leftJoinAndSelect('postAlbum.album', 'album')
+                    .leftJoinAndSelect('album.photos', 'photo')
+                    .where('postAlbum.postId = :postId', { postId })
+                    .getMany();
                 
-                if (albumsQuery && albumsQuery.length > 0) {
-                    console.log(`[PostController] Найдено ${albumsQuery.length} альбомов для поста ${postId}`);
-                    
-                    // Обрабатываем альбомы
-                    const albums = albumsQuery.map((album: any) => {
-                        album.id = Number(album.id);
-                        album.userId = Number(album.userId);
-                        album.photosCount = Number(album.photosCount);
-                        album.isPrivate = album.isPrivate === true || album.isPrivate === 'true';
-                        return album;
-                    });
-                    
-                    post.albums = albums;
-                    
-                    // Если альбом один, добавляем флаг для полной ширины
-                    if (albums.length === 1) {
-                        (albums[0] as any).isFullWidth = true;
-                    }
-                    
-                    // Загружаем фотографии для каждого альбома
-                    for (const album of albums) {
-                        try {
-                            // Получаем актуальное количество фотографий для альбома
-                            const photoCountResult = await AppDataSource.query(`
-                                SELECT COUNT(*) as count FROM album_photos
-                                WHERE "albumId" = $1
-                            `, [album.id]);
+                // Извлекаем альбомы из связующей таблицы
+                const albums = postAlbums.map(pa => pa.album);
+                console.log(`[PostController] Для поста ${postId} найдено ${albums.length} фотоальбомов через TypeORM`);
+                
+                // Обработаем фотографии и добавим photosCount для каждого альбома
+                for (const album of albums) {
+                    try {
+                        if (album.photos && album.photos.length > 0) {
+                            album.photosCount = album.photos.length;
+                            console.log(`Альбом ${album.id}: количество фото ${album.photosCount}`);
+                        } else {
+                            // Если фотографии не загрузились через JOINы, загрузим отдельно
+                            console.log(`Получаем фотографии для альбома ${album.id} отдельным запросом`);
+                            const photos = await AppDataSource.getRepository(Photo)
+                                .createQueryBuilder('photo')
+                                .innerJoin('album_photos', 'ap', 'photo.id = ap.photoId')
+                                .where('ap.albumId = :albumId', { albumId: album.id })
+                                .getMany();
                             
-                            // Устанавливаем актуальное количество фотографий
-                            const actualPhotoCount = parseInt(photoCountResult[0].count, 10);
-                            album.photosCount = actualPhotoCount;
-                            
-                            console.log(`Альбом ${album.id}: актуальное количество фотографий = ${actualPhotoCount}`);
-                            
-                            // Загружаем превью фотографий для альбома (до 5 штук)
-                            const photosQuery = await AppDataSource.query(`
-                                SELECT p.* FROM photos p
-                                JOIN album_photos ap ON p.id = ap."photoId"
-                                WHERE ap."albumId" = $1
-                                ORDER BY p.id DESC
-                                LIMIT 5
-                            `, [album.id]);
-                            
-                            // Обрабатываем фотографии
-                            if (photosQuery && photosQuery.length > 0) {
-                                const processedPhotos = photosQuery.map((photo: any) => {
-                                    photo.id = Number(photo.id);
-                                    return photo;
-                                });
-                                
-                                // Записываем фотографии в альбом
-                                (album as any).photos = processedPhotos;
-                                
-                                // Добавляем coverPhoto из первой фотографии
-                                if (processedPhotos.length > 0) {
-                                    (album as any).coverPhoto = processedPhotos[0];
-                                }
-                                
-                                console.log(`Альбом ${album.id}: загружено ${processedPhotos.length} фото для превью`);
-                            } else {
-                                (album as any).photos = [];
-                            }
-                        } catch (error) {
-                            console.error(`Ошибка при загрузке данных для альбома ${album.id}:`, error);
-                            (album as any).photos = [];
+                            album.photos = photos;
+                            album.photosCount = photos.length;
+                            console.log(`Альбом ${album.id}: количество фото ${album.photosCount}`);
                         }
+                    } catch (error) {
+                        console.error(`Ошибка при загрузке данных для альбома ${album.id}:`, error);
+                        album.photos = [];
+                        album.photosCount = 0;
                     }
-                } else {
-                    console.log(`Не найдено альбомов для поста ${postId}`);
-                    post.albums = [];
                 }
+                
+                // Загружаем музыкальные альбомы для поста
+                const postMusicAlbums = await AppDataSource.getRepository(PostMusicAlbum)
+                    .createQueryBuilder('postMusicAlbum')
+                    .leftJoinAndSelect('postMusicAlbum.musicAlbum', 'musicAlbum')
+                    .leftJoinAndSelect('musicAlbum.tracks', 'tracks')
+                    .where('postMusicAlbum.postId = :postId', { postId })
+                    .getMany();
+                
+                // Извлекаем музыкальные альбомы из связующей таблицы
+                const musicAlbums = postMusicAlbums.map(pma => {
+                    const musicAlbum = pma.musicAlbum;
+                    // Добавляем количество треков
+                    musicAlbum.tracksCount = musicAlbum.tracks?.length || 0;
+                    return musicAlbum;
+                });
+                console.log(`[PostController] Для поста ${postId} найдено ${musicAlbums.length} музыкальных альбомов`);
+                
+                // Добавляем все обработанные данные к посту
+                post.albums = albums;
+                post.musicAlbums = musicAlbums;
                 
                 // Для треков добавляем audioUrl
                 if (post.tracks && post.tracks.length > 0) {
@@ -312,6 +293,10 @@ export class PostController {
             const {
                 content,
                 attachments,
+                photoIds,
+                albumIds,
+                trackIds,
+                musicAlbumIds,
                 authorType,
                 authorId,
                 wallOwnerId
@@ -320,6 +305,10 @@ export class PostController {
             console.log('[PostController] Получены данные для создания поста:', {
                 content,
                 attachments,
+                photoIds,
+                albumIds,
+                trackIds,
+                musicAlbumIds,
                 authorType,
                 authorId,
                 wallOwnerId
@@ -356,7 +345,14 @@ export class PostController {
             }
 
             // Проверяем наличие содержимого или вложений
-            if (!content && (!attachments || attachments.length === 0)) {
+            const hasAttachments = 
+                (attachments && attachments.length > 0) || 
+                (photoIds && photoIds.length > 0) || 
+                (albumIds && albumIds.length > 0) || 
+                (trackIds && trackIds.length > 0) || 
+                (musicAlbumIds && musicAlbumIds.length > 0);
+                
+            if (!content && !hasAttachments) {
                 res.status(400).json({ message: "Пост должен содержать текст или вложения" });
                 return;
             }
@@ -425,10 +421,62 @@ export class PostController {
                             break;
                     }
                 }
-
-                // Сохраняем пост с вложениями
-                await this.postRepository.save(post);
             }
+            
+            // Обрабатываем photoIds (новый формат)
+            if (photoIds && photoIds.length > 0) {
+                if (!post.photos) post.photos = [];
+                const photos = await AppDataSource.manager.find('Photo', {
+                    where: photoIds.map((id: number) => ({ id: Number(id) }))
+                }) as Photo[];
+                post.photos = photos;
+                console.log(`[PostController] Добавлено ${photos.length} фотографий к посту ${post.id}`);
+            }
+            
+            // Обрабатываем albumIds (новый формат)
+            if (albumIds && albumIds.length > 0) {
+                for (const albumId of albumIds) {
+                    const album = await AppDataSource.manager.findOne('Album', {
+                        where: { id: Number(albumId) }
+                    }) as Album;
+                    if (album) {
+                        const postAlbum = new PostAlbum();
+                        postAlbum.post = savedPost;
+                        postAlbum.album = album;
+                        await AppDataSource.getRepository(PostAlbum).save(postAlbum);
+                        console.log(`[PostController] Создана связь между постом ${savedPost.id} и альбомом ${album.id}`);
+                    }
+                }
+            }
+            
+            // Обрабатываем trackIds (новый формат)
+            if (trackIds && trackIds.length > 0) {
+                if (!post.tracks) post.tracks = [];
+                const tracks = await this.musicTrackRepository.findBy(
+                    trackIds.map((id: number) => ({ id: Number(id) }))
+                );
+                post.tracks = tracks;
+                console.log(`[PostController] Добавлено ${tracks.length} треков к посту ${post.id}`);
+            }
+            
+            // Обрабатываем musicAlbumIds (новый формат)
+            if (musicAlbumIds && musicAlbumIds.length > 0) {
+                for (const albumId of musicAlbumIds) {
+                    const album = await AppDataSource.manager.findOne('MusicAlbum', {
+                        where: { id: Number(albumId) }
+                    }) as MusicAlbum;
+                    if (album) {
+                        const postMusicAlbum = new PostMusicAlbum();
+                        postMusicAlbum.post = savedPost;
+                        postMusicAlbum.musicAlbum = album;
+                        await AppDataSource.getRepository(PostMusicAlbum).save(postMusicAlbum);
+                        console.log(`[PostController] Создана связь между постом ${savedPost.id} и музыкальным альбомом ${album.id}`);
+                    }
+                }
+            }
+
+            // Сохраняем пост с вложениями
+            await this.postRepository.save(post);
 
             // Получаем полный пост со всеми связями
             const fullPost = await this.getPostWithRelations(savedPost.id);
@@ -444,12 +492,14 @@ export class PostController {
     public updatePost = async (req: Request, res: Response): Promise<void> => {
         try {
             const id = Number(req.params.id);
-            const { content, photoIds, trackIds } = req.body;
+            const { content, photoIds, trackIds, photoAlbumIds, musicAlbumIds } = req.body;
             
             console.log(`[PostController] Обновление поста ${id}`);
             console.log('Новый контент:', content);
             console.log('Новые ID фотографий:', photoIds);
             console.log('Новые ID треков:', trackIds);
+            console.log('Новые ID фотоальбомов:', photoAlbumIds);
+            console.log('Новые ID музыкальных альбомов:', musicAlbumIds);
             
             // Находим пост
             const post = await this.postRepository.findOne({
@@ -502,6 +552,57 @@ export class PostController {
             
             // Сохраняем изменения
             await this.postRepository.save(post);
+            
+            // Обрабатываем фотоальбомы
+            if (Array.isArray(photoAlbumIds)) {
+                // Сначала удаляем все существующие связи с фотоальбомами
+                await AppDataSource.getRepository(PostAlbum)
+                    .createQueryBuilder()
+                    .delete()
+                    .where("postId = :postId", { postId: id })
+                    .execute();
+                
+                // Затем создаем новые связи
+                for (const albumId of photoAlbumIds) {
+                    const album = await AppDataSource.manager.findOne('Album', {
+                        where: { id: Number(albumId) }
+                    }) as Album;
+                    
+                    if (album) {
+                        const postAlbum = new PostAlbum();
+                        postAlbum.post = post;
+                        postAlbum.album = album;
+                        await AppDataSource.getRepository(PostAlbum).save(postAlbum);
+                        console.log(`[PostController] Создана связь между постом ${id} и фотоальбомом ${album.id}`);
+                    }
+                }
+            }
+            
+            // Обрабатываем музыкальные альбомы
+            if (Array.isArray(musicAlbumIds)) {
+                // Сначала удаляем все существующие связи с музыкальными альбомами
+                await AppDataSource.getRepository(PostMusicAlbum)
+                    .createQueryBuilder()
+                    .delete()
+                    .where("postId = :postId", { postId: id })
+                    .execute();
+                
+                // Затем создаем новые связи
+                for (const albumId of musicAlbumIds) {
+                    const album = await AppDataSource.manager.findOne('MusicAlbum', {
+                        where: { id: Number(albumId) }
+                    }) as MusicAlbum;
+                    
+                    if (album) {
+                        const postMusicAlbum = new PostMusicAlbum();
+                        postMusicAlbum.post = post;
+                        postMusicAlbum.musicAlbum = album;
+                        await AppDataSource.getRepository(PostMusicAlbum).save(postMusicAlbum);
+                        console.log(`[PostController] Создана связь между постом ${id} и музыкальным альбомом ${album.id}`);
+                    }
+                }
+            }
+            
             console.log(`[PostController] Пост ${id} успешно обновлен`);
             
             // Загружаем полный пост со всеми связями
@@ -715,13 +816,14 @@ export class PostController {
         }
     };
 
-    // Получение постов с определенной фотографией
+    // Получение постов содержащих фотографию по ID
     public getPostsWithPhoto = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { photoId } = req.params;
-
+            const photoId = Number(req.params.photoId);
+            console.log(`[PostController] Запрос на получение постов с фотографией по ID: ${photoId}`);
+            
             // Получаем обычные посты с этой фотографией
-            const posts = await this.postRepository
+            const postsQuery = await this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.photos', 'photos')
                 .leftJoinAndSelect('post.tracks', 'tracks')
@@ -739,16 +841,23 @@ export class PostController {
                 .where('photos.id = :photoId', { photoId })
                 .getMany();
 
-            // Обрабатываем треки для обычных постов
-            const processedPosts = posts.map(post => {
-                if (post.tracks && post.tracks.length > 0) {
-                    post.tracks = post.tracks.map(track => ({
-                        ...track,
-                        audioUrl: `/api/music/file/${track.filename}`
-                    }));
+            // Для каждого поста загружаем отношения, включая музыкальные альбомы
+            const processedPosts = [];
+            for (const post of postsQuery) {
+                const postWithRelations = await this.getPostWithRelations(post.id);
+                if (postWithRelations) {
+                    processedPosts.push(postWithRelations);
+                } else {
+                    // Если не удалось загрузить с отношениями, добавляем трекам audioUrl
+                    if (post.tracks && post.tracks.length > 0) {
+                        post.tracks = post.tracks.map(track => ({
+                            ...track,
+                            audioUrl: `/api/music/file/${track.filename}`
+                        }));
+                    }
+                    processedPosts.push({...post, albums: [], musicAlbums: []});
                 }
-                return post;
-            });
+            }
 
             // Объединяем результаты
             const allPosts = [...processedPosts, ...wallPosts];
@@ -895,25 +1004,56 @@ export class PostController {
                 .skip(offset)
                 .getMany();
             
-            // Для каждого поста загружаем альбомы
+            // Для каждого поста загружаем альбомы и музыкальные альбомы
             const posts = [];
             for (const post of postsQuery) {
-                // Загружаем альбомы для поста
-                const postAlbums = await AppDataSource.getRepository(PostAlbum)
-                    .createQueryBuilder('postAlbum')
-                    .leftJoinAndSelect('postAlbum.album', 'album')
-                    .leftJoinAndSelect('album.photos', 'photo')
-                    .where('postAlbum.postId = :postId', { postId: post.id })
-                    .getMany();
-                
-                // Извлекаем альбомы из связующей таблицы
-                const albums = postAlbums.map(pa => pa.album);
-                
-                // Добавляем альбомы к посту
-                posts.push({
-                    ...post,
-                    albums: albums
-                });
+                const postWithRelations = await this.getPostWithRelations(post.id);
+                if (postWithRelations) {
+                    posts.push(postWithRelations);
+                } else {
+                    // Если не удалось загрузить с отношениями, добавляем базовый пост c альбомами и треками
+                    // Загружаем альбомы для поста
+                    const postAlbums = await AppDataSource.getRepository(PostAlbum)
+                        .createQueryBuilder('postAlbum')
+                        .leftJoinAndSelect('postAlbum.album', 'album')
+                        .leftJoinAndSelect('album.photos', 'photo')
+                        .where('postAlbum.postId = :postId', { postId: post.id })
+                        .getMany();
+                    
+                    // Извлекаем альбомы из связующей таблицы
+                    const albums = postAlbums.map(pa => pa.album);
+                    
+                    // Загружаем музыкальные альбомы для поста
+                    const postMusicAlbums = await AppDataSource.getRepository(PostMusicAlbum)
+                        .createQueryBuilder('postMusicAlbum')
+                        .leftJoinAndSelect('postMusicAlbum.musicAlbum', 'musicAlbum')
+                        .leftJoinAndSelect('musicAlbum.tracks', 'tracks')
+                        .where('postMusicAlbum.postId = :postId', { postId: post.id })
+                        .getMany();
+                    
+                    // Извлекаем музыкальные альбомы из связующей таблицы
+                    const musicAlbums = postMusicAlbums.map(pma => {
+                        const musicAlbum = pma.musicAlbum;
+                        // Добавляем количество треков
+                        musicAlbum.tracksCount = musicAlbum.tracks?.length || 0;
+                        return musicAlbum;
+                    });
+                    
+                    // Добавляем audioUrl к каждому треку
+                    if (post.tracks && post.tracks.length > 0) {
+                        post.tracks = post.tracks.map(track => ({
+                            ...track,
+                            audioUrl: `/api/music/file/${track.filename}`
+                        }));
+                    }
+                    
+                    // Добавляем альбомы к посту
+                    posts.push({
+                        ...post,
+                        albums: albums,
+                        musicAlbums: musicAlbums
+                    });
+                }
             }
             
             console.log(`[PostController] Найдено ${posts.length} постов (limit=${limit}, offset=${offset})`);

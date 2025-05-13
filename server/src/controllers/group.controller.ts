@@ -352,40 +352,8 @@ export class GroupController {
                 Number(offset)
             );
             
-            // Дополнительно загружаем информацию об альбомах для каждого поста
-            for (const post of posts) {
-                try {
-                    // Загружаем альбомы напрямую через SQL-запрос, если они есть
-                    const albumsQuery = await AppDataSource.query(`
-                        SELECT a.* FROM albums a
-                        JOIN post_album pa ON a.id = pa."albumId"
-                        WHERE pa."postId" = $1
-                    `, [post.id]);
-                    
-                    if (albumsQuery && albumsQuery.length > 0) {
-                        // Загружаем фотографии для каждого альбома
-                        for (const album of albumsQuery) {
-                            const photosQuery = await AppDataSource.query(`
-                                SELECT p.* FROM photos p
-                                JOIN album_photos ap ON p.id = ap."photoId"
-                                WHERE ap."albumId" = $1
-                                LIMIT 5
-                            `, [album.id]);
-                            
-                            album.photos = photosQuery || [];
-                        }
-                        
-                        // Добавляем albums к посту
-                        (post as any).albums = albumsQuery;
-                    } else {
-                        (post as any).albums = [];
-                    }
-                } catch (error) {
-                    console.error(`Ошибка при загрузке альбомов для поста ${post.id}:`, error);
-                    (post as any).albums = [];
-                }
-            }
-            
+            // После модификации GroupService, все данные о постах включают musicAlbums,
+            // поэтому убираем дублирующий код и просто возвращаем посты
             return res.json(posts);
         } catch (error) {
             console.error('Ошибка при получении постов группы:', error);

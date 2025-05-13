@@ -495,7 +495,7 @@
 
 .queueItemActive {
     opacity: 1;
-    border: 2px solid var(--vseti-color-blue-light);
+    border: 2px solid var(--vseti-color-icons-primary-light);
 }
 
 .queueItemImage {

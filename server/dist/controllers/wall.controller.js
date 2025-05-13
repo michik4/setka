@@ -178,7 +178,14 @@ class WallController {
         try {
             const { userId } = req.params;
             const { page = 1, limit = 10 } = req.query;
-            console.log(`[WallController] Запрос на получение записей со стены пользователя: ${userId}, страница ${page}, лимит ${limit}`);
+            
+            // Явно преобразуем параметры в числа
+            const numPage = Number(page);
+            const numLimit = Number(limit);
+            const skip = (numPage - 1) * numLimit;
+            
+            console.log(`[WallController] Запрос на получение записей со стены пользователя: ${userId}, страница ${numPage}, лимит ${numLimit}, пропуск ${skip}`);
+            
             const queryBuilder = this.postRepository
                 .createQueryBuilder('post')
                 .leftJoinAndSelect('post.author', 'author')
@@ -215,8 +222,9 @@ class WallController {
             ])
                 .where('post.wallOwnerId = :userId', { userId: parseInt(userId) })
                 .orderBy('post.createdAt', 'DESC')
-                .take(Number(limit))
-                .skip((Number(page) - 1) * Number(limit));
+                .take(numLimit)
+                .skip(skip);
+                
             const [postsQuery, total] = await queryBuilder.getManyAndCount();
             console.log(`[WallController] Найдено ${postsQuery.length} записей для стены пользователя ${userId} из ${total} всего`);
             // Для каждого поста загружаем альбомы

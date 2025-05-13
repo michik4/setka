@@ -6,6 +6,7 @@ import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { PostMusicAlbum } from '../entities/post_music_album.entity';
 
 export class MusicAlbumController {
     private albumRepository = AppDataSource.getRepository(MusicAlbum);
@@ -66,10 +67,14 @@ export class MusicAlbumController {
             }
 
             const albums = await this.albumRepository.find({
-                where: { userId },
+                where: { 
+                    userId,
+                    isInLibrary: true // Возвращаем только альбомы, которые находятся в библиотеке
+                },
                 order: { createdAt: 'DESC' }
             });
 
+            console.log(`[MusicAlbumController] Найдено ${albums.length} альбомов в библиотеке пользователя ID:${userId}`);
             return res.status(200).json(albums);
         } catch (error) {
             console.error('Ошибка при получении альбомов пользователя:', error);
@@ -443,6 +448,224 @@ export class MusicAlbumController {
         } catch (error) {
             console.error(`Ошибка при установке обложки для альбома ${req.params.albumId}:`, error);
             return res.status(500).json({ message: 'Ошибка при установке обложки альбома' });
+        }
+    }
+
+    // Добавление альбома в библиотеку пользователя
+    async addAlbumToLibrary(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { albumId } = req.params;
+            const userId = req.user?.id;
+
+            if (!userId) {
+                return res.status(401).json({ message: 'Необходима авторизация' });
+            }
+
+            // Находим оригинальный альбом
+            const sourceAlbum = await this.albumRepository.findOne({
+                where: { id: parseInt(albumId) },
+                relations: ['tracks']
+            });
+
+            if (!sourceAlbum) {
+                return res.status(404).json({ message: 'Альбом не найден' });
+            }
+
+            // Проверяем, является ли альбом уже удаленным из библиотеки пользователя
+            if (sourceAlbum.userId === userId) {
+                // Если альбом уже принадлежит пользователю, но был удален из библиотеки
+                if (!sourceAlbum.isInLibrary) {
+                    // Просто помечаем, что альбом снова в библиотеке
+                    sourceAlbum.isInLibrary = true;
+                    await this.albumRepository.save(sourceAlbum);
+                    
+                    console.log(`[MusicAlbumController] Альбом "${sourceAlbum.title}" (ID:${albumId}) восстановлен в библиотеке пользователя ID:${userId}`);
+                    
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Альбом возвращен в вашу библиотеку',
+                        album: sourceAlbum
+                    });
+                } else {
+                    // Альбом уже в библиотеке
+                    return res.status(400).json({ 
+                        message: 'Альбом уже находится в вашей библиотеке',
+                        album: sourceAlbum
+                    });
+                }
+            }
+
+            // Проверяем, есть ли у пользователя такой же альбом
+            const existingAlbum = await this.albumRepository.findOne({
+                where: {
+                    userId,
+                    title: sourceAlbum.title,
+                    isInLibrary: true
+                }
+            });
+
+            if (existingAlbum) {
+                return res.status(400).json({ 
+                    message: 'Альбом с таким названием уже существует в вашей библиотеке',
+                    album: existingAlbum 
+                });
+            }
+
+            // Создаем новую запись альбома для пользователя
+            const newAlbum = this.albumRepository.create({
+                title: sourceAlbum.title,
+                description: sourceAlbum.description,
+                userId,
+                coverUrl: sourceAlbum.coverUrl,
+                isPrivate: false, // По умолчанию делаем альбом публичным в библиотеке пользователя
+                isInLibrary: true, // Специально отмечаем, что альбом в библиотеке
+                tracks: [] // Треки добавим отдельно
+            });
+
+            await this.albumRepository.save(newAlbum);
+
+            // Добавляем треки из исходного альбома в новый
+            if (sourceAlbum.tracks && sourceAlbum.tracks.length > 0) {
+                // Для каждого трека из оригинального альбома
+                for (const track of sourceAlbum.tracks) {
+                    // Проверяем, есть ли такой трек у пользователя
+                    let userTrack = await this.trackRepository.findOne({
+                        where: {
+                            userId,
+                            title: track.title,
+                            artist: track.artist
+                        }
+                    });
+
+                    // Если трека нет, создаем его в библиотеке пользователя
+                    if (!userTrack) {
+                        userTrack = this.trackRepository.create({
+                            title: track.title,
+                            artist: track.artist,
+                            duration: track.duration,
+                            filename: track.filename,
+                            filepath: track.filepath,
+                            coverUrl: track.coverUrl,
+                            userId,
+                            playCount: 0
+                        });
+
+                        await this.trackRepository.save(userTrack);
+                    }
+
+                    // Добавляем трек в новый альбом
+                    newAlbum.tracks.push(userTrack);
+                }
+
+                // Обновляем альбом с треками
+                newAlbum.tracksCount = newAlbum.tracks.length;
+                await this.albumRepository.save(newAlbum);
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Альбом добавлен в вашу библиотеку',
+                album: newAlbum
+            });
+        } catch (error) {
+            console.error(`[MusicAlbumController] Ошибка при добавлении альбома ${req.params.albumId} в библиотеку:`, error);
+            return res.status(500).json({ message: 'Ошибка при добавлении альбома в библиотеку' });
+        }
+    }
+
+    // Удаление альбома из библиотеки пользователя
+    async removeAlbumFromLibrary(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { albumId } = req.params;
+            const userId = req.user?.id;
+
+            if (!userId) {
+                return res.status(401).json({ message: 'Необходима авторизация' });
+            }
+
+            // Проверяем наличие альбома в библиотеке пользователя
+            const album = await this.albumRepository.findOne({
+                where: { id: parseInt(albumId), userId }
+            });
+
+            if (!album) {
+                return res.status(404).json({ message: 'Альбом не найден в вашей библиотеке' });
+            }
+
+            // Проверяем, привязан ли альбом к каким-либо постам
+            const postAlbumCount = await AppDataSource.getRepository(PostMusicAlbum)
+                .createQueryBuilder('postMusicAlbum')
+                .where('postMusicAlbum.musicAlbumId = :albumId', { albumId: album.id })
+                .getCount();
+            
+            console.log(`[MusicAlbumController] Альбом ${albumId} привязан к ${postAlbumCount} постам`);
+            
+            // Вместо удаления альбома, помечаем его как не входящий в библиотеку
+            album.isInLibrary = false;
+                
+            // Сохраняем обновленный статус альбома
+            await this.albumRepository.save(album);
+            
+            console.log(`[MusicAlbumController] Альбом ${albumId} помечен как удаленный из библиотеки пользователя ${userId}`);
+                
+            return res.status(200).json({
+                success: true,
+                message: 'Альбом удален из вашей библиотеки'
+            });
+        } catch (error) {
+            console.error(`[MusicAlbumController] Ошибка при удалении альбома ${req.params.albumId} из библиотеки:`, error);
+            return res.status(500).json({ message: 'Ошибка при удалении альбома из библиотеки' });
+        }
+    }
+
+    // Проверка наличия альбома в библиотеке пользователя
+    async checkAlbumInLibrary(albumId: number, userId: number): Promise<boolean> {
+        try {
+            console.log(`[MusicAlbumController] Проверка наличия альбома ID:${albumId} в библиотеке пользователя ID:${userId}`);
+            
+            // Находим альбом по ID
+            const album = await this.albumRepository.findOne({
+                where: { id: albumId }
+            });
+            
+            if (!album) {
+                console.error(`[MusicAlbumController] Альбом с ID:${albumId} не найден`);
+                return false;
+            }
+            
+            console.log(`[MusicAlbumController] Оригинальный альбом: "${album.title}" (ID:${album.id})`);
+            
+            // 1. Проверка - принадлежит ли альбом пользователю и находится ли он в библиотеке
+            if (album.userId === userId) {
+                // Проверяем флаг isInLibrary
+                if (album.isInLibrary) {
+                    console.log(`[MusicAlbumController] Альбом "${album.title}" (ID:${albumId}) найден в библиотеке пользователя`);
+                    return true;
+                } else {
+                    console.log(`[MusicAlbumController] Альбом "${album.title}" (ID:${albumId}) принадлежит пользователю, но был удален из библиотеки (isInLibrary=false)`);
+                    return false;
+                }
+            }
+            
+            // 2. Проверка - есть ли копия альбома у пользователя с таким же названием
+            const albumByTitleCheck = await this.albumRepository.findOne({
+                where: {
+                    title: album.title,
+                    userId: userId,
+                    isInLibrary: true
+                }
+            });
+            
+            if (albumByTitleCheck) {
+                console.log(`[MusicAlbumController] Альбом "${album.title}" найден в библиотеке пользователя по названию (ID:${albumByTitleCheck.id})`);
+                return true;
+            }
+            
+            console.log(`[MusicAlbumController] Альбом "${album.title}" (ID:${albumId}) НЕ найден в библиотеке пользователя ID:${userId}`);
+            return false;
+        } catch (error) {
+            console.error(`[MusicAlbumController] Ошибка при проверке наличия альбома в библиотеке:`, error);
+            return false;
         }
     }
 }

@@ -84,14 +84,14 @@
   font-size: 11px;
   padding: 2px 6px;
   background-color: var(--vseti-color-hover);
-  color: var(--vseti-color-blue-hover);
+  color: var(--vseti-color-icons-primary-hover);
   border-radius: 3px;
   text-transform: uppercase;
 }
 
 .moduleTitle {
   font-size: 14px;
-  color: var(--vseti-color-blue);
+  color: var(--vseti-color-icons-primary);
   cursor: pointer;
 }
 

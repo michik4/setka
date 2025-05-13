@@ -37,7 +37,8 @@ interface QueueSyncEvent {
 // Интерфейс контекста очереди
 export interface QueueContextProps {
   // Основные данные
-  queue: Track[]; // Текущая очередь треков
+  queue: Track[]; // Текущая очередь треков (может быть оригинальной или перемешанной)
+  originalQueue: Track[]; // Оригинальная очередь без перемешивания
   history: Track[]; // История воспроизведенных треков
   currentTrackIndex: number; // Индекс текущего трека в очереди
   shuffleMode: boolean; // Режим перемешивания очереди
@@ -70,6 +71,7 @@ export interface QueueContextProps {
   
   // Управление режимом shuffle
   toggleShuffleMode: () => void; // Включить/выключить режим перемешивания
+  applyShuffleMode: (enable: boolean) => void; // Применить режим перемешивания с указанным значением
 }
 
 // Создаем контекст
@@ -87,11 +89,11 @@ type MappedTrack = Track | null;
 // Провайдер контекста очереди
 export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Состояния для очереди и истории
-  const [queue, setQueue] = useState<Track[]>([]);
+  const [originalQueue, setOriginalQueue] = useState<Track[]>([]); // Оригинальная очередь без перемешивания
+  const [queue, setQueue] = useState<Track[]>([]); // Рабочая очередь (может быть оригинальной или перемешанной)
   const [history, setHistory] = useState<Track[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(-1);
   const [shuffleMode, setShuffleMode] = useState<boolean>(false);
-  const [shuffledQueue, setShuffledQueue] = useState<number[]>([]);
   
   // Создаем ref для отслеживания, загружено ли начальное состояние из PlayerContext
   const initialDataLoadedRef = useRef<boolean>(false);
@@ -411,82 +413,201 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [history]);
   
-  // Функция для создания случайного порядка треков
-  const generateShuffledQueue = useCallback(() => {
-    if (queue.length === 0) return;
+  // Функция для создания перемешанной очереди
+  const generateShuffledQueue = useCallback((): Track[] => {
+    if (originalQueue.length === 0) return [];
     
-    // Создаем индексы всех треков в очереди
-    const indices = Array.from({ length: queue.length }, (_, i) => i);
+    console.log('[QueueContext] Генерация перемешанной очереди, треков:', originalQueue.length);
     
-    // Убираем текущий трек из индексов, если он есть
-    const currentTrackPosition = currentTrackIndex >= 0 ? indices.indexOf(currentTrackIndex) : -1;
-    if (currentTrackPosition !== -1) {
-      indices.splice(currentTrackPosition, 1);
-    }
+    // Создаем копию оригинальной очереди
+    const shuffled = [...originalQueue];
     
-    // Перемешиваем все индексы, кроме текущего трека
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
+    // Находим текущий трек
+    const currentTrack = currentTrackIndex >= 0 ? originalQueue[currentTrackIndex] : null;
     
-    // Добавляем текущий трек в начало перемешанной очереди
-    if (currentTrackIndex >= 0) {
-      indices.unshift(currentTrackIndex);
-    }
-    
-    console.log('[QueueContext] Сгенерирована перемешанная очередь:', indices);
-    setShuffledQueue(indices);
-  }, [queue.length, currentTrackIndex]);
-  
-  // Отправляем событие об изменении режима shuffle
-  useEffect(() => {
-    dispatchQueueEvent({
-      type: 'SHUFFLE_MODE_CHANGED',
-      data: { shuffleMode }
-    });
-    
-    // При изменении режима shuffle, нужно обновить перемешанную очередь
-    if (shuffleMode && queue.length > 0) {
-      generateShuffledQueue();
-    }
-  }, [shuffleMode, queue.length, generateShuffledQueue]);
-  
-  // Установить индекс текущего трека с учетом режима перемешивания
-  const updateCurrentTrackIndex = useCallback((index: number) => {
-    if (index < 0 || index >= queue.length) {
-      console.warn(`[QueueContext] Попытка установить некорректный индекс трека: ${index}, максимальный индекс: ${queue.length - 1}`);
-      return;
-    }
-    
-    console.log(`[QueueContext] Установка текущего индекса трека: ${index}`);
-    
-    // В режиме shuffle нужно найти соответствующий индекс в перемешанной очереди
-    if (shuffleMode) {
-      // Проверяем, есть ли этот индекс в перемешанной очереди
-      const shuffledIndex = shuffledQueue.indexOf(index);
-      
-      if (shuffledIndex === -1) {
-        // Если этого трека нет в перемешанной очереди, добавляем его
-        console.log('[QueueContext] Трек не найден в перемешанной очереди, обновляем перемешанную очередь');
-        
-        // Устанавливаем индекс трека
-        setCurrentTrackIndex(index);
-        
-        // Обновляем перемешанную очередь
-        setTimeout(() => generateShuffledQueue(), 0);
-        return;
+    // Убираем текущий трек из массива для перемешивания (если он есть)
+    let currentTrackRemoved = null;
+    if (currentTrack) {
+      const currentIndex = shuffled.findIndex(t => t.id === currentTrack.id);
+      if (currentIndex !== -1) {
+        currentTrackRemoved = shuffled.splice(currentIndex, 1)[0];
       }
     }
     
-    // Если режим shuffle не активен или трек уже есть в перемешанной очереди
-    setCurrentTrackIndex(index);
-  }, [queue.length, shuffleMode, shuffledQueue, generateShuffledQueue]);
+    // Перемешиваем массив (улучшенный алгоритм Фишера-Йейтса)
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      // Используем криптографически более надежный источник случайности, если доступен
+      let j;
+      if (window.crypto && window.crypto.getRandomValues) {
+        const randomArray = new Uint32Array(1);
+        window.crypto.getRandomValues(randomArray);
+        j = randomArray[0] % (i + 1);
+      } else {
+        j = Math.floor(Math.random() * (i + 1));
+      }
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    // Проверяем, что перемешивание действительно произошло
+    let changesCount = 0;
+    for (let i = 0; i < originalQueue.length; i++) {
+      if (i < shuffled.length && originalQueue[i].id !== shuffled[i].id) {
+        changesCount++;
+      }
+    }
+    
+    // Если перемешивание недостаточное (менее 50% изменений), повторяем процесс
+    if (changesCount < Math.floor(shuffled.length / 2) && shuffled.length > 3) {
+      console.log('[QueueContext] Недостаточное перемешивание, повторная попытка');
+      // Рекурсивно вызываем функцию, но не более одного раза во избежание бесконечной рекурсии
+      return generateShuffledQueue();
+    }
+    
+    // Если у нас был текущий трек, добавляем его в начало
+    if (currentTrackRemoved) {
+      shuffled.unshift(currentTrackRemoved);
+    }
+    
+    console.log('[QueueContext] Сгенерирована перемешанная очередь:', 
+      shuffled.map(t => t.title).slice(0, 5), 
+      `(изменено ${changesCount} треков из ${originalQueue.length})`
+    );
+    return shuffled;
+  }, [originalQueue, currentTrackIndex]);
+  
+  // Функция для применения перемешанной очереди
+  const applyShuffleMode = useCallback((enable: boolean) => {
+    console.log(`[QueueContext] Применение режима перемешивания: ${enable ? 'включение' : 'выключение'}, tracks=${queue.length}, originalQueue=${originalQueue.length}`);
+    
+    if (enable) {
+      // Включение режима перемешивания
+      if (originalQueue.length === 0 || originalQueue.length !== queue.length) {
+        // Если оригинальная очередь пуста или не синхронизирована с текущей, 
+        // сохраняем текущую очередь как оригинальную
+        console.log('[QueueContext] Сохранение текущей очереди как оригинальной перед перемешиванием');
+        setOriginalQueue([...queue]);
+        
+        // Генерируем перемешанную очередь с паузой для обновления originalQueue
+        setTimeout(() => {
+          const shuffledQueue = generateShuffledQueue();
+          console.log('[QueueContext] Установка перемешанной очереди, треков:', shuffledQueue.length);
+          
+          // Устанавливаем новую перемешанную очередь
+          setQueue(shuffledQueue);
+          
+          // Обновляем индекс текущего трека после перемешивания
+          if (currentTrackIndex >= 0) {
+            const currentTrack = queue[currentTrackIndex];
+            const newIndex = shuffledQueue.findIndex(t => t.id === currentTrack.id);
+            if (newIndex !== -1 && newIndex !== currentTrackIndex) {
+              console.log(`[QueueContext] Обновление индекса текущего трека после перемешивания: ${currentTrackIndex} -> ${newIndex}`);
+              setCurrentTrackIndex(newIndex);
+            }
+          }
+        }, 0);
+      } else {
+        // Уже есть сохраненная оригинальная очередь, генерируем перемешанную
+        console.log('[QueueContext] Генерация перемешанной очереди с сохраненной оригинальной');
+        const shuffledQueue = generateShuffledQueue();
+        console.log('[QueueContext] Установка перемешанной очереди, треков:', shuffledQueue.length);
+        setQueue(shuffledQueue);
+        
+        // Обновляем индекс текущего трека
+        if (currentTrackIndex >= 0) {
+          const currentTrack = originalQueue[currentTrackIndex];
+          const newIndex = shuffledQueue.findIndex(t => t.id === currentTrack.id);
+          if (newIndex !== -1) {
+            console.log(`[QueueContext] Обновление индекса текущего трека после перемешивания: ${currentTrackIndex} -> ${newIndex}`);
+            setCurrentTrackIndex(newIndex);
+          }
+        }
+      }
+    } else {
+      // Выключение режима shuffle - возвращаем оригинальную очередь
+      if (originalQueue.length > 0) {
+        console.log('[QueueContext] Восстановление оригинальной очереди, треков:', originalQueue.length);
+        
+        // Сохраняем текущий трек, чтобы найти его в оригинальной очереди
+        const currentTrack = currentTrackIndex >= 0 ? queue[currentTrackIndex] : null;
+        
+        // Возвращаем оригинальную очередь
+        setQueue([...originalQueue]);
+        
+        // Обновляем индекс текущего трека
+        if (currentTrack) {
+          const newIndex = originalQueue.findIndex(t => t.id === currentTrack.id);
+          if (newIndex !== -1) {
+            console.log(`[QueueContext] Обновление индекса после восстановления: ${currentTrackIndex} -> ${newIndex}`);
+            setCurrentTrackIndex(newIndex);
+          }
+        }
+      } else {
+        console.warn('[QueueContext] Попытка выключить режим shuffle, но оригинальная очередь пуста');
+      }
+    }
+    
+    // Обновляем флаг режима shuffle
+    setShuffleMode(enable);
+    
+    // Отправляем событие о новом состоянии
+    dispatchQueueEvent({
+      type: 'SHUFFLE_MODE_CHANGED',
+      data: { shuffleMode: enable }
+    });
+    
+    // Возвращаем результат успешного применения режима
+    return true;
+  }, [queue, originalQueue, currentTrackIndex, generateShuffledQueue]);
   
   // Переключение режима перемешивания
   const toggleShuffleMode = useCallback(() => {
-    setShuffleMode(prev => !prev);
-  }, []);
+    const newShuffleMode = !shuffleMode;
+    console.log(`[QueueContext] Переключение режима перемешивания: ${newShuffleMode ? 'включение' : 'выключение'}`);
+    console.log(`[QueueContext] Текущее состояние очереди: queue=${queue.length}, originalQueue=${originalQueue.length}`);
+    
+    // Если включаем режим и оригинальная очередь не синхронизирована с текущей, обновляем её
+    if (newShuffleMode && (originalQueue.length === 0 || originalQueue.length !== queue.length)) {
+      console.log('[QueueContext] Обновление оригинальной очереди перед применением shuffle');
+      setOriginalQueue([...queue]);
+      
+      // Небольшая задержка для гарантии обновления состояния
+      setTimeout(() => {
+        const success = applyShuffleMode(true);
+        console.log(`[QueueContext] Результат применения режима shuffle: ${success ? 'успешно' : 'ошибка'}`);
+        
+        // Отправляем событие о новом состоянии для синхронизации
+        dispatchQueueEvent({
+          type: 'SHUFFLE_MODE_CHANGED',
+          data: { shuffleMode: true }
+        });
+      }, 50);
+    } else {
+      // Если выключаем режим или оригинальная очередь уже актуальна
+      setTimeout(() => {
+        const success = applyShuffleMode(newShuffleMode);
+        console.log(`[QueueContext] Результат применения режима shuffle: ${success ? 'успешно' : 'ошибка'}`);
+        
+        // Отправляем событие о новом состоянии для синхронизации
+        dispatchQueueEvent({
+          type: 'SHUFFLE_MODE_CHANGED',
+          data: { shuffleMode: newShuffleMode }
+        });
+      }, 0);
+    }
+  }, [shuffleMode, applyShuffleMode, queue, originalQueue]);
+  
+  // Обработчик изменения очереди - синхронизация с оригинальной очередью в определенных случаях
+  useEffect(() => {
+    // Если режим shuffle выключен, синхронизируем оригинальную очередь
+    if (!shuffleMode && queue.length > 0) {
+      setOriginalQueue([...queue]);
+    }
+    
+    // Если очередь пуста, но оригинальная очередь есть, также очистим оригинальную
+    if (queue.length === 0 && originalQueue.length > 0) {
+      setOriginalQueue([]);
+    }
+  }, [queue, shuffleMode]);
   
   // Добавить трек в очередь
   const addToQueue = useCallback((track: Track) => {
@@ -688,22 +809,11 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return -1; // Нет треков или текущий трек не установлен
     }
     
-    if (shuffleMode) {
-      // Находим текущий трек в перемешанной очереди
-      const currentShuffledIndex = shuffledQueue.indexOf(currentTrackIndex);
-      
-      // Если нашли и есть следующий трек
-      if (currentShuffledIndex !== -1 && currentShuffledIndex < shuffledQueue.length - 1) {
-        return shuffledQueue[currentShuffledIndex + 1];
-      }
-      
-      return -1; // Нет следующего трека в перемешанной очереди
-    } else {
-      // Обычный последовательный режим
-      const nextIndex = currentTrackIndex + 1;
-      return nextIndex < queue.length ? nextIndex : -1;
-    }
-  }, [queue.length, currentTrackIndex, shuffleMode, shuffledQueue]);
+    // В режиме перемешивания или без него, просто берем следующий индекс
+    // Текущая рабочая очередь уже содержит либо оригинальную, либо перемешанную очередь
+    const nextIndex = currentTrackIndex + 1;
+    return nextIndex < queue.length ? nextIndex : -1;
+  }, [queue.length, currentTrackIndex]);
   
   // Получить следующий трек с учетом режима shuffle
   const getNextTrack = useCallback((): Track | null => {
@@ -720,21 +830,10 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return -1; // Нет треков или текущий трек не установлен
     }
     
-    if (shuffleMode) {
-      // Находим текущий трек в перемешанной очереди
-      const currentShuffledIndex = shuffledQueue.indexOf(currentTrackIndex);
-      
-      // Если нашли и есть предыдущий трек
-      if (currentShuffledIndex > 0) {
-        return shuffledQueue[currentShuffledIndex - 1];
-      }
-      
-      return -1; // Нет предыдущего трека в перемешанной очереди
-    } else {
-      // Обычный последовательный режим
-      return currentTrackIndex > 0 ? currentTrackIndex - 1 : -1;
-    }
-  }, [queue.length, currentTrackIndex, shuffleMode, shuffledQueue]);
+    // В режиме перемешивания или без него, просто берем предыдущий индекс
+    // Текущая рабочая очередь уже содержит либо оригинальную, либо перемешанную очередь
+    return currentTrackIndex > 0 ? currentTrackIndex - 1 : -1;
+  }, [queue.length, currentTrackIndex]);
   
   // Получить предыдущий трек с учетом режима shuffle и истории
   const getPreviousTrack = useCallback((): Track | null => {
@@ -801,7 +900,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           
           // В режиме shuffle может потребоваться обновить перемешанную очередь
           if (shuffleMode) {
-            setTimeout(() => generateShuffledQueue(), 0);
+            setTimeout(() => applyShuffleMode(true), 0);
           }
         }
         break;
@@ -815,9 +914,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (!trackExists) {
             setQueue(prevQueue => [...prevQueue, data.track]);
             
-            // Обновляем перемешанную очередь, если режим shuffle активен
+            // Если режим shuffle активен, применяем перемешивание
             if (shuffleMode) {
-              setTimeout(() => generateShuffledQueue(), 0);
+              setTimeout(() => applyShuffleMode(true), 0);
             }
           }
         }
@@ -848,9 +947,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               return newQueue;
             });
             
-            // Обновляем перемешанную очередь, если режим shuffle активен
+            // Если режим shuffle активен, применяем перемешивание
             if (shuffleMode) {
-              setTimeout(() => generateShuffledQueue(), 0);
+              setTimeout(() => applyShuffleMode(true), 0);
             }
           }
         }
@@ -860,7 +959,6 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.log('[QueueContext] Обработка события очистки очереди');
         setQueue([]);
         setCurrentTrackIndex(-1);
-        setShuffledQueue([]);
         // Здесь можно автоматически загрузить треки пользователя
         if (!initialDataLoadedRef.current) {
           setTimeout(() => {
@@ -880,11 +978,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           
           // Если пришли данные с shuffleMode, учитываем их
           if (data.shuffleMode !== undefined) {
-            setShuffleMode(data.shuffleMode);
-            
-            // Если режим перемешивания активен, генерируем перемешанную очередь
+            // Если shuffle активен, применяем перемешивание, иначе просто сохраняем значение
             if (data.shuffleMode) {
-              setTimeout(() => generateShuffledQueue(), 0);
+              // Сначала сохраняем оригинальную очередь
+              setOriginalQueue([...data.tracks]);
+              applyShuffleMode(true);
+            } else {
+              setShuffleMode(false);
             }
           }
           
@@ -907,19 +1007,35 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       case 'TOGGLE_SHUFFLE':
         // Включение/выключение режима перемешивания
         console.log('[QueueContext] Обработка события переключения режима перемешивания');
-        setShuffleMode(prev => !prev);
+        if (data && data.shuffleMode !== undefined) {
+          console.log('[QueueContext] Установка режима перемешивания из события TOGGLE_SHUFFLE:', data.shuffleMode, 
+                     'принудительное обновление:', data.forceGenerate);
+          
+          // Если требуется принудительное обновление, сбрасываем оригинальную очередь
+          // для гарантии перегенерации
+          if (data.forceGenerate && data.shuffleMode) {
+            console.log('[QueueContext] Принудительное обновление очереди (сброс оригинальной)');
+            if (queue.length > 0) {
+              setOriginalQueue([...queue]);
+            }
+          }
+          
+          // Применяем перемешивание
+          applyShuffleMode(data.shuffleMode);
+        } else {
+          // Если не указан конкретный режим, переключаем текущий
+          applyShuffleMode(!shuffleMode);
+        }
         break;
         
       case 'SET_SHUFFLE_MODE':
         // Установка конкретного значения режима перемешивания
         if (data && data.shuffleMode !== undefined) {
-          console.log('[QueueContext] Установка режима перемешивания:', data.shuffleMode);
-          setShuffleMode(data.shuffleMode);
+          console.log('[QueueContext] Установка режима перемешивания:', data.shuffleMode, 
+                     'принудительное обновление:', data.forceGenerate);
           
-          // Если включаем режим перемешивания, генерируем перемешанную очередь
-          if (data.shuffleMode) {
-            setTimeout(() => generateShuffledQueue(), 0);
-          }
+          // Применяем перемешивание
+          applyShuffleMode(data.shuffleMode);
         }
         break;
         
@@ -943,12 +1059,34 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetchUserTracks, 
     initialDataLoadedRef.current, 
     shuffleMode, 
-    generateShuffledQueue
+    applyShuffleMode
   ]);
+
+  // Обновление перемешанной очереди при изменении основной очереди
+  useEffect(() => {
+    // Если режим перемешивания активен, а очередь изменилась,
+    // нужно перегенерировать перемешанную очередь
+    if (shuffleMode && queue.length > 0) {
+      console.log('[QueueContext] Обновление перемешанной очереди из-за изменения основной очереди');
+      applyShuffleMode(true);
+    }
+  }, [queue, shuffleMode, applyShuffleMode]);
+
+  // Установить индекс текущего трека
+  const updateCurrentTrackIndex = useCallback((index: number) => {
+    if (index < 0 || index >= queue.length) {
+      console.warn(`[QueueContext] Попытка установить некорректный индекс трека: ${index}, максимальный индекс: ${queue.length - 1}`);
+      return;
+    }
+    
+    console.log(`[QueueContext] Установка текущего индекса трека: ${index}`);
+    setCurrentTrackIndex(index);
+  }, [queue.length]);
 
   // Значение контекста
   const contextValue: QueueContextProps = {
     queue,
+    originalQueue,
     history,
     currentTrackIndex,
     shuffleMode,
@@ -966,7 +1104,8 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     getCurrentTrack,
     getTrackByIndex,
     fetchUserTracks,
-    toggleShuffleMode
+    toggleShuffleMode,
+    applyShuffleMode
   };
   
   return (

@@ -1,0 +1,182 @@
+.container {
+  width: 100%;
+  position: relative;
+  border-radius: 8px;
+  background-color: var(--vseti-color-card);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  padding: 15px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--vseti-color-border);
+  padding-bottom: 10px;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--vseti-color-text-primary);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: var(--vseti-color-text-secondary);
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+.closeButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--vseti-color-text-primary);
+}
+
+.albumGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-gap: 15px;
+  margin: 15px 0;
+}
+
+.albumItem {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.albumItem:hover {
+  transform: translateY(-2px);
+}
+
+.albumItem.selected {
+  box-shadow: 0 0 0 3px var(--vseti-color-light-button);
+}
+
+.selectedIndicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--vseti-color-light-button);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.noAlbums {
+  text-align: center;
+  color: var(--vseti-color-text-tertiary);
+  padding: 30px 0;
+  font-size: 14px;
+}
+
+.albumPreview {
+  width: 100%;
+  height: 150px;
+  position: relative;
+  overflow: hidden;
+}
+
+.albumCover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.albumInfo {
+  padding: 10px;
+}
+
+.albumTitle {
+  font-weight: 500;
+  color: var(--vseti-color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.albumTracks {
+  font-size: 12px;
+  color: var(--vseti-color-text-tertiary);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+  border-top: 1px solid var(--vseti-color-border);
+  padding-top: 15px;
+}
+
+.cancelButton, .confirmButton {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelButton {
+  background-color: transparent;
+  border: 1px solid var(--vseti-color-border);
+  color: var(--vseti-color-text-secondary);
+}
+
+.confirmButton {
+  background-color: var(--vseti-color-primary);
+  border: none;
+  color: white;
+}
+
+.cancelButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.confirmButton:hover {
+  background-color: var(--vseti-color-primary-hover);
+}
+
+.confirmButton:disabled {
+  background-color: var(--vseti-color-disabled);
+  cursor: not-allowed;
+}
+
+.loading, .error {
+  padding: 30px;
+  text-align: center;
+  color: var(--vseti-color-text-secondary);
+}
+
+.retryButton {
+  margin-top: 15px;
+  padding: 8px 16px;
+  background-color: var(--vseti-color-primary);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+} 

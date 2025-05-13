@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Photo } from '../../types/post.types';
 import { Album } from '../../types/album.types';
-import { Track } from '../../types/music.types';
+import { Track, MusicAlbum } from '../../types/music.types';
 import { ImageUploader } from '../ImageUploader/ImageUploader';
 import { PhotoGrid } from '../PhotoGrid/PhotoGrid';
 import UploadAudio from '../UploadAudio';
@@ -14,6 +14,10 @@ import { ServerImage } from '../ServerImage/ServerImage';
 import { TrackSelector } from '../TrackSelector';
 import { groupService } from '../../services/groupService';
 import { Group } from '../../types/group.types';
+import MusicAlbumSelector from '../MusicAlbumSelector/MusicAlbumSelector';
+import UniversalMusicAlbumItem from '../UniversalAlbumItem/UniversalAlbumItem';
+import MusicSelector from '../MusicSelector/MusicSelector';
+import { AttachFile as AttachFileIcon, Photo as PhotoIcon, MusicNote as MusicNoteIcon, Upload as UploadIcon } from '@mui/icons-material';
 
 interface CreatePostFormProps {
     onSuccess?: () => void;
@@ -22,7 +26,7 @@ interface CreatePostFormProps {
 }
 
 interface AttachmentBase {
-    type: 'photo' | 'album' | 'track';
+    type: 'photo' | 'album' | 'track' | 'musicAlbum';
     id: number;
 }
 
@@ -41,7 +45,12 @@ interface TrackAttachment extends AttachmentBase {
     data: Track;
 }
 
-type Attachment = PhotoAttachment | AlbumAttachment | TrackAttachment;
+interface MusicAlbumAttachment extends AttachmentBase {
+    type: 'musicAlbum';
+    data: MusicAlbum;
+}
+
+type Attachment = PhotoAttachment | AlbumAttachment | TrackAttachment | MusicAlbumAttachment;
 
 interface PostAuthor {
     id: number;
@@ -62,6 +71,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const [showPhotoSelector, setShowPhotoSelector] = useState(false);
     const [showAudioUploader, setShowAudioUploader] = useState(false);
     const [showTrackSelector, setShowTrackSelector] = useState(false);
+    const [showMusicAlbumSelector, setShowMusicAlbumSelector] = useState(false);
+    const [showMusicSelector, setShowMusicSelector] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [uploadAlbumId, setUploadAlbumId] = useState<number | null>(null);
@@ -70,6 +81,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const formRef = useRef<HTMLFormElement>(null);
     const [isSelectorOpen, setIsSelectorOpen] = useState(false);
     const selectorRef = useRef<HTMLDivElement>(null);
+    const [showAttachMenu, setShowAttachMenu] = useState(false);
+    const attachMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         let isSubscribed = true;
@@ -383,24 +396,50 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !selectedAuthor) return;
+        if (isSubmitting) return;
+
+        if (!content.trim() && attachments.length === 0) {
+            setError('Пост не может быть пустым. Добавьте текст или вложения.');
+            return;
+        }
 
         try {
             setIsSubmitting(true);
             setError(null);
 
+            // Разделяем прикрепления по типам
+            const photoIds = attachments
+                .filter(a => a.type === 'photo')
+                .map(a => a.id);
+                
+            const albumIds = attachments
+                .filter(a => a.type === 'album')
+                .map(a => a.id);
+                
+            const trackIds = attachments
+                .filter(a => a.type === 'track')
+                .map(a => a.id);
+                
+            const musicAlbumIds = attachments
+                .filter(a => a.type === 'musicAlbum')
+                .map(a => a.id);
+
+            const authorType = selectedAuthor?.type || 'user';
+            const authorId = selectedAuthor?.id || user?.id;
+
+            // Формируем данные поста
             const postData = {
                 content,
-                attachments: attachments.map(attachment => ({
-                    type: attachment.type,
-                    id: attachment.id
-                })),
-                authorType: selectedAuthor.type,
-                authorId: selectedAuthor.id,
-                ...(wallOwnerId ? { wallOwnerId } : { wallOwnerId: selectedAuthor.id })
+                photoIds,
+                albumIds,
+                trackIds,
+                musicAlbumIds,
+                authorType,
+                authorId,
+                wallOwnerId: wallOwnerId
             };
 
-            console.log('Отправка данных поста:', postData);
+            console.log('Отправляем данные поста:', postData);
             const response = await api.post('/posts', postData);
 
             if (response) {
@@ -411,8 +450,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                     onSuccess();
                 }
             }
-        } catch (err) {
-            console.error('Ошибка при создании поста:', err);
+        } catch (error) {
+            console.error('Ошибка при создании поста:', error);
             setError('Не удалось создать пост');
         } finally {
             setIsSubmitting(false);
@@ -508,6 +547,45 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         }
     };
 
+    // Обработчик выбора музыкальных альбомов
+    const handleMusicAlbumsSelected = (albums: MusicAlbum[]) => {
+        console.log('Выбраны музыкальные альбомы:', albums);
+        
+        const newAttachments = albums.map(album => ({
+            type: 'musicAlbum' as const,
+            id: album.id,
+            data: album
+        }));
+        
+        setAttachments(prev => [...prev, ...newAttachments]);
+    };
+
+    // Обработчик клика вне меню прикреплений
+    const handleClickOutsideAttachMenu = useCallback((event: MouseEvent) => {
+        if (attachMenuRef.current && !attachMenuRef.current.contains(event.target as Node)) {
+            setShowAttachMenu(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        // Добавляем обработчик события при открытии меню
+        if (showAttachMenu) {
+            document.addEventListener('mousedown', handleClickOutsideAttachMenu);
+        } else {
+            document.removeEventListener('mousedown', handleClickOutsideAttachMenu);
+        }
+        
+        // Удаляем обработчик при размонтировании
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutsideAttachMenu);
+        };
+    }, [showAttachMenu, handleClickOutsideAttachMenu]);
+
+    // Обработчик для объединенного музыкального селектора
+    const handleMusicSelectorClose = () => {
+        setShowMusicSelector(false);
+    };
+
     if (!user) {
         return (
             <div className={styles.error}>
@@ -519,6 +597,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const photoAttachments = attachments.filter((a): a is PhotoAttachment => a.type === 'photo');
     const albumAttachments = attachments.filter((a): a is AlbumAttachment => a.type === 'album');
     const trackAttachments = attachments.filter((a): a is TrackAttachment => a.type === 'track');
+    const musicAlbumAttachments = attachments.filter((a): a is MusicAlbumAttachment => a.type === 'musicAlbum');
     const hasContent = content.trim().length > 0 || attachments.length > 0;
 
     return (
@@ -701,52 +780,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                 </>
             )}
 
-            <div className={styles.mediaSection}>
-                <div className={styles.attachButtons}>
-                    <button
-                        type="button"
-                        className={styles.photoSelectorButton}
-                        onClick={() => setShowPhotoSelector(true)}
-                    >
-                        Фото
-                    </button>
-                    <div className={styles.dropdownContainer}>
-                        <button
-                            type="button"
-                            className={styles.audioSelectorButton}
-                            onClick={() => setShowTrackSelector(true)}
-                        >
-                            Музыка
-                        </button>
-                        <div className={styles.dropdownContent}>
-                            <button
-                                type="button"
-                                className={styles.dropdownItem}
-                                onClick={() => setShowTrackSelector(true)}
-                            >
-                                Моя музыка
-                            </button>
-                            <button
-                                type="button"
-                                className={styles.dropdownItem}
-                                onClick={() => setShowAudioUploader(true)}
-                            >
-                                Загрузить
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {hasContent && (
-                    <button
-                        type="submit"
-                        className={styles.submitButton}
-                        disabled={isSubmitting || (!content.trim() && attachments.length === 0)}
-                    >
-                        {isSubmitting ? 'Публикация...' : 'Опубликовать'}
-                    </button>
-                )}
-            </div>
+            
 
             {showPhotoSelector && (
                 <div className={styles.photoSelectorOverlay}>
@@ -777,14 +811,38 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                 </div>
             )}
 
-            {showTrackSelector && (
-                <div className={styles.audioUploaderOverlay}>
-                    <TrackSelector
-                        userId={user.id}
-                        onSelect={handleTracksSelected}
-                        onCancel={() => setShowTrackSelector(false)}
-                        multiple={true}
-                    />
+            {showMusicSelector && (
+                <MusicSelector
+                    isOpen={showMusicSelector}
+                    onClose={handleMusicSelectorClose}
+                    onTracksSelected={handleTracksSelected}
+                    onAlbumsSelected={handleMusicAlbumsSelected}
+                    userId={user?.id}
+                />
+            )}
+
+            {musicAlbumAttachments.length > 0 && (
+                <div className={styles.attachmentSection}>
+                    <h6 className={styles.attachmentSectionTitle}>
+                        Музыкальные альбомы ({musicAlbumAttachments.length})
+                    </h6>
+                    <div className={styles.albumsList}>
+                        {musicAlbumAttachments.map((attachment) => (
+                            <div key={`music-album-${attachment.id}`} className={styles.albumItem}>
+                                <UniversalMusicAlbumItem 
+                                    album={attachment.data as MusicAlbum} 
+                                    variant="compact"
+                                />
+                                <button
+                                    className={styles.removeButton}
+                                    onClick={() => handleAttachmentDelete(attachment)}
+                                    title="Удалить альбом"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
@@ -809,6 +867,62 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                     </span>
                 </div>
             )}
+
+<div className={styles.mediaSection}>
+                <div className={styles.attachButtonWrapper} ref={attachMenuRef}>
+                    <button
+                        type="button"
+                        className={styles.attachButton}
+                        onClick={() => setShowAttachMenu(!showAttachMenu)}
+                        disabled={isSubmitting}
+                    >
+                        <AttachFileIcon sx={{ fontSize: 'var(--icon-size-small)' }} />
+                        Прикрепить
+                    </button>
+                    {showAttachMenu && (
+                        <div className={styles.attachDropdown}>
+                            <div 
+                                className={styles.attachOption}
+                                onClick={() => {
+                                    setShowPhotoSelector(true);
+                                    setShowAttachMenu(false);
+                                }}
+                            >
+                                <PhotoIcon sx={{ fontSize: 'var(--icon-size-small)' }} />
+                                Фото/Альбом
+                            </div>
+                            <div 
+                                className={styles.attachOption}
+                                onClick={() => {
+                                    setShowMusicSelector(true);
+                                    setShowAttachMenu(false);
+                                }}
+                            >
+                                <MusicNoteIcon sx={{ fontSize: 'var(--icon-size-small)' }} />
+                                Музыка
+                            </div>
+                            <div 
+                                className={styles.attachOption}
+                                onClick={() => {
+                                    setShowAudioUploader(true);
+                                    setShowAttachMenu(false);
+                                }}
+                            >
+                                <UploadIcon sx={{ fontSize: 'var(--icon-size-small)' }} />
+                                Загрузить аудио
+                            </div>
+                        </div>
+                    )}
+                </div>
+                
+                <button
+                    type="submit"
+                    className={styles.submitButton}
+                    disabled={!hasContent || isSubmitting}
+                >
+                    {isSubmitting ? 'Отправка...' : 'Опубликовать'}
+                </button>
+            </div>
         </form>
     );
 }; 

@@ -13,7 +13,7 @@
 }
 
 .form.dragging {
-    border: 2px dashed var(--vseti-color-blue-light);
+    border: 2px dashed var(--vseti-color-icons-primary-light);
     background-color: rgba(74, 118, 168, 0.05);
 }
 
@@ -41,7 +41,7 @@
 
 .textarea:focus {
     outline: none;
-    border-color: var(--vseti-color-blue-light);
+    border-color: var(--vseti-color-icons-primary-light);
 }
 
 .textarea::placeholder {
@@ -176,7 +176,7 @@
 }
 
 .submitButton:hover {
-    background: var(--vseti-color-blue-light);
+    background: var(--vseti-color-icons-primary-light);
 }
 
 .submitButton:disabled {
@@ -540,7 +540,7 @@
 }
 
 .expanded {
-    border-color: var(--vseti-color-blue-light);
+    border-color: var(--vseti-color-icons-primary-light);
 }
 
 .mediaSection {
@@ -735,4 +735,65 @@
 .optionName {
     font-size: 14px;
     color: var(--text-primary);
+}
+
+.attachButtonWrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.attachButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--vseti-color-icons-primary-light);
+    color: var(--vseti-color-white);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.attachButton:hover {
+    background-color: var(--vseti-color-icons-primary);
+}
+
+.attachButton:disabled {
+    background-color: rgba(var(--primary-rgb), 0.5);
+    cursor: not-allowed;
+}
+
+.attachDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    width: 200px;
+    background: var(--vseti-color-card-item);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-top: 5px;
+    overflow: hidden;
+}
+
+.attachOption {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: var(--vseti-color-text-primary);
+}
+
+.attachOption:hover {
+    background-color: var(--vseti-color-hover);
+}
+
+.attachOption i {
+    width: 16px;
+    color: var(--vseti-color-icons-primary);
 } 

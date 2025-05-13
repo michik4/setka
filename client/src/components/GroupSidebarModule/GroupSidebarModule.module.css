@@ -290,7 +290,7 @@
 }
 
 .joinButton:hover {
-  background-color: var(--vseti-color-blue-light);
+  background-color: var(--vseti-color-icons-primary-light);
 }
 
 .leaveButton {
@@ -406,7 +406,7 @@
 }
 
 .defaultMemberAvatar:hover {
-  background-color: var(--vseti-color-blue-light);
+  background-color: var(--vseti-color-icons-primary-light);
 }
 
 .memberInfo {
@@ -574,7 +574,7 @@
 .editButton {
   background-color: #f1f5f9;
   border: 1px solid var(--vseti-color-border-light);
-  color: var(--vseti-color-blue);
+  color: var(--vseti-color-icons-primary);
   margin-top: 8px;
 }
 

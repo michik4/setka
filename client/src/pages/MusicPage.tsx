@@ -1,20 +1,24 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Spinner } from '../components/Spinner/Spinner';
 import styles from './MusicPage.module.css';
-import { Track as DemoTrack, getDemoTracks } from './demoTracks';
-import AuPlayerWrap from '../components/AuPlayer/wrap/AuPlayWrap';
-import AuOrder from '../components/AuPlayer/AuOrder';
 import { usePlayer } from '../contexts/PlayerContext';
-import UploadAudio, { MultiUploadAudio } from '../components/UploadAudio';
-import { Link } from 'react-router-dom';
-import { tokenService } from '../utils/api';
+import { useQueue } from '../contexts/QueueContext';
 import UniversalTrackItem from '../components/UniversalTrackItem/UniversalTrackItem';
+import UniversalMusicAlbumItem from '../components/UniversalAlbumItem/UniversalAlbumItem';
 import { MusicService } from '../services/music.service';
-import { Search as SearchIcon } from '@mui/icons-material';
+import { MusicAlbumService } from '../services/music-album.service';
+import { Search as SearchIcon, Add as AddIcon, Remove as RemoveIcon, LibraryMusic, QueueMusic, Audiotrack, Close as CloseIcon } from '@mui/icons-material';
+import { Link } from 'react-router-dom';
+import UploadAudio, { MultiUploadAudio } from '../components/UploadAudio';
+import CreateAlbumModal from '../components/MusicAlbum/CreateAlbumModal';
+
 // Получаем URL API из переменных окружения
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 const MEDIA_URL = process.env.REACT_APP_MEDIA_URL || '/api/media';
+
+const PRIMARY_ICON_SIZE = 24;
+const SECONDARY_ICON_SIZE = 18;
 
 interface Track {
     id: number;
@@ -26,500 +30,534 @@ interface Track {
     playCount: number;
 }
 
+interface MusicAlbum {
+    id: number;
+    title: string;
+    description?: string;
+    userId: number;
+    coverUrl?: string;
+    tracksCount: number;
+    isPrivate: boolean;
+    createdAt: string;
+    updatedAt: string;
+    tracks?: Track[];
+    isInLibrary?: boolean;
+}
+
 interface PaginationInfo {
     total: number;
     page: number;
     limit: number;
     pages: number;
     hasMore: boolean;
+    isLoading: boolean;
+    lastFetchTime: number;
 }
 
-// Перечисление для вкладок
-enum TabType {
-    MyMusic = 'my-music',
-    Queue = 'queue',
-    Albums = 'albums',
-    Search = 'search'
-}
-
-export const MusicPage: React.FC = () => {
+const MusicPage: React.FC = () => {
     const { user } = useAuth();
-    const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [tracks, setTracks] = useState<Track[]>([]);
+    const [createAlbumBlock, setCreateAlbumBlock] = useState(false);
+    const [isCreateAlbumModalOpen, setIsCreateAlbumModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [debugInfo, setDebugInfo] = useState<string | null>(null);
-    const [debugVisible, setDebugVisible] = useState(false);
+    const [isLoadingAlbums, setIsLoadingAlbums] = useState(true);
+    const [tracks, setTracks] = useState<Track[]>([]);
+    const [albums, setAlbums] = useState<MusicAlbum[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [uploadingTrack, setUploadingTrack] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [coverError, setCoverError] = useState(false);
-    const [activeTab, setActiveTab] = useState<TabType>(TabType.MyMusic);
-    const [expandedView, setExpandedView] = useState(false);
-    const audioRef = useRef<HTMLAudioElement>(null);
-    const [volume, setVolume] = useState(1);
-    const [showVolumeControl, setShowVolumeControl] = useState(false);
-    const [pagination, setPagination] = useState<PaginationInfo>({
-        total: 0,
-        page: 1,
-        limit: 50,
-        pages: 0,
-        hasMore: false
-    });
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    // Состояние для поиска
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [searchResults, setSearchResults] = useState<{
         libraryTracks: Track[],
         serverTracks: Track[]
     }>({ libraryTracks: [], serverTracks: [] });
-    
-    const { 
-        playTrack, 
-        currentTrack: playerTrack, 
-        isPlaying: playerIsPlaying, 
+
+    // Обновленная структура пагинации с контролем состояния загрузки
+    const [pagination, setPagination] = useState<PaginationInfo>({
+        total: 0,
+        page: 1,
+        limit: 50,
+        pages: 0,
+        hasMore: false,
+        isLoading: false,
+        lastFetchTime: 0
+    });
+
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Используем рефы для отслеживания состояния загрузки и предотвращения повторных запросов
+    const paginationRef = useRef<PaginationInfo>({
+        total: 0,
+        page: 1,
+        limit: 50,
+        pages: 0,
+        hasMore: false,
+        isLoading: false,
+        lastFetchTime: 0
+    });
+
+    const requestIdRef = useRef<number>(0);
+    const albumRequestInProgressRef = useRef<boolean>(false);
+    const lastAlbumRequestTimeRef = useRef<number>(0);
+
+    // Синхронизируем состояние пагинации с ref для доступа из обработчиков событий
+    useEffect(() => {
+        paginationRef.current = pagination;
+    }, [pagination]);
+
+    const {
+        playTrack,
+        currentTrack: playerTrack,
+        isPlaying: playerIsPlaying,
         getTrackCover,
-        tracks: queueTracks,
-        setTracks: setQueueTracks,
-        addToQueue,
-        audio
+        addToQueue
     } = usePlayer();
 
-    useEffect(() => {
-        fetchTracks(1, true);
-    }, []);
+    const { clearQueue, addTracksToQueue } = useQueue();
 
-    useEffect(() => {
-        // Обработчик скролла для ленивой загрузки на уровне окна
-        const handleScroll = () => {
-            // Проверяем нужно ли загружать дополнительные треки
-            if (activeTab !== TabType.MyMusic || !pagination.hasMore || isLoadingMore || isLoading) {
+    // Полностью переработанная функция загрузки треков
+    const fetchTracks = useCallback(async (page: number, resetData: boolean = false) => {
+        // Генерируем уникальный идентификатор запроса
+        const requestId = ++requestIdRef.current;
+
+        // Проверяем, не выполняется ли уже загрузка
+        if (paginationRef.current.isLoading) {
+            console.log('⛔ Загрузка уже выполняется, пропускаем запрос');
+            return;
+        }
+
+        // Проверяем время последнего запроса (минимум 1000 мс между запросами)
+        const now = Date.now();
+        if (now - paginationRef.current.lastFetchTime < 1000) {
+            console.log(`⛔ Слишком частые запросы (${now - paginationRef.current.lastFetchTime}мс), пропускаем`);
+            return;
+        }
+
+        // Проверяем, есть ли необходимость в загрузке дополнительных страниц
+        if (page > 1 && !paginationRef.current.hasMore) {
+            console.log('⛔ Нет больше страниц для загрузки, пропускаем запрос');
+            return;
+        }
+
+        // Обновляем состояние пагинации перед запросом
+        setPagination(prev => ({
+            ...prev,
+            isLoading: true,
+            lastFetchTime: now
+        }));
+
+        // Обновляем состояние загрузки UI
+        if (resetData) {
+            setIsLoading(true);
+        } else if (page > 1) {
+            setIsLoadingMore(true);
+        }
+
+        try {
+            console.log(`🔄 Запрос треков #${requestId}, страница ${page}, лимит ${paginationRef.current.limit}`);
+
+            const result = await MusicService.getUserTracksPaginated(page, paginationRef.current.limit);
+
+            // Проверяем, не был ли этот запрос отменен более новым
+            if (requestIdRef.current > requestId) {
+                console.log(`⚠️ Запрос #${requestId} был отменен более новым запросом #${requestIdRef.current}`);
                 return;
             }
 
-            // Проверяем, насколько пользователь прокрутил страницу
-            const scrollTop = window.scrollY || document.documentElement.scrollTop;
-            const windowHeight = window.innerHeight;
-            const documentHeight = document.documentElement.scrollHeight;
-            
-            // Отображаем контроль громкости, если страница прокручена больше чем на 200px
-            setShowVolumeControl(scrollTop > 200);
-            
-            // Если пользователь прокрутил почти до конца страницы, загружаем еще треки
-            // Увеличиваем порог для более раннего начала загрузки
-            if (documentHeight - scrollTop - windowHeight < 500) {
-                loadMoreTracks();
+            console.log(`✅ Получены данные для запроса #${requestId}, страница ${page}:`, result);
+
+            // Добавляем отладочные выводы
+            console.log('🔍 Подробный анализ результата запроса:');
+            console.log('- Структура result:', Object.keys(result));
+            console.log('- result.tracks:', result.tracks);
+            console.log('- result.tracks.length:', result.tracks ? result.tracks.length : 'undefined');
+            console.log('- Тип result:', typeof result);
+            console.log('- result instanceof Array:', Array.isArray(result));
+
+            // Проверяем структуру ответа и извлекаем треки и информацию о пагинации
+            const tracks = result?.tracks || [];
+            console.log(`📦 Извлеченные треки (${tracks.length}):`, tracks);
+
+            // Проверка на случай, если tracks пустой, но должен содержать данные
+            if (tracks.length === 0 && result && typeof result === 'object' && 'tracks' in result) {
+                console.warn('⚠️ Массив треков пуст, хотя результат содержит поле tracks:', result);
             }
+
+            const totalTracks = result?.totalTracks || result?.pagination?.total || 0;
+            const paginationData = result?.pagination || {
+                total: totalTracks,
+                page: page,
+                limit: paginationRef.current.limit,
+                pages: Math.ceil(totalTracks / paginationRef.current.limit),
+                hasMore: (page * paginationRef.current.limit) < totalTracks
+            };
+
+            // Вычисляем, есть ли еще страницы
+            const totalPages = paginationData.pages || Math.ceil(totalTracks / paginationRef.current.limit);
+            const hasMorePages = paginationData.hasMore !== undefined
+                ? paginationData.hasMore
+                : (page < totalPages && tracks.length > 0);
+
+            // Обновляем информацию о пагинации
+            setPagination(prev => ({
+                ...prev,
+                total: totalTracks,
+                page: page,
+                pages: totalPages,
+                hasMore: hasMorePages,
+                isLoading: false
+            }));
+
+            // Логируем информацию о количестве треков
+            console.log(`🎵 Получено треков: ${tracks.length}, всего: ${totalTracks}, страниц: ${totalPages}, hasMore: ${hasMorePages}`);
+
+            // Обновляем список треков
+            setTracks(prevTracks => {
+                console.log('📋 Предыдущее состояние треков:', prevTracks);
+                console.log('📋 Новые треки из запроса:', tracks);
+
+                // При сбросе или первой странице заменяем полностью
+                if (resetData || page === 1) {
+                    console.log('📋 Полная замена треков:', tracks);
+                    return [...tracks];
+                }
+
+                // Иначе добавляем только новые (уникальные) треки
+                const existingIds = new Set(prevTracks.map(t => t.id));
+                const newTracks = tracks.filter(track => !existingIds.has(track.id));
+
+                console.log(`📋 Добавлено ${newTracks.length} новых треков (отфильтровано ${tracks.length - newTracks.length} дублей)`);
+
+                // Если нет новых треков, отключаем hasMore
+                if (newTracks.length === 0 && tracks.length > 0) {
+                    setPagination(prev => ({ ...prev, hasMore: false }));
+                    console.log('⚠️ Нет новых треков, отключаем hasMore');
+                }
+
+                const updatedTracks = [...prevTracks, ...newTracks];
+                console.log('📋 Обновленный список треков:', updatedTracks);
+                return updatedTracks;
+            });
+
+            setError(null);
+        } catch (err) {
+            console.error('❌ Ошибка при загрузке треков:', err);
+            setError('Не удалось загрузить треки. Пожалуйста, попробуйте позже.');
+
+            // Сбрасываем состояние загрузки в случае ошибки
+            setPagination(prev => ({
+                ...prev,
+                isLoading: false
+            }));
+        } finally {
+            // Сбрасываем все флаги загрузки UI
+            setIsLoading(false);
+            setIsLoadingMore(false);
+        }
+    }, []);
+
+    // Загрузка альбомов пользователя
+    const fetchAlbums = useCallback(async () => {
+        // Проверяем, не идет ли уже запрос на загрузку альбомов
+        if (albumRequestInProgressRef.current) {
+            console.log('⛔ Запрос альбомов уже выполняется, пропускаем дублирующий запрос');
+            return;
+        }
+
+        // Проверяем время последнего запроса альбомов, чтобы избежать слишком частых вызовов
+        const now = Date.now();
+        if (now - lastAlbumRequestTimeRef.current < 1000) {
+            console.log('⛔ Слишком частые запросы альбомов, пропускаем');
+            return;
+        }
+
+        // Обновляем рефы состояния
+        albumRequestInProgressRef.current = true;
+        lastAlbumRequestTimeRef.current = now;
+
+        try {
+            setIsLoadingAlbums(true);
+            const albumsData = await MusicAlbumService.getUserAlbums();
+            
+            // Устанавливаем значение isInLibrary по умолчанию для альбомов, где оно не определено
+            const processedAlbums = albumsData.map(album => ({
+                ...album,
+                isInLibrary: album.isInLibrary !== undefined ? album.isInLibrary : true
+            }));
+            
+            console.log(`[MusicPage] Получено ${processedAlbums.length} альбомов, добавлено свойство isInLibrary где необходимо`);
+            setAlbums(processedAlbums);
+        } catch (err) {
+            console.error('Ошибка при загрузке альбомов:', err);
+            setError('Не удалось загрузить альбомы. Пожалуйста, попробуйте позже.');
+        } finally {
+            setIsLoadingAlbums(false);
+            albumRequestInProgressRef.current = false;
+        }
+    }, []);
+
+    // Поиск треков
+    const handleSearch = async () => {
+        if (!searchQuery.trim()) {
+            // Если поиск пустой, возвращаем к обычному отображению
+            setIsSearching(false);
+            return;
+        }
+
+        try {
+            setIsSearching(true);
+            const results = await MusicService.searchTracks(searchQuery);
+            setSearchResults(results);
+        } catch (err) {
+            console.error('Ошибка при поиске треков:', err);
+            setError('Не удалось выполнить поиск. Пожалуйста, попробуйте позже.');
+        }
+    };
+
+    // Загрузка данных при первоначальной загрузке страницы
+    useEffect(() => {
+        // Сбрасываем состояние пагинации
+        setPagination({
+            total: 0,
+            page: 1,
+            limit: 50,
+            pages: 0,
+            hasMore: false,
+            isLoading: false,
+            lastFetchTime: 0
+        });
+
+        // Загружаем первую страницу треков и альбомы
+        fetchTracks(1, true);
+        fetchAlbums();
+
+        // Добавляем обработчик события beforeunload для сброса рефов при закрытии/обновлении страницы
+        const handleBeforeUnload = () => {
+            albumRequestInProgressRef.current = false;
         };
 
-        // Привязываем обработчик скролла к окну
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [fetchTracks, fetchAlbums]);
+
+    // Улучшенная система отслеживания скролла с защитой от частых запросов
+    useEffect(() => {
+        // Используем throttle для ограничения частоты вызовов обработчика скролла
+        let throttleTimeout: NodeJS.Timeout | null = null;
+        const throttleDelay = 200; // мс
+
+        const handleScroll = () => {
+            // Если уже выполняется throttle, выходим
+            if (throttleTimeout) return;
+
+            // Устанавливаем таймаут для throttle
+            throttleTimeout = setTimeout(() => {
+                throttleTimeout = null;
+
+                // Если идет загрузка или поиск, или больше нет страниц, не делаем запрос
+                if (paginationRef.current.isLoading || isSearching || !paginationRef.current.hasMore) {
+                    return;
+                }
+
+                // Вычисляем положение скролла
+                const scrollPosition = window.innerHeight + window.scrollY;
+                const documentHeight = document.documentElement.scrollHeight;
+                const scrollThreshold = 0.85; // 85% высоты документа
+
+                // Если достигнут порог прокрутки, загружаем следующую страницу
+                if (scrollPosition >= documentHeight * scrollThreshold) {
+                    const nextPage = paginationRef.current.page + 1;
+                    console.log(`📜 Достигнут порог прокрутки (${Math.round(scrollPosition / documentHeight * 100)}%), загружаем страницу ${nextPage}`);
+                    fetchTracks(nextPage, false);
+                }
+            }, throttleDelay);
+        };
+
+        // Добавляем обработчик скролла и очищаем его при размонтировании
         window.addEventListener('scroll', handleScroll);
 
         return () => {
-            // Удаляем обработчик при размонтировании
             window.removeEventListener('scroll', handleScroll);
+            if (throttleTimeout) {
+                clearTimeout(throttleTimeout);
+            }
         };
-    }, [activeTab, pagination.hasMore, isLoadingMore, isLoading, pagination.page]);
+    }, [fetchTracks, isSearching]);
 
-    useEffect(() => {
-        if (currentTrack && audioRef.current) {
-            try {
-                console.log('[Music] Установка аудио источника:', currentTrack.audioUrl);
-                audioRef.current.src = currentTrack.audioUrl;
-                
-                audioRef.current.onerror = ((e: Event) => {
-                    console.error('Ошибка воспроизведения аудио:', e);
-                    const audioElement = audioRef.current;
-                    if (audioElement && audioElement.error) {
-                        console.error('Код ошибки:', audioElement.error.code);
-                        console.error('Сообщение ошибки:', audioElement.error.message);
-                        
-                        // Показываем более информативное сообщение об ошибке
-                        let errorMessage = 'Не удалось воспроизвести трек: ' + currentTrack.title;
-                        switch (audioElement.error.code) {
-                            case MediaError.MEDIA_ERR_ABORTED:
-                                errorMessage += ' (воспроизведение прервано)';
-                                break;
-                            case MediaError.MEDIA_ERR_NETWORK:
-                                errorMessage += ' (сетевая ошибка)';
-                                break;
-                            case MediaError.MEDIA_ERR_DECODE:
-                                errorMessage += ' (ошибка декодирования)';
-                                break;
-                            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                                errorMessage += ' (формат не поддерживается)';
-                                break;
-                        }
-                        
-                        alert(errorMessage);
-                    } else {
-                        alert('Не удалось воспроизвести трек: ' + currentTrack.title);
-                    }
-                    setIsPlaying(false);
-                }) as OnErrorEventHandler;
-                
-                if (isPlaying) {
-                    const playPromise = audioRef.current.play();
-                    
-                    if (playPromise !== undefined) {
-                        playPromise.catch(error => {
-                            console.error('[Music] Ошибка воспроизведения:', error);
-                            setIsPlaying(false);
-                        });
-                    }
-                } else {
-                    audioRef.current.pause();
-                }
-            } catch (error) {
-                console.error('[Music] Ошибка при настройке аудио:', error);
-                setIsPlaying(false);
-            }
-        }
-    }, [currentTrack, isPlaying]);
-
-    useEffect(() => {
-        setCoverError(false);
-    }, [playerTrack?.id]);
-
-    const handleBackgroundCoverError = () => {
-        console.warn('[MusicPage] Ошибка загрузки фоновой обложки:', playerTrack?.coverUrl);
-        setCoverError(true);
+    // Обработчик выбора трека для воспроизведения
+    const handlePlayTrack = (track: Track) => {
+        playTrack(track);
     };
 
-    const fetchTracks = (page = 1, resetTracks = false) => {
-        if (resetTracks) {
-            setTracks([]);
-            setError(null);
-        }
-        
-        setIsLoading(resetTracks);
-        setIsLoadingMore(page > 1);
-        
-        // Получаем токен из tokenService
-        const token = tokenService.getToken();
-        
-        // Загружаем все треки сразу, увеличив лимит
-        fetch(`${API_URL}/music?page=${page}&limit=1000`, {
-            headers: {
-                'Accept': 'application/json',
-                // Добавляем токен в заголовок Authorization, если он есть
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            // Удаляем credentials: 'include', так как теперь используем токены, а не куки
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP ошибка: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('[Music] Получены треки:', data);
-                
-                // Валидация данных
-                const validatedTracks = data.tracks.map((track: any) => {
-                    const validTrack: Track = {
-                        id: track.id || 0,
-                        title: track.title || 'Неизвестный трек',
-                        artist: track.artist || 'Неизвестный исполнитель',
-                        duration: track.duration || 0,
-                        coverUrl: track.coverUrl || '/api/music/cover/default.png',
-                        // Для трека с сервера используем файловый маршрут
-                        audioUrl: track.filename ? `${API_URL}/music/file/${track.filename}` : '',
-                        playCount: track.playCount || 0
-                    };
-                    
-                    // Проверяем наличие аудио URL
-                    if (!validTrack.audioUrl) {
-                        console.warn(`[Music] Трек ${validTrack.title} (ID: ${validTrack.id}) не имеет аудио URL`);
-                    }
-                    
-                    return validTrack;
-                });
-                
-                // Обновляем список треков
-                if (resetTracks) {
-                    setTracks(validatedTracks);
-                } else {
-                    setTracks(prevTracks => [...prevTracks, ...validatedTracks]);
-                }
-                
-                // Одновременно обновляем и очередь воспроизведения в плеере
-                if (resetTracks) {
-                    console.log(`[Music] Добавляем в очередь все ${validatedTracks.length} треков`);
-                    setQueueTracks([...validatedTracks]);
-                }
-                
-                // Обновляем информацию о пагинации
-                setPagination(data.pagination);
-            })
-            .catch(err => {
-                console.error('[Music] Ошибка при загрузке треков:', err);
-                setError(`Не удалось загрузить треки: ${err.message}`);
-            })
-            .finally(() => {
-                setIsLoading(false);
-                setIsLoadingMore(false);
-            });
-    };
-    
-    // Функция для загрузки дополнительных треков
-    const loadMoreTracks = () => {
-        if (pagination.hasMore && !isLoadingMore) {
-            const nextPage = pagination.page + 1;
-            console.log(`[Music] Загрузка дополнительных треков, страница ${nextPage}`);
-            fetchTracks(nextPage, false);
-        }
-    };
+    // Обработчик удаления трека
+    const handleDeleteTrack = async (trackId: number, event: React.MouseEvent) => {
+        event.stopPropagation();
 
-    // Обработчик для выбора трека из списка "Моя музыка"
-    const handleSelectTrack = async (track: Track) => {
-        console.log('[Music] Выбран трек из списка:', track);
-        
         try {
-            // Загружаем все треки пользователя без пагинации
-            setIsLoading(true);
-            
-            // Получаем токен из tokenService
-            const token = tokenService.getToken();
-            
-            const response = await fetch(`${API_URL}/music?limit=1000`, {
-                headers: {
-                    'Accept': 'application/json',
-                    // Добавляем токен в заголовок Authorization, если он есть
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                // Удаляем credentials: 'include', так как теперь используем токены, а не куки
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ошибка: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            console.log('[Music] Загружены все треки для очереди:', data);
-            
-            // Преобразуем все треки в нужный формат
-            const allTracks = data.tracks.map((trackData: any) => {
-                return {
-                    id: trackData.id || 0,
-                    title: trackData.title || 'Неизвестный трек',
-                    artist: trackData.artist || 'Неизвестный исполнитель',
-                    duration: trackData.duration || '0:00',
-                    coverUrl: trackData.coverUrl || '/api/music/cover/default.png',
-                    audioUrl: trackData.filename ? `${API_URL}/music/file/${trackData.filename}` : '',
-                    playCount: trackData.playCount || 0
-                };
-            });
-            
-            console.log(`[Music] Добавляем в очередь все ${allTracks.length} треков`);
-            
-            // Полностью заменяем очередь
-            setQueueTracks([...allTracks]);
-            
-            // Находим выбранный трек в полном списке
-            const selectedTrack = allTracks.find((t: Track) => t.id === track.id) || track;
-            
-            // Запускаем воспроизведение
-            console.log('[Music] Начинаем воспроизведение трека:', selectedTrack);
-            playTrack(selectedTrack);
-            
-        } catch (error) {
-            console.error('[Music] Ошибка при загрузке всех треков для очереди:', error);
-            // Если произошла ошибка, используем текущие загруженные треки
-            setQueueTracks([...tracks]);
-            playTrack(track);
-        } finally {
-            setIsLoading(false);
+            await MusicService.deleteTrack(trackId);
+
+            // После успешного удаления перезагружаем текущую страницу
+            fetchTracks(pagination.page, true);
+
+        } catch (err) {
+            console.error('Ошибка при удалении трека:', err);
+            setError('Не удалось удалить трек. Пожалуйста, попробуйте позже.');
         }
     };
 
-    // Обработчик для добавления трека в очередь без воспроизведения
-    const handleAddToQueue = (track: Track, e: React.MouseEvent) => {
-        e.stopPropagation(); // Предотвращаем выбор трека для воспроизведения
-        
-        // Проверяем, есть ли уже такой трек в очереди
-        const trackExists = queueTracks.some(t => t.id === track.id);
-        
-        if (!trackExists) {
-            console.log('[Music] Добавление трека в очередь:', track);
-            addToQueue(track);
-                } else {
-            console.log('[Music] Трек уже в очереди:', track);
-        }
+    // Обработчик загрузки нового трека
+    const handleTrackUploaded = (track: Track) => {
+        // При добавлении нового трека делаем полное обновление данных
+        fetchTracks(1, true);
     };
 
-    const handleDeleteTrack = async (trackId: number, e: React.MouseEvent) => {
-        e.stopPropagation(); // Предотвращаем запуск трека при удалении
-        
-        if (!window.confirm('Вы уверены, что хотите удалить этот трек?')) {
-            return;
-        }
-        
-        try {
-            // Получаем токен из tokenService
-            const token = tokenService.getToken();
-            
-            const response = await fetch(`${API_URL}/music/${trackId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    // Добавляем токен в заголовок Authorization, если он есть
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                // Удаляем credentials: 'include', так как теперь используем токены, а не куки
-            });
-            
-            if (response.ok) {
-                // Удаляем трек из списка треков
-                setTracks(prev => prev.filter(track => track.id !== trackId));
-                
-                // Также удаляем его из очереди, если он там есть
-                setQueueTracks(prev => prev.filter(track => track.id !== trackId));
-                
-                // Обновляем информацию о пагинации
-                setPagination(prev => ({
-                    ...prev,
-                    total: Math.max(0, prev.total - 1),
-                    pages: Math.max(1, Math.ceil((prev.total - 1) / prev.limit))
-                }));
-                
-                // Проверяем, нужно ли подгрузить дополнительные треки
-                if (tracks.length < 5 && pagination.hasMore) {
-                    loadMoreTracks();
-                }
-            } else {
-                console.error('Ошибка при удалении трека');
-            }
-        } catch (error) {
-            console.error('Ошибка при удалении трека:', error);
-        }
-    };
-
-    // Обработчик для удаления всех треков пользователя
-    const handleDeleteAllTracks = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        
-        // Проверяем, есть ли треки для удаления
-        if (pagination.total === 0 || tracks.length === 0) {
-            alert('У вас нет треков для удаления');
-            return;
-        }
-        
-        // Запрашиваем подтверждение у пользователя
-        const confirmation = window.confirm(`Вы уверены, что хотите удалить все треки (${pagination.total})? Это действие нельзя отменить.`);
-        
-        if (!confirmation) {
-            return;
-        }
-        
-        try {
-            // Получаем токен из tokenService
-            const token = tokenService.getToken();
-            
-            const response = await fetch(`${API_URL}/music/user/all`, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    // Добавляем токен в заголовок Authorization, если он есть
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                },
-                // Удаляем credentials: 'include', так как теперь используем токены, а не куки
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Ошибка HTTP: ${response.status}`);
-            }
-            
-            const result = await response.json();
-            console.log('[Music] Результат удаления всех треков:', result);
-            
-            // Обновляем список треков
-            setTracks([]);
-            
-            // Сбрасываем пагинацию
-            setPagination({
-                total: 0,
-                page: 1,
-                limit: pagination.limit,
-                pages: 0,
-                hasMore: false
-            });
-            
-            // Показываем сообщение об успешном удалении
-            alert(`Удалено ${result.deletedCount} треков`);
-            
-        } catch (error) {
-            console.error('[Music] Ошибка при удалении всех треков:', error);
-            alert(`Ошибка при удалении треков: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-        }
-    };
-
-    // Обработчик для добавления нового трека после загрузки
-    const handleTrackUploaded = (newTrack: Track) => {
-        console.log('[Music] Добавлен новый трек:', newTrack);
-        
-        // Добавляем трек в начало списка
-        setTracks(prev => [newTrack, ...prev]);
-        
-        // Обновляем информацию о пагинации
-        setPagination(prev => ({
-            ...prev,
-            total: prev.total + 1,
-            pages: Math.ceil((prev.total + 1) / prev.limit)
-        }));
-    };
-
-    // Обработчик для множественной загрузки треков
+    // Обработчик множественной загрузки треков
     const handleTracksUploaded = (newTracks: any[]) => {
-        console.log(`[Music] Добавлено ${newTracks.length} новых треков`);
-        
-        // Конвертируем в формат Track
-        const convertedTracks: Track[] = newTracks.map(track => ({
-            id: track.id || 0,
-            title: track.title || 'Неизвестный трек',
-            artist: track.artist || 'Неизвестный исполнитель',
-            duration: track.duration || '0:00',
-            coverUrl: track.coverUrl || '/api/music/cover/default.png',
-            audioUrl: track.filename ? `${API_URL}/music/file/${track.filename}` : '',
-            playCount: track.playCount || 0
-        }));
-        
-        // Добавляем треки в начало списка
-        setTracks(prev => [...convertedTracks, ...prev]);
-        
-        // Обновляем информацию о пагинации
-        setPagination(prev => ({
-            ...prev,
-            total: prev.total + convertedTracks.length,
-            pages: Math.ceil((prev.total + convertedTracks.length) / prev.limit)
-        }));
-        
-        // Добавляем их в очередь плеера
-        if (convertedTracks.length > 0) {
-            setQueueTracks(prev => [...convertedTracks, ...prev]);
+        // При массовой загрузке треков перезагружаем данные
+        fetchTracks(1, true);
+    };
+
+    // Обработчик выбора альбома
+    const handleAlbumClick = (albumId: number) => {
+        // Перенаправление на страницу альбома
+        window.location.href = `/music/albums/${albumId}`;
+    };
+
+    // Обработчик воспроизведения альбома
+    const handlePlayAlbum = async (albumId: number) => {
+        try {
+            const album = await MusicAlbumService.getAlbumById(albumId);
+            if (album && album.tracks && album.tracks.length > 0) {
+                clearQueue();
+                addTracksToQueue(album.tracks);
+                playTrack(album.tracks[0]);
+            }
+        } catch (err) {
+            console.error('Ошибка при воспроизведении альбома:', err);
         }
     };
 
-    // Вкладка "Моя музыка"
-    const renderMyMusicTab = () => {
-        return (
-            <div className={`${styles.myMusicTab} ${expandedView ? styles.expanded : ''}`}>
-                <div className={styles.myMusicHeader}>
-                    <h2>Моя музыка</h2>
-                    <div className={styles.myMusicActions}>
-                        <button 
-                            className={styles.deleteAllButton} 
-                            onClick={handleDeleteAllTracks}
-                            title="Удалить все треки"
-                            disabled={isLoading || tracks.length === 0}
-                        >
-                            Удалить все треки
-                        </button>
-                    </div>
+    // Обработчик формы поиска при нажатии Enter
+    const handleSearchKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key === 'Enter') {
+            handleSearch();
+        }
+    };
+
+    // Функция для отмены поиска и возврата к обычному отображению
+    const handleClearSearch = () => {
+        setSearchQuery('');
+        setIsSearching(false);
+        if (searchInputRef.current) {
+            searchInputRef.current.focus();
+        }
+    };
+
+    // Отображение основного содержимого
+    const renderContent = () => {
+        if (isSearching) {
+            // Отображение результатов поиска
+            return renderSearchResults();
+        } else {
+            // Отображение библиотеки пользователя
+            return (
+                <div className={styles.contentBlock}>
+                    {renderAlbumsSection()}
+                    {renderTracksSection()}
                 </div>
-                
+            );
+        }
+    };
+
+    // Отображение секции с альбомами
+    const renderAlbumsSection = () => {
+        return (
+            <div className={styles.section}>
+                <div className={styles.sectionHeader}>
+                    <h2 className={styles.sectionTitle}>
+                        <LibraryMusic className={styles.sectionIcon} />
+                        Альбомы
+                    </h2>
+                    <button 
+                        onClick={() => setIsCreateAlbumModalOpen(true)} 
+                        className={`${styles.createAlbumButton}`}
+                    >
+                        <div className={styles.createAlbumButtonText}>
+                            <AddIcon />
+                            <h4 className={styles.createAlbumButtonLabel}>Создать альбом</h4>
+                        </div>
+                    </button>
+                </div>
+
+                {isLoadingAlbums ? (
+                    <div className={styles.loading}>
+                        <Spinner />
+                        <p>Загрузка альбомов...</p>
+                    </div>
+                ) : (
+                    <div className={styles.albumsGrid}>
+                        {/* Плитка для создания нового альбома */}
+                        {/*createAlbumBlock && (
+                        <div className={styles.album}>
+                            <Link to="/music/albums/create" className={styles.createAlbumLink}>
+                                <div className={styles.createAlbumTile}>
+                                    <div className={styles.createAlbumIcon}>+</div>
+                                    <div className={styles.createAlbumLabel}>Создать альбом</div>
+                                </div>
+                            </Link>
+                        </div>
+                        )}*/}
+
+                        {/* Отображение существующих альбомов */}
+                        {albums.map(album => (
+                            <UniversalMusicAlbumItem
+                                key={album.id}
+                                album={album}
+                                variant="grid"
+                                onAlbumClick={() => handleAlbumClick(album.id)}
+                                onLibraryStatusChange={(status) => {
+                                    // При изменении статуса альбома в библиотеке обновляем список альбомов
+                                    console.log(`Статус альбома "${album.title}" (ID:${album.id}) в библиотеке изменен: ${status ? 'Добавлен' : 'Удален'}`);
+                                    fetchAlbums();
+                                }}
+                            />
+                        ))}
+
+                        {albums.length === 0 && !isLoadingAlbums && (
+                            <div className={styles.emptyStateSmall}>
+                                <p>У вас пока нет созданных альбомов</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Отображение секции с треками
+    const renderTracksSection = () => {
+        console.log('🎵 Рендеринг секции треков:', {
+            tracks: tracks,
+            isLoading: isLoading,
+            isLoadingMore: isLoadingMore,
+            tracksLength: tracks.length,
+            error: error,
+            page: pagination.page,
+            total: pagination.total,
+            hasMore: pagination.hasMore
+        });
+
+        return (
+            <div className={styles.section}>
+                <div className={styles.sectionHeader}>
+                    <h2 className={styles.sectionTitle}>
+                        <Audiotrack className={styles.sectionIcon} />
+                        Моя музыка
+                    </h2>
+                </div>
+
                 <div className={styles.trackListContainer}>
                     {isLoading && pagination.page === 1 ? (
                         <div className={styles.loading}>
@@ -527,9 +565,7 @@ export const MusicPage: React.FC = () => {
                             <p>Загрузка ваших треков...</p>
                         </div>
                     ) : error ? (
-                        <div className={styles.errorMessage}>
-                            {error}
-                        </div>
+                        <div className={styles.errorMessage}>{error}</div>
                     ) : tracks.length === 0 ? (
                         <div className={styles.emptyState}>
                             <p>У вас пока нет загруженных треков</p>
@@ -543,11 +579,10 @@ export const MusicPage: React.FC = () => {
                         <div className={styles.trackList}>
                             <div className={styles.trackListHeader}>
                                 <div className={styles.trackCount}>
-                                    Найдено: {pagination.total} {pagination.total === 1 ? 'трек' : 
-                                              pagination.total < 5 ? 'трека' : 'треков'}
+                                    Найдено: {pagination.total} {getPluralForm(pagination.total, 'трек', 'трека', 'треков')}
                                 </div>
                             </div>
-                            
+
                             <div className={styles.tracksList}>
                                 {tracks.map((track, index) => (
                                     <UniversalTrackItem
@@ -555,12 +590,11 @@ export const MusicPage: React.FC = () => {
                                         track={track}
                                         isInLibrary={true}
                                         onLibraryStatusChange={() => fetchTracks(1, true)}
-                                        onPlayClick={() => handleSelectTrack(track)}
-                                        onRemove={(trackId) => handleDeleteTrack(trackId, new MouseEvent('click') as any)}
+                                        onPlayClick={() => handlePlayTrack(track)}
                                     />
                                 ))}
                             </div>
-                            
+
                             {/* Индикатор загрузки дополнительных треков */}
                             {isLoadingMore && (
                                 <div className={styles.loadingMore}>
@@ -568,11 +602,11 @@ export const MusicPage: React.FC = () => {
                                     <p>Загрузка треков...</p>
                                 </div>
                             )}
-                            
+
                             {/* Индикатор конца списка */}
                             {!isLoadingMore && !pagination.hasMore && tracks.length > 0 && (
                                 <div className={styles.endOfList}>
-                                    <p>Вы дошли до конца списка</p>
+                                    <span>Вы достигли конца списка ({pagination.total} {getPluralForm(pagination.total, 'трек', 'трека', 'треков')})</span>
                                 </div>
                             )}
                         </div>
@@ -581,139 +615,33 @@ export const MusicPage: React.FC = () => {
             </div>
         );
     };
-    
-    // Вкладка "Очередь"
-    const renderQueueTab = () => {
-        if (queueTracks.length === 0) {
-            return (
-                <div className={styles.emptyState}>
-                    <p>Очередь воспроизведения пуста</p>
-                    <p>Добавьте треки из раздела "Моя музыка"</p>
-                </div>
-            );
-        }
-        
-        return (
-            <div className={styles.queueContainer}>
-                <div className={styles.queueHeader}>
-                    <div className={styles.trackCount}>
-                        В очереди: {queueTracks.length} {queueTracks.length === 1 ? 'трек' : 
-                                   queueTracks.length < 5 ? 'трека' : 'треков'}
-                    </div>
-                </div>
-                
-                <div className={styles.tracksList}>
-                    {queueTracks.map((track) => (
-                        <UniversalTrackItem
-                            key={track.id}
-                            track={track}
-                            variant="queue"
-                            isInLibrary={true}
-                            onLibraryStatusChange={() => fetchTracks(1, true)}
-                            onPlayClick={() => playTrack(track)}
-                            onRemove={(trackId) => {
-                                // Удаляем трек из очереди по ID
-                                setQueueTracks(prev => prev.filter(t => t.id !== trackId));
-                            }}
-                        />
-                    ))}
-                </div>
-            </div>
-        );
-    };
 
-    // Переключение между обычным и расширенным режимом
-    const toggleViewMode = () => {
-        setExpandedView(!expandedView);
-    };
-
-    // Получаем URL обложки для фона
-    const coverUrl = playerTrack ? (coverError ? '/api/music/cover/default.png' : getTrackCover(playerTrack.coverUrl)) : '';
-
-    // Инициализация громкости
-    useEffect(() => {
-        if (audio) {
-            setVolume(audio.volume);
-        }
-    }, [audio]);
-
-    // Обработчик изменения громкости
-    const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newVolume = parseFloat(e.target.value);
-        setVolume(newVolume);
-        if (audio) {
-            audio.volume = newVolume;
-        }
-    };
-
-    // Функция для выполнения поиска
-    const handleSearch = async () => {
-        if (!searchQuery.trim()) {
-            setSearchResults({ libraryTracks: [], serverTracks: [] });
-            return;
-        }
-        
-        setIsSearching(true);
-        try {
-            const results = await MusicService.searchTracks(searchQuery);
-            setSearchResults(results);
-            
-            // Если есть результаты, переключаемся на вкладку поиска
-            if (activeTab !== TabType.Search) {
-                setActiveTab(TabType.Search);
-            }
-        } catch (error) {
-            console.error('Ошибка при выполнении поиска:', error);
-            // Можно добавить обработку ошибки, например показать уведомление
-        } finally {
-            setIsSearching(false);
-        }
-    };
-    
-    // Обработчик изменения поискового запроса
-    const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchQuery(e.target.value);
-    };
-    
-    // Обработчик нажатия Enter в поисковой строке
-    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            handleSearch();
-        }
-    };
-
-    // Рендер вкладки с результатами поиска
-    const renderSearchTab = () => {
-        if (isSearching) {
-            return (
-                <div className={styles.loadingContainer}>
-                    <Spinner />
-                    <p>Выполняется поиск...</p>
-                </div>
-            );
-        }
-        
+    // Отображение результатов поиска
+    const renderSearchResults = () => {
         const { libraryTracks, serverTracks } = searchResults;
-        const totalResults = libraryTracks.length + serverTracks.length;
-        
-        if (searchQuery.trim() === '') {
-            return (
-                <div className={styles.emptyState}>
-                    <p>Введите поисковый запрос, чтобы найти треки</p>
-                </div>
-            );
-        }
-        
-        if (totalResults === 0) {
-            return (
-                <div className={styles.emptyState}>
-                    <p>По запросу "{searchQuery}" ничего не найдено</p>
-                </div>
-            );
-        }
-        
+        const hasResults = libraryTracks.length > 0 || serverTracks.length > 0;
+
         return (
             <div className={styles.searchResults}>
+                <div className={styles.searchResultsHeader}>
+                    <h2 className={styles.searchResultsTitle}>
+                        Результаты поиска: "{searchQuery}"
+                    </h2>
+                    <button
+                        className={styles.clearSearchButton}
+                        onClick={handleClearSearch}
+                    >
+                        Вернуться к библиотеке
+                    </button>
+                </div>
+
+                {!hasResults && (
+                    <div className={styles.emptyState}>
+                        <p>По вашему запросу ничего не найдено</p>
+                        <p>Попробуйте изменить поисковый запрос или проверьте написание</p>
+                    </div>
+                )}
+
                 {libraryTracks.length > 0 && (
                     <div className={styles.searchSection}>
                         <h3 className={styles.searchSectionTitle}>В Вашей библиотеке</h3>
@@ -724,12 +652,13 @@ export const MusicPage: React.FC = () => {
                                     track={track}
                                     isInLibrary={true}
                                     onLibraryStatusChange={() => fetchTracks(1, true)}
+                                    onPlayClick={() => handlePlayTrack(track)}
                                 />
                             ))}
                         </div>
                     </div>
                 )}
-                
+
                 {serverTracks.length > 0 && (
                     <div className={styles.searchSection}>
                         <h3 className={styles.searchSectionTitle}>В сети</h3>
@@ -740,6 +669,7 @@ export const MusicPage: React.FC = () => {
                                     track={track}
                                     isInLibrary={false}
                                     onLibraryStatusChange={() => fetchTracks(1, true)}
+                                    onPlayClick={() => handlePlayTrack(track)}
                                 />
                             ))}
                         </div>
@@ -749,176 +679,97 @@ export const MusicPage: React.FC = () => {
         );
     };
 
-    // Если страница загружается в первый раз, показываем индикатор загрузки
-    if (isLoading && tracks.length === 0 && queueTracks.length === 0) {
-        return (
-            <div className={styles.centeredContainer}>
-                <div className={styles.loading}>
-                    <Spinner />
-                    <p>Загрузка музыки...</p>
-                </div>
-            </div>
-        );
-    }
+    // Вспомогательная функция для правильного склонения в зависимости от числа
+    const getPluralForm = (count: number, form1: string, form2: string, form5: string): string => {
+        const lastDigit = count % 10;
+        const lastTwoDigits = count % 100;
+
+        if (lastDigit === 1 && lastTwoDigits !== 11) {
+            return form1;
+        }
+
+        if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 10 || lastTwoDigits >= 20)) {
+            return form2;
+        }
+
+        return form5;
+    };
+
+    const handleAlbumCreated = (albumId: number) => {
+        console.log(`Альбом с ID ${albumId} успешно создан`);
+        // Обновляем список альбомов после создания
+        fetchAlbums();
+    };
 
     return (
-        <div className={`${expandedView ? styles.expandedMode : ''}`}>
-            <div className={styles.container}>
-                {playerTrack && (
-                    <>
-                        <div 
-                            className={styles.backgroundCover} 
-                            style={{ 
-                                backgroundImage: `url(${coverUrl})`,
-                                opacity: playerIsPlaying ? 0.3 : 0.15
-                            }}
-                        />
-                        {/* Невидимое изображение для отслеживания ошибок загрузки */}
-                        <img 
-                            src={coverUrl} 
-                            onError={handleBackgroundCoverError} 
-                            style={{ display: 'none' }} 
-                            alt="" 
-                        />
-                    </>
-                )}
-                <div className={styles.header}>
-                    <h1 className={styles.title}>Музыка</h1>
-                    <p className={styles.subtitle}>Слушайте и добавляйте в плейлисты</p>
-                    
-                    {/* Поисковая строка */}
-                    <div className={styles.searchContainer}>
-                        <input
-                            type="text"
-                            className={styles.searchInput}
-                            placeholder="Поиск треков..."
-                            value={searchQuery}
-                            onChange={handleSearchInputChange}
-                            onKeyDown={handleSearchKeyDown}
-                        />
-                        <button 
-                            className={styles.searchButton}
-                            onClick={handleSearch}
-                            disabled={isSearching}
+        <div className={styles.musicPage}>
+            {/* Поисковая строка */}
+            <div className={styles.searchContainer}>
+                <div className={styles.searchInputContainer}>
+                    <SearchIcon className={styles.searchIcon} />
+                    <input
+                        type="text"
+                        className={styles.searchInput}
+                        placeholder="Поиск треков..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
+                        ref={searchInputRef}
+                    />
+                    {searchQuery && (
+                        <button
+                            className={styles.clearSearchInputButton}
+                            onClick={() => setSearchQuery('')}
                         >
-                            <SearchIcon />
+                            <CloseIcon sx={{ 
+                                    fontSize: SECONDARY_ICON_SIZE,
+                                    color: 'var(--vseti-color-text-muted)'
+                                }} />
                         </button>
-                    </div>
-                        
-                    {/* Кнопка переключения режима отображения */}
-                    <button 
-                        className={styles.viewModeToggle}
-                        onClick={toggleViewMode}
-                        title={expandedView ? "Список треков" : "Расширенный плеер"}
-                    >
-                        {expandedView ? (
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
-                            </svg>
-                        ) : (
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
-                            </svg>
-                        )}
-                    </button>
+                    )}
                 </div>
-
-                {debugVisible && debugInfo && (
-                    <div className={styles.debugPanel}>
-                        <div className={styles.debugHeader}>
-                            <h3>Отладочная информация</h3>
-                            <button onClick={() => setDebugVisible(false)}>Закрыть</button>
-                        </div>
-                        <pre className={styles.debugContent}>{debugInfo}</pre>
-                    </div>
-                )}
-
-                <div className={styles.content}>
-                    <div className={styles.tabs}>
-                        <button 
-                            className={`${styles.tab} ${activeTab === TabType.MyMusic ? styles.tabActive : ''}`}
-                            onClick={() => setActiveTab(TabType.MyMusic)}
-                        >
-                            Моя музыка
-                        </button>
-                        <button 
-                            className={`${styles.tab} ${activeTab === TabType.Queue ? styles.tabActive : ''}`}
-                            onClick={() => setActiveTab(TabType.Queue)}
-                        >
-                            Очередь {queueTracks.length > 0 ? `(${queueTracks.length})` : ''}
-                        </button>
-                        <button 
-                            className={`${styles.tab} ${activeTab === TabType.Albums ? styles.tabActive : ''}`}
-                            onClick={() => setActiveTab(TabType.Albums)}
-                        >
-                            Альбомы
-                        </button>
-                        <button 
-                            className={`${styles.tab} ${activeTab === TabType.Search ? styles.tabActive : ''}`}
-                            onClick={() => setActiveTab(TabType.Search)}
-                        >
-                            Поиск
-                        </button>
-                    </div>
-
-                    <div className={styles.tabContent}>
-                        {activeTab === TabType.MyMusic ? renderMyMusicTab() : activeTab === TabType.Queue ? renderQueueTab() : activeTab === TabType.Albums ? (
-                            <div className={styles.tabContent}>
-                                <div className={styles.albumsGrid}>
-                                    <div className={styles.album}>
-                                        <Link to="/music/albums/create" className={styles.createAlbumLink}>
-                                            <div className={styles.createAlbumTile}>
-                                                <div className={styles.createAlbumIcon}>+</div>
-                                                <div className={styles.createAlbumLabel}>Создать альбом</div>
-                                            </div>
-                                        </Link>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : renderSearchTab()}
-                    </div>
-                </div>
-
-                {/* Добавляем компонент загрузки аудио */}
-                <UploadAudio onTrackUploaded={handleTrackUploaded} />
-                
-                {/* Добавляем компонент множественной загрузки музыки */}
-                <MultiUploadAudio onTracksUploaded={handleTracksUploaded} />
-
-                {/* Аудио плеер - передаем флаг expandedMode */}
-                <div className={styles.playerContainer}>
-                    <div className={expandedView ? styles.playerExpanded : ''}>
-                        <AuPlayerWrap expandedMode={expandedView} />
-                    </div>
-                </div>
-
-                {/* Фиксированный контроль громкости */}
-                {showVolumeControl && (
-                    <div className={styles.volumeControlFixed}>
-                        <div className={styles.volumeIcon}>
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                <path d={
-                                    volume === 0 
-                                        ? "M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"
-                                        : volume < 0.5
-                                        ? "M7 9v6h4l5 5V4l-5 5H7z"
-                                        : "M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
-                                } />
-                            </svg>
-                        </div>
-                        <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={volume}
-                            onChange={handleVolumeChange}
-                            aria-label="Громкость"
-                            className={styles.volumeSliderFixed}
-                        />
-                    </div>
-                )}
+                <button
+                    className={`${styles.searchButton} ${!searchQuery ? styles.disabled : ''}`}
+                    onClick={handleSearch}
+                    disabled={!searchQuery}
+                >
+                    Найти
+                </button>
             </div>
+
+            {/* Основной контент страницы */}
+            {renderContent()}
+
+            {/* Модальное окно создания альбома */}
+            <CreateAlbumModal
+                isOpen={isCreateAlbumModalOpen}
+                onClose={() => setIsCreateAlbumModalOpen(false)}
+                onAlbumCreated={handleAlbumCreated}
+                availableTracks={tracks}
+                userId={user?.id}
+            />
+
+            {/* Плавающая кнопка добавления */}
+            <UploadAudio
+                onTrackUploaded={handleTrackUploaded}
+                maxFileSize={100 * 1024 * 1024} // 100 МБ
+            >
+                <div className={styles.floatingAddButton}>
+                    <AddIcon />
+                </div>
+            </UploadAudio>
+
+            {/* Кнопка для массовой загрузки треков */}
+            <MultiUploadAudio
+                onTracksUploaded={handleTracksUploaded}
+                maxFileSize={100 * 1024 * 1024} // 100 МБ
+            >
+                <button className={styles.multiUploadButton}>
+                    Загрузить музыку
+                </button>
+            </MultiUploadAudio>
         </div>
     );
-}; 
+};
+
+export default MusicPage; 

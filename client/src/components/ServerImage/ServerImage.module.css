@@ -80,7 +80,7 @@
     width: 30px;
     height: 30px;
     border: 3px solid #f3f3f3;
-    border-top: 3px solid var(--vseti-color-blue-light);
+    border-top: 3px solid var(--vseti-color-icons-primary-light);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }

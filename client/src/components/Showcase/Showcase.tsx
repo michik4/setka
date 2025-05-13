@@ -13,7 +13,7 @@ import { usePlayer } from '../../contexts/PlayerContext';
 import { useQueue } from '../../contexts/QueueContext';
 import UniversalTrackItem from '../UniversalTrackItem';
 import styles from './Showcase.module.css';
-
+import { LockPerson as LockPersonIcon } from '@mui/icons-material';
 interface ShowcaseProps {
     userId: string;
 }
@@ -108,8 +108,8 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                         let userTracks: Track[] = [];
                         if (isAuthor) {
                             try {
-                                const musicResponse = await MusicService.getUserTracks(6);
-                                userTracks = musicResponse.tracks?.slice(0, 6) || [];
+                                const musicResponse = await MusicService.getUserTracks();
+                                userTracks = musicResponse.tracks || [];
                             } catch (tracksErr) {
                                 console.error('Ошибка при загрузке треков текущего пользователя:', tracksErr);
                             }
@@ -313,7 +313,7 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                                                 />
                                             )}
                                             {isAuthor && album.title === 'Загруженное' && (
-                                                <div className={styles.lockIcon}>🔒</div>
+                                                <LockPersonIcon className={styles.lockIcon} sx={{ fontSize: 'var(--icon-size-small)' }} />
                                             )}
                                         </div>
                                         <div className={styles.albumInfo}>
@@ -351,7 +351,7 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                                             alt="Фото" 
                                         />
                                         {isAuthor && uploadedPhotoIds.includes(photo.id) && (
-                                            <div className={styles.lockIcon}>🔒</div>
+                                            <LockPersonIcon className={styles.lockIcon} sx={{ fontSize: 'var(--icon-size-small)' }} />
                                         )}
                                     </div>
                                 ))}
@@ -393,7 +393,7 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                                                 </div>
                                             )}
                                             {album.isPrivate && (
-                                                <div className={styles.lockIcon}>🔒</div>
+                                                <LockPersonIcon className={styles.lockIcon} sx={{ fontSize: 'var(--icon-size-small)' }} />
                                             )}
                                         </div>
                                         <div className={styles.albumInfo}>
@@ -445,7 +445,7 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                                 </button>
                             </div>
                             <div className={styles.tracksGrid}>
-                                {tracks.map(track => (
+                                {tracks.slice(0, 6).map(track => (
                                     <UniversalTrackItem
                                         key={track.id}
                                         track={track}
@@ -455,6 +455,14 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                                     />
                                 ))}
                             </div>
+                            {tracks.length > 6 && (
+                                <button 
+                                    className={styles.showMoreTracksButton}
+                                    onClick={handleShowAllTracks}
+                            >
+                                    Показать еще {tracks.length - 6} треков
+                                </button>
+                            )}
                         </div>
                     )}
                     

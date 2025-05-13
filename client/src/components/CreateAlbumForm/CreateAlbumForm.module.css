@@ -113,7 +113,7 @@
 }
 
 .submitButton:hover:not(:disabled) {
-    background: var(--vseti-color-blue-light);
+    background: var(--vseti-color-icons-primary-light);
 }
 
 .submitButton:disabled {

@@ -15,6 +15,53 @@ export class MusicService {
         }
     }
 
+    // Получение треков пользователя с пагинацией
+    static async getUserTracksPaginated(page: number = 1, limit: number = 20): Promise<{ 
+        tracks: Track[], 
+        totalTracks?: number, 
+        pagination?: {
+            total: number,
+            page: number,
+            limit: number,
+            pages: number,
+            hasMore: boolean
+        } 
+    }> {
+        try {
+            console.log(`[MusicService] Запрос треков с пагинацией: страница ${page}, лимит ${limit}`);
+            const result = await api.get(`${this.API_ENDPOINT}?page=${page}&limit=${limit}`);
+            
+            console.log('[MusicService] Получен ответ от API:', result);
+            
+            // Проверяем структуру ответа для совместимости с разными версиями API
+            if (result && typeof result === 'object') {
+                // Нормализуем ответ, обеспечивая все необходимые поля
+                const normalizedResult = {
+                    tracks: Array.isArray(result.tracks) ? result.tracks : [], 
+                    totalTracks: result.totalTracks || result.pagination?.total || 0,
+                    pagination: result.pagination || {
+                        total: result.totalTracks || 0,
+                        page: page,
+                        limit: limit,
+                        pages: Math.ceil((result.totalTracks || 0) / limit),
+                        hasMore: ((page * limit) < (result.totalTracks || 0))
+                    }
+                };
+                
+                console.log('[MusicService] Нормализованный ответ:', normalizedResult);
+                return normalizedResult;
+            }
+            
+            // Если ответ не соответствует ожидаемой структуре, возвращаем пустой результат
+            console.warn('[MusicService] Ответ сервера не соответствует ожидаемой структуре:', result);
+            return { tracks: [], totalTracks: 0, pagination: { total: 0, page, limit, pages: 0, hasMore: false } };
+        } catch (error) {
+            console.error('[MusicService] Ошибка при получении треков пользователя с пагинацией:', error);
+            // Вместо пробрасывания ошибки, возвращаем пустой результат
+            return { tracks: [], totalTracks: 0, pagination: { total: 0, page, limit, pages: 0, hasMore: false } };
+        }
+    }
+
     // Получение треков конкретного пользователя по ID
     static async getUserTracksById(userId: string | number, limit: number = 1000): Promise<{ tracks: Track[], totalTracks: number }> {
         try {
@@ -115,6 +162,25 @@ export class MusicService {
         } catch (error) {
             console.error(`Ошибка при удалении трека ${trackId} из библиотеки:`, error);
             throw error;
+        }
+    }
+    
+    // Проверка наличия трека в библиотеке пользователя
+    static async isTrackInLibrary(trackId: number): Promise<boolean> {
+        try {
+            const response = await api.get(`${this.API_ENDPOINT}/${trackId}/in-library`);
+            
+            // Проверяем структуру ответа
+            if (response && typeof response === 'object' && 'inLibrary' in response) {
+                return response.inLibrary === true;
+            }
+            
+            console.warn(`[MusicService] Неожиданный формат ответа от сервера при проверке наличия трека ${trackId} в библиотеке:`, response);
+            return false;
+        } catch (error) {
+            console.error(`Ошибка при проверке наличия трека ${trackId} в библиотеке:`, error);
+            // Не выбрасываем ошибку, просто возвращаем false
+            return false;
         }
     }
     

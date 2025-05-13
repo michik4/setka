@@ -29,7 +29,7 @@
 }
 
 .createAlbumButton:hover {
-    background: var(--vseti-color-blue-light);
+    background: var(--vseti-color-icons-primary-light);
 }
 
 .createAlbumSection {

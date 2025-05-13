@@ -12,3 +12,6 @@ export const PLAYER_SYNC_CHANNEL = 'player-sync';
 export const ACTIVE_PLAYER_STORAGE_KEY = 'active-player';
 export const PLAYER_SESSION_KEY = 'player-session';
 export const SHUFFLE_QUEUE_KEY = 'shuffle-queue'; 
+
+// Grid
+export const GRID_WIDTH = 520;

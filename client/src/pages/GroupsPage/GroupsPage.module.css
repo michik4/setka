@@ -25,7 +25,7 @@
 }
 
 .createButton:hover {
-    background-color: var(--vseti-color-blue-light);
+    background-color: var(--vseti-color-icons-primary-light);
 }
 
 .searchContainer {
@@ -52,7 +52,7 @@
 }
 
 .searchButton:hover {
-    background-color: var(--vseti-color-blue-light);
+    background-color: var(--vseti-color-icons-primary-light);
 }
 
 .section {
@@ -67,7 +67,7 @@
     font-size: 16px;
     margin-top: 0;
     margin-bottom: 16px;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
 }
 
 .groupsList {
@@ -175,7 +175,7 @@
 }
 
 .joinButton:hover {
-    background-color: var(--vseti-color-blue-light);
+    background-color: var(--vseti-color-icons-primary-light);
 }
 
 .leaveButton {

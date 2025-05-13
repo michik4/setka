@@ -7,7 +7,8 @@
     --vseti-color-light-button: #25c97a;
     --vseti-color-hover: #2d333c;
     --vseti-color-border: #373d47;
-    
+    --vseti-color-link: #25c97a;
+
     /* Дополнительные цвета и оттенки */
     --vseti-color-dark: #1a1f25;
 
@@ -30,6 +31,7 @@
     --vseti-color-green-active: rgba(24, 167, 95, 0.25);
 
     --vseti-color-text-dark: #1a1f25;
+    --vseti-color-text-colorful: #447BBA;
     --vseti-color-text-primary: #e9ebee;
     --vseti-color-text-secondary: #c4c9cf;
     --vseti-color-text-tertiary: #a6acb3;
@@ -37,7 +39,6 @@
     --vseti-color-text-accent: #18a75f;
     
     --vseti-color-icon: #757b84;
-    
     
     --vseti-color-scrollbar: #3c444f;
     --vseti-color-scrollbar-light: #c1c9d1;
@@ -50,17 +51,25 @@
     --vseti-color-shadow-light: #d3d9de;
     --vseti-color-border-light: #e7e8ec;
     --vseti-color-text-gray: #656565;
-    --vseti-color-blue: #2a5885;
-    --vseti-color-blue-light: #4a76a8;
-    --vseti-color-blue-hover: #5181b8;
+    --vseti-color-icons-primary: #2a5885;
+    --vseti-color-icons-primary-light: #4a76a8;
+    --vseti-color-icons-primary-hover: #5181b8;
     --vseti-color-background-light: #f0f2f5;
     --vseti-color-background-gray: #edeef0;
-    
-    /* Размеры и радиусы */
-    --border-radius: 8px;
+
+    /* Сокращения для самых часто используемых цветов*/
     --bg-secondary: var(--vseti-color-card);
     --border-color: var(--vseti-color-border);
     --text-primary: var(--vseti-color-text-primary);
+    --color-card: var(--vseti-color-card);
+    --color-card-item: var(--vseti-color-card-item);
+    --color-card-item-hover: var(--vseti-color-card-item-hover);
+    --color-card-hover: var(--vseti-color-card-hover);
+    --color-card-active: var(--vseti-color-card-active);
+    
+    /* Размеры и радиусы */
+    --border-radius: 8px;
+    --block-padding: 20px;
     --sidebar-width: 165px;
     --right-sidebar-width: 320px;
     --content-width: 550px;
@@ -69,6 +78,9 @@
     --max-content-area: 1070px; /* Обновлено с учетом новой ширины правого сайдбара */
     --side-spacing: 30px; /* Отступ от краев для сайдбаров */
     --std-gap: 15px;
+    --icon-size: 24px;
+    --icon-size-small: 18px;
+    --icon-size-tiny: 14px;
 }
 
 body {
@@ -78,6 +90,11 @@ body {
 h1, h2, h3, h4, h5, h6 {
     margin: 0;
     padding: 0;
+}
+
+a {
+    text-decoration: none;
+    color: var(--vseti-color-link);
 }
 
 button {

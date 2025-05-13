@@ -5,6 +5,8 @@ import { MusicTrack } from "./music.entity";
 import { Group } from "./group.entity";
 import { Album } from "./album.entity";
 import { PostAlbum } from "./post_album.entity";
+import { PostMusicAlbum } from "./post_music_album.entity";
+import { MusicAlbum } from "./music_album.entity";
 
 @Entity("posts")
 export class Post {
@@ -47,7 +49,10 @@ export class Post {
     photos: Photo[];
 
     @OneToMany(() => PostAlbum, postAlbum => postAlbum.post)
-    postAlbums: PostAlbum[];
+    albumRelations: PostAlbum[];
+
+    @OneToMany(() => PostMusicAlbum, postMusicAlbum => postMusicAlbum.post)
+    musicAlbumRelations: PostMusicAlbum[];
 
     @ManyToMany(() => MusicTrack)
     @JoinTable({
@@ -81,6 +86,9 @@ export class Post {
     @UpdateDateColumn()
     updatedAt: Date;
 
-    // Свойство для хранения альбомов при загрузке из БД
-    albums: Album[];
+    // Нереляционное свойство для альбомов
+    albums?: Album[];
+
+    // Нереляционное свойство для музыкальных альбомов
+    musicAlbums?: MusicAlbum[];
 } 

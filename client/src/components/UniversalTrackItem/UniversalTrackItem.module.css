@@ -246,7 +246,14 @@
     cursor: not-allowed;
 }
 
+.trackControlButton.inLibrary {
+    color: var(--vseti-color-light-button);
+    background-color: var(--vseti-color-green-hover);
+}
 
+.trackControlButton.inLibrary:hover {
+    background-color: var(--vseti-color-green-active);
+}
 
 /* Адаптивный дизайн */
 @media (max-width: 768px) {

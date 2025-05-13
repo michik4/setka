@@ -139,7 +139,7 @@
 /* Стили для кнопки загрузки фотографий */
 .uploadButton {
     padding: 8px 16px;
-    background-color: var(--vseti-color-blue-light);
+    background-color: var(--vseti-color-icons-primary-light);
     color: var(--vseti-color-var(--vseti-color-white));
     border: none;
     border-radius: 4px;
@@ -170,7 +170,7 @@
 .uploaderTitle {
     margin: 0 0 15px 0;
     font-size: 18px;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
 }
 
 .uploadingStatus {
@@ -179,7 +179,7 @@
     background-color: #e1eaf7;
     border-radius: 4px;
     text-align: center;
-    color: var(--vseti-color-blue-light);
+    color: var(--vseti-color-icons-primary-light);
     font-weight: 500;
 }
 

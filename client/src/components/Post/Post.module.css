@@ -234,7 +234,9 @@
 }
 
 .editContainer {
-    margin: 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .editTextarea {
@@ -245,7 +247,6 @@
     border: 1px solid var(--vseti-color-border);
     border-radius: 4px;
     resize: none;
-    margin-bottom: 8px;
     font-size: 13px;
     font-family: inherit;
     background-color: var(--vseti-color-dark);
@@ -255,7 +256,6 @@
 .editButtons {
     display: flex;
     justify-content: flex-end;
-    margin-top: 16px;
     gap: 8px;
 }
 
@@ -270,31 +270,51 @@
 }
 
 /* Стили для предпросмотра поста */
-.previewContainer {
-    margin: 16px 0;
-    border: 1px solid var(--vseti-color-border);
-    border-radius: 8px;
-    overflow: hidden;
+.previewPost {
+    background: var(--vseti-color-card);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    box-shadow: 0 1px 0 0 var(--vseti-color-border), 0 0 0 1px var(--vseti-color-border);
+    margin-bottom: 0;
+    color: var(--vseti-color-text-primary);
 }
 
-.previewTitle {
-    background-color: var(--vseti-color-dark);
-    padding: 8px 12px;
-    margin: 0;
-    font-size: 14px;
-    font-weight: 500;
+.previewPost .postHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.previewPost .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--vseti-color-border);
+}
+
+.previewPost .actions {
+    display: flex;
+    gap: 8px;
+}
+
+.previewPost .actionButton {
+    background: none;
+    border: none;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
     color: var(--vseti-color-text-secondary);
-    border-bottom: 1px solid var(--vseti-color-border);
-}
-
-.postPreview {
-    padding: 12px;
-    background-color: var(--vseti-color-card);
+    font-size: 13px;
+    opacity: 0.7;
 }
 
 /* Стили для медиа селектора */
 .mediaSelector {
-    margin: 16px 0;
     border: 1px solid var(--vseti-color-border);
     border-radius: 8px;
     overflow: hidden;
@@ -320,20 +340,21 @@
     padding: 8px 16px;
     background: none;
     border: none;
-    font-size: 13px;
-    cursor: pointer;
+    border-bottom: 2px solid transparent;
     color: var(--vseti-color-text-secondary);
-    transition: background-color 0.2s;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
 }
 
 .mediaSelectorTab:hover {
+    color: var(--vseti-color-text-primary);
     background-color: var(--vseti-color-hover);
 }
 
 .mediaSelectorTab.active {
-    background-color: var(--vseti-color-card);
-    font-weight: 500;
-    border-bottom: 2px solid var(--vseti-color-light-button);
+    color: var(--vseti-color-light-button);
+    border-bottom-color: var(--vseti-color-light-button);
 }
 
 .mediaSelectorTab:disabled {
@@ -347,15 +368,17 @@
 }
 
 .selectExistingButton {
-    margin-top: 8px;
-    padding: 6px 12px;
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
     background-color: var(--vseti-color-dark);
-    border: none;
-    border-radius: 4px;
-    color: var(--vseti-color-text-secondary);
+    color: var(--vseti-color-text-primary);
+    border: 1px solid var(--vseti-color-border);
+    border-radius: var(--border-radius);
+    font-size: 14px;
     cursor: pointer;
-    font-size: 13px;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
 }
 
 .selectExistingButton:hover {
@@ -403,29 +426,23 @@
 .trackItemWithControls {
     display: flex;
     align-items: center;
-    margin-bottom: 8px;
-    position: relative;
+    margin-bottom: 4px;
 }
 
 .trackDeleteBtn {
     background: none;
     border: none;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
+    color: var(--vseti-color-text-muted);
+    padding: 4px;
     cursor: pointer;
-    color: var(--vseti-color-error);
+    border-radius: 4px;
     margin-left: 8px;
-    background-color: var(--vseti-color-hover);
-    position: relative;
+    transition: all 0.2s ease;
 }
 
 .trackDeleteBtn:hover {
+    color: var(--vseti-color-error);
     background-color: rgba(230, 70, 70, 0.1);
-    transform: scale(1.1);
 }
 
 /* Дополнительные стили для отображения треков в посте */
@@ -535,7 +552,7 @@
 .addToMusicButton {
     background: none;
     border: none;
-    color: var(--vseti-color-blue);
+    color: var(--vseti-color-icons-primary);
     cursor: pointer;
     padding: 4px;
     border-radius: 50%;
@@ -563,7 +580,7 @@
     width: 16px;
     height: 16px;
     border: 2px solid rgba(42, 88, 133, 0.2);
-    border-top-color: var(--vseti-color-blue);
+    border-top-color: var(--vseti-color-icons-primary);
     border-radius: 50%;
     animation: spin 1s infinite linear;
 }
@@ -916,11 +933,12 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    padding: 20px;
 }
 
 .modalContent {
@@ -983,4 +1001,350 @@
         max-width: 95%;
         max-height: 95vh;
     }
+}
+
+/* Стили для контейнера предпросмотра */
+.previewContainer {
+
+    border: 1px solid var(--vseti-color-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.previewTitle {
+    background-color: var(--vseti-color-dark);
+    padding: 8px 12px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vseti-color-text-secondary);
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.postPreview {
+    padding: 15px;
+    background-color: var(--vseti-color-background);
+}
+
+/* Стили для блока приложений */
+.attachmentsContainer {
+    border: 1px solid var(--vseti-color-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.attachmentsTitle {
+    display: flex;
+    align-items: center;
+    background-color: var(--vseti-color-dark);
+    padding: 8px 12px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vseti-color-text-secondary);
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.attachmentsList {
+    padding: 12px;
+    background-color: var(--vseti-color-card);
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.attachmentsList:last-child {
+    border-bottom: none;
+}
+
+.attachmentsSubtitle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vseti-color-text-secondary);
+}
+
+.photoAttachments {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+}
+
+.photoAttachmentItem {
+    position: relative;
+}
+
+.photoThumbnail {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.photoThumbnail img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.trackAttachments {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.trackAttachmentItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background-color: var(--vseti-color-dark);
+    border-radius: 4px;
+}
+
+.trackInfo {
+    flex: 1;
+    overflow: hidden;
+}
+
+.attachmentDeleteBtn {
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.photoThumbnail:hover .attachmentDeleteBtn,
+.trackAttachmentItem:hover .attachmentDeleteBtn {
+    opacity: 1;
+}
+
+.attachmentDeleteBtn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.trackAttachmentItem .attachmentDeleteBtn {
+    position: static;
+    opacity: 1;
+    background: transparent;
+    color: var(--vseti-color-text-muted);
+    margin-left: 8px;
+}
+
+.trackAttachmentItem .attachmentDeleteBtn:hover {
+    color: var(--vseti-color-error);
+    background: rgba(230, 70, 70, 0.1);
+}
+
+/* Стили для отображения прикрепленных файлов в режиме редактирования */
+.attachmentsPreview {
+    margin: 15px 0;
+    border: 1px solid var(--vseti-color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--vseti-color-card);
+}
+
+.attachmentsTitle {
+    margin: 0;
+    padding: 10px 15px;
+    background-color: var(--vseti-color-dark);
+    color: var(--vseti-color-text-secondary);
+    font-weight: 500;
+    font-size: 14px;
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.attachmentSection {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--vseti-color-border);
+}
+
+.attachmentSection:last-child {
+    border-bottom: none;
+}
+
+.attachmentSectionTitle {
+    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vseti-color-text-secondary);
+}
+
+.albumsList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.albumItem {
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--vseti-color-card-item);
+    position: relative;
+}
+
+.albumPreview {
+    width: 100%;
+    height: 100px;
+    overflow: hidden;
+}
+
+.albumCover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.albumInfo {
+    padding: 8px;
+}
+
+.albumTitle {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vseti-color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.albumCount {
+    font-size: 12px;
+    color: var(--vseti-color-text-tertiary);
+}
+
+.removeButton {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.removeButton:hover {
+    opacity: 1;
+}
+
+.trackItemWithRemove {
+    position: relative;
+    margin-bottom: 8px;
+}
+
+.trackItemWithRemove:last-child {
+    margin-bottom: 0;
+}
+
+.removeTrackButton {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.removeTrackButton:hover {
+    opacity: 1;
+}
+
+/* Стили для предпросмотра альбомов */
+.albumsPreview, .musicAlbumsPreview {
+    margin: 10px 0;
+
+}
+
+.albumsPreviewTitle, .musicAlbumsPreviewTitle {
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    padding: 5px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--vseti-color-border);
+}
+
+.albumsPreviewTitle p, .musicAlbumsPreviewTitle p{
+    margin: 0;
+
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vseti-color-text-secondary);
+}
+
+.albumGrid, .musicAlbumGrid {
+}
+
+.albumPreviewItem, .musicAlbumPreviewItem {
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: var(--vseti-color-card-item);
+}
+
+.albumPreviewImage, .musicAlbumPreviewImage {
+    width: 100%;
+    height: 80px;
+    overflow: hidden;
+}
+
+.albumPreviewImage img, .musicAlbumPreviewImage img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.albumPreviewInfo, .musicAlbumPreviewInfo {
+    padding: 6px;
+}
+
+.albumPreviewTitle, .musicAlbumPreviewTitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--vseti-color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.albumPreviewCount, .musicAlbumPreviewCount {
+    font-size: 11px;
+    color: var(--vseti-color-text-tertiary);
 } 
