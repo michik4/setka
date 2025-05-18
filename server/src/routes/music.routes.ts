@@ -678,4 +678,130 @@ router.get('/:id/in-library', authenticateSession, async (req: any, res) => {
     }
 });
 
+// Получить треки определенного пользователя
+router.get('/user/:userId', async (req, res) => {
+    console.log('[API Music] GET /user/:userId - Запрос на получение треков определенного пользователя');
+    
+    try {
+        const targetUserId = parseInt(req.params.userId);
+        
+        if (isNaN(targetUserId)) {
+            console.error('[API Music] Некорректный ID пользователя');
+            return res.status(400).json({ message: 'Некорректный ID пользователя' });
+        }
+        
+        // Проверяем существование пользователя
+        const userExists = await userRepository.findOne({
+            where: { id: targetUserId }
+        });
+        
+        if (!userExists) {
+            console.error(`[API Music] Пользователь с ID ${targetUserId} не найден`);
+            return res.status(404).json({ message: 'Пользователь не найден' });
+        }
+        
+        // Параметры пагинации
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const skip = (page - 1) * limit;
+        
+        console.log(`[API Music] Пагинация: страница ${page}, лимит ${limit}, пропустить ${skip}`);
+        
+        // Получаем общее количество публичных треков пользователя
+        const totalTracks = await musicRepository.count({
+            where: { userId: targetUserId }
+        });
+        
+        // Получаем треки с пагинацией
+        const tracks = await musicRepository.find({
+            where: { userId: targetUserId },
+            order: { createdAt: 'DESC' },
+            skip,
+            take: limit
+        });
+        
+        console.log(`[API Music] Найдено ${tracks.length} треков пользователя ${targetUserId} на странице ${page} из ${Math.ceil(totalTracks / limit)} страниц`);
+        
+        // Добавляем заголовок Content-Type для явного указания формата ответа
+        res.setHeader('Content-Type', 'application/json');
+        return res.json({
+            tracks,
+            pagination: {
+                total: totalTracks,
+                page,
+                limit,
+                pages: Math.ceil(totalTracks / limit),
+                hasMore: page < Math.ceil(totalTracks / limit)
+            }
+        });
+    } catch (error) {
+        console.error('[API Music] Ошибка при получении треков пользователя:', error);
+        return res.status(500).json({ message: 'Ошибка сервера' });
+    }
+});
+
+// Получить треки из библиотеки "Моя музыка" пользователя
+router.get('/library/:userId', async (req, res) => {
+    console.log('[API Music] GET /library/:userId - Запрос на получение библиотеки "Моя музыка" пользователя');
+    
+    try {
+        const targetUserId = parseInt(req.params.userId);
+        
+        if (isNaN(targetUserId)) {
+            console.error('[API Music] Некорректный ID пользователя');
+            return res.status(400).json({ message: 'Некорректный ID пользователя' });
+        }
+        
+        // Проверяем существование пользователя
+        const userExists = await userRepository.findOne({
+            where: { id: targetUserId }
+        });
+        
+        if (!userExists) {
+            console.error(`[API Music] Пользователь с ID ${targetUserId} не найден`);
+            return res.status(404).json({ message: 'Пользователь не найден' });
+        }
+        
+        // Параметры пагинации
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const skip = (page - 1) * limit;
+        
+        console.log(`[API Music] Пагинация библиотеки: страница ${page}, лимит ${limit}, пропустить ${skip}`);
+        
+        // Получаем общее количество треков в библиотеке пользователя
+        // Здесь мы получаем все треки, где userId соответствует целевому ID
+        // В реальной схеме БД, это должны быть треки, которые пользователь добавил в "Мою музыку"
+        const totalTracks = await musicRepository.count({
+            where: { userId: targetUserId }
+        });
+        
+        // Получаем треки из библиотеки с пагинацией
+        const tracks = await musicRepository.find({
+            where: { userId: targetUserId },
+            order: { createdAt: 'DESC' },
+            skip,
+            take: limit
+        });
+        
+        console.log(`[API Music] Найдено ${tracks.length} треков в библиотеке пользователя ${targetUserId} на странице ${page} из ${Math.ceil(totalTracks / limit)} страниц`);
+        
+        // Добавляем заголовок Content-Type для явного указания формата ответа
+        res.setHeader('Content-Type', 'application/json');
+        return res.json({
+            tracks,
+            pagination: {
+                total: totalTracks,
+                page,
+                limit,
+                pages: Math.ceil(totalTracks / limit),
+                hasMore: page < Math.ceil(totalTracks / limit)
+            }
+        });
+    } catch (error) {
+        console.error('[API Music] Ошибка при получении треков библиотеки пользователя:', error);
+        return res.status(500).json({ message: 'Ошибка сервера' });
+    }
+});
+
 export default router; 

@@ -8,10 +8,11 @@ import UniversalTrackItem from '../components/UniversalTrackItem/UniversalTrackI
 import UniversalMusicAlbumItem from '../components/UniversalAlbumItem/UniversalAlbumItem';
 import { MusicService } from '../services/music.service';
 import { MusicAlbumService } from '../services/music-album.service';
-import { Search as SearchIcon, Add as AddIcon, Remove as RemoveIcon, LibraryMusic, QueueMusic, Audiotrack, Close as CloseIcon } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
+import { Search as SearchIcon, Add as AddIcon, Remove as RemoveIcon, LibraryMusic, QueueMusic, Audiotrack, Close as CloseIcon, Person } from '@mui/icons-material';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import UploadAudio, { MultiUploadAudio } from '../components/UploadAudio';
 import CreateAlbumModal from '../components/MusicAlbum/CreateAlbumModal';
+import { api } from '../utils/api';
 
 // Получаем URL API из переменных окружения
 const API_URL = process.env.REACT_APP_API_URL || '/api';
@@ -56,6 +57,14 @@ interface PaginationInfo {
 
 const MusicPage: React.FC = () => {
     const { user } = useAuth();
+    const { userId: urlUserId } = useParams<{ userId?: string }>();
+    const location = useLocation();
+    
+    // Определяем, просматриваем ли мы музыку другого пользователя
+    const isViewingOtherUser = !!urlUserId && urlUserId !== String(user?.id);
+    const targetUserId = isViewingOtherUser ? parseInt(urlUserId) : user?.id;
+    
+    const [otherUserName, setOtherUserName] = useState<string>('');
     const [createAlbumBlock, setCreateAlbumBlock] = useState(false);
     const [isCreateAlbumModalOpen, setIsCreateAlbumModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -114,6 +123,25 @@ const MusicPage: React.FC = () => {
 
     const { clearQueue, addTracksToQueue } = useQueue();
 
+    // Функция для получения имени пользователя
+    const fetchUserName = useCallback(async () => {
+        if (isViewingOtherUser && targetUserId) {
+            try {
+                // Используем утилиту api вместо прямого fetch
+                const userData = await api.get(`/users/${targetUserId}`);
+                
+                if (userData && userData.firstName) {
+                    setOtherUserName(`${userData.firstName} ${userData.lastName || ''}`);
+                } else {
+                    setOtherUserName(`Пользователь №${targetUserId}`);
+                }
+            } catch (error) {
+                console.error('Ошибка при получении данных пользователя:', error);
+                setOtherUserName(`Пользователь №${targetUserId}`);
+            }
+        }
+    }, [isViewingOtherUser, targetUserId]);
+
     // Полностью переработанная функция загрузки треков
     const fetchTracks = useCallback(async (page: number, resetData: boolean = false) => {
         // Генерируем уникальный идентификатор запроса
@@ -154,8 +182,16 @@ const MusicPage: React.FC = () => {
 
         try {
             console.log(`🔄 Запрос треков #${requestId}, страница ${page}, лимит ${paginationRef.current.limit}`);
-
-            const result = await MusicService.getUserTracksPaginated(page, paginationRef.current.limit);
+            
+            let result;
+            
+            // Используем разные методы в зависимости от того, чью музыку мы просматриваем
+            if (isViewingOtherUser && targetUserId) {
+                console.log(`Получаем треки пользователя ${targetUserId}`);
+                result = await MusicService.getUserTracksByUserId(targetUserId, page, paginationRef.current.limit);
+            } else {
+                result = await MusicService.getUserTracksPaginated(page, paginationRef.current.limit);
+            }
 
             // Проверяем, не был ли этот запрос отменен более новым
             if (requestIdRef.current > requestId) {
@@ -167,11 +203,15 @@ const MusicPage: React.FC = () => {
 
             // Добавляем отладочные выводы
             console.log('🔍 Подробный анализ результата запроса:');
-            console.log('- Структура result:', Object.keys(result));
-            console.log('- result.tracks:', result.tracks);
-            console.log('- result.tracks.length:', result.tracks ? result.tracks.length : 'undefined');
-            console.log('- Тип result:', typeof result);
-            console.log('- result instanceof Array:', Array.isArray(result));
+            if (result && typeof result === 'object') {
+                console.log('- Структура result:', Object.keys(result));
+                console.log('- result.tracks:', result.tracks);
+                console.log('- result.tracks.length:', result.tracks ? result.tracks.length : 'undefined');
+                console.log('- Тип result:', typeof result);
+                console.log('- result instanceof Array:', Array.isArray(result));
+            } else {
+                console.log('- Результат запроса не определен или не является объектом:', result);
+            }
 
             // Проверяем структуру ответа и извлекаем треки и информацию о пагинации
             const tracks = result?.tracks || [];
@@ -223,7 +263,7 @@ const MusicPage: React.FC = () => {
 
                 // Иначе добавляем только новые (уникальные) треки
                 const existingIds = new Set(prevTracks.map(t => t.id));
-                const newTracks = tracks.filter(track => !existingIds.has(track.id));
+                const newTracks = tracks.filter((track: Track) => !existingIds.has(track.id));
 
                 console.log(`📋 Добавлено ${newTracks.length} новых треков (отфильтровано ${tracks.length - newTracks.length} дублей)`);
 
@@ -253,39 +293,45 @@ const MusicPage: React.FC = () => {
             setIsLoading(false);
             setIsLoadingMore(false);
         }
-    }, []);
+    }, [isViewingOtherUser, targetUserId]);
 
-    // Загрузка альбомов пользователя
+    // Загрузка альбомов
     const fetchAlbums = useCallback(async () => {
-        // Проверяем, не идет ли уже запрос на загрузку альбомов
+        // Если запрос уже выполняется, не делаем новый
         if (albumRequestInProgressRef.current) {
-            console.log('⛔ Запрос альбомов уже выполняется, пропускаем дублирующий запрос');
+            console.warn('[MusicPage] Запрос альбомов уже выполняется, пропускаем дублирующий вызов fetchAlbums.');
             return;
         }
-
-        // Проверяем время последнего запроса альбомов, чтобы избежать слишком частых вызовов
-        const now = Date.now();
-        if (now - lastAlbumRequestTimeRef.current < 1000) {
-            console.log('⛔ Слишком частые запросы альбомов, пропускаем');
-            return;
-        }
-
-        // Обновляем рефы состояния
+        
         albumRequestInProgressRef.current = true;
-        lastAlbumRequestTimeRef.current = now;
-
+        setIsLoadingAlbums(true);
+        
         try {
-            setIsLoadingAlbums(true);
-            const albumsData = await MusicAlbumService.getUserAlbums();
+            let albumsData;
             
-            // Устанавливаем значение isInLibrary по умолчанию для альбомов, где оно не определено
-            const processedAlbums = albumsData.map(album => ({
-                ...album,
-                isInLibrary: album.isInLibrary !== undefined ? album.isInLibrary : true
-            }));
+            // Используем разные методы в зависимости от того, чью музыку мы просматриваем
+            if (isViewingOtherUser && targetUserId) {
+                console.log(`Получаем альбомы пользователя ${targetUserId}`);
+                albumsData = await MusicAlbumService.getUserAlbumsByUserId(targetUserId);
+            } else {
+                console.log('Получаем альбомы текущего пользователя');
+                albumsData = await MusicAlbumService.getUserAlbumsByUserId('current');
+            }
             
-            console.log(`[MusicPage] Получено ${processedAlbums.length} альбомов, добавлено свойство isInLibrary где необходимо`);
-            setAlbums(processedAlbums);
+            // Проверяем, что albumsData существует и является массивом
+            if (albumsData && Array.isArray(albumsData)) {
+                // Устанавливаем значение isInLibrary по умолчанию для альбомов, где оно не определено
+                const processedAlbums = albumsData.map((album: MusicAlbum) => ({
+                    ...album,
+                    isInLibrary: album.isInLibrary !== undefined ? album.isInLibrary : true
+                }));
+                
+                console.log(`[MusicPage] Получено ${processedAlbums.length} альбомов, добавлено свойство isInLibrary где необходимо`);
+                setAlbums(processedAlbums);
+            } else {
+                console.log('[MusicPage] Получены пустые данные альбомов:', albumsData);
+                setAlbums([]);
+            }
         } catch (err) {
             console.error('Ошибка при загрузке альбомов:', err);
             setError('Не удалось загрузить альбомы. Пожалуйста, попробуйте позже.');
@@ -293,7 +339,7 @@ const MusicPage: React.FC = () => {
             setIsLoadingAlbums(false);
             albumRequestInProgressRef.current = false;
         }
-    }, []);
+    }, [isViewingOtherUser, targetUserId]);
 
     // Поиск треков
     const handleSearch = async () => {
@@ -329,6 +375,11 @@ const MusicPage: React.FC = () => {
         // Загружаем первую страницу треков и альбомы
         fetchTracks(1, true);
         fetchAlbums();
+        
+        // Загружаем информацию о пользователе, если просматриваем чужую музыку
+        if (isViewingOtherUser) {
+            fetchUserName();
+        }
 
         // Добавляем обработчик события beforeunload для сброса рефов при закрытии/обновлении страницы
         const handleBeforeUnload = () => {
@@ -340,7 +391,7 @@ const MusicPage: React.FC = () => {
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, [fetchTracks, fetchAlbums]);
+    }, [fetchTracks, fetchAlbums, fetchUserName, isViewingOtherUser]);
 
     // Улучшенная система отслеживания скролла с защитой от частых запросов
     useEffect(() => {
@@ -480,15 +531,17 @@ const MusicPage: React.FC = () => {
                         <LibraryMusic className={styles.sectionIcon} />
                         Альбомы
                     </h2>
-                    <button 
-                        onClick={() => setIsCreateAlbumModalOpen(true)} 
-                        className={`${styles.createAlbumButton}`}
-                    >
-                        <div className={styles.createAlbumButtonText}>
-                            <AddIcon />
-                            <h4 className={styles.createAlbumButtonLabel}>Создать альбом</h4>
-                        </div>
-                    </button>
+                    {!isViewingOtherUser && (
+                        <button 
+                            onClick={() => setIsCreateAlbumModalOpen(true)} 
+                            className={`${styles.createAlbumButton}`}
+                        >
+                            <div className={styles.createAlbumButtonText}>
+                                <AddIcon />
+                                <h4 className={styles.createAlbumButtonLabel}>Создать альбом</h4>
+                            </div>
+                        </button>
+                    )}
                 </div>
 
                 {isLoadingAlbums ? (
@@ -498,18 +551,6 @@ const MusicPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className={styles.albumsGrid}>
-                        {/* Плитка для создания нового альбома */}
-                        {/*createAlbumBlock && (
-                        <div className={styles.album}>
-                            <Link to="/music/albums/create" className={styles.createAlbumLink}>
-                                <div className={styles.createAlbumTile}>
-                                    <div className={styles.createAlbumIcon}>+</div>
-                                    <div className={styles.createAlbumLabel}>Создать альбом</div>
-                                </div>
-                            </Link>
-                        </div>
-                        )}*/}
-
                         {/* Отображение существующих альбомов */}
                         {albums.map(album => (
                             <UniversalMusicAlbumItem
@@ -527,7 +568,7 @@ const MusicPage: React.FC = () => {
 
                         {albums.length === 0 && !isLoadingAlbums && (
                             <div className={styles.emptyStateSmall}>
-                                <p>У вас пока нет созданных альбомов</p>
+                                <p>{isViewingOtherUser ? `У пользователя пока нет публичных альбомов` : 'У вас пока нет созданных альбомов'}</p>
                             </div>
                         )}
                     </div>
@@ -554,7 +595,7 @@ const MusicPage: React.FC = () => {
                 <div className={styles.sectionHeader}>
                     <h2 className={styles.sectionTitle}>
                         <Audiotrack className={styles.sectionIcon} />
-                        Моя музыка
+                        {isViewingOtherUser ? `Музыка` : 'Моя музыка'}
                     </h2>
                 </div>
 
@@ -562,18 +603,22 @@ const MusicPage: React.FC = () => {
                     {isLoading && pagination.page === 1 ? (
                         <div className={styles.loading}>
                             <Spinner />
-                            <p>Загрузка ваших треков...</p>
+                            <p>Загрузка треков...</p>
                         </div>
                     ) : error ? (
                         <div className={styles.errorMessage}>{error}</div>
                     ) : tracks.length === 0 ? (
                         <div className={styles.emptyState}>
-                            <p>У вас пока нет загруженных треков</p>
-                            <p>Вы можете загрузить музыку двумя способами:</p>
-                            <ul className={styles.uploadOptionsList}>
-                                <li>Нажмите на кнопку "+" в правом нижнем углу, чтобы добавить один трек</li>
-                                <li>Нажмите на кнопку "Загрузить музыку" для множественной загрузки треков</li>
-                            </ul>
+                            <p>{isViewingOtherUser ? `У пользователя пока нет загруженных треков` : 'У вас пока нет загруженных треков'}</p>
+                            {!isViewingOtherUser && (
+                                <>
+                                    <p>Вы можете загрузить музыку двумя способами:</p>
+                                    <ul className={styles.uploadOptionsList}>
+                                        <li>Нажмите на кнопку "+" в правом нижнем углу, чтобы добавить один трек</li>
+                                        <li>Нажмите на кнопку "Загрузить музыку" для множественной загрузки треков</li>
+                                    </ul>
+                                </>
+                            )}
                         </div>
                     ) : (
                         <div className={styles.trackList}>
@@ -588,7 +633,7 @@ const MusicPage: React.FC = () => {
                                     <UniversalTrackItem
                                         key={track.id}
                                         track={track}
-                                        isInLibrary={true}
+                                        isInLibrary={!isViewingOtherUser}
                                         onLibraryStatusChange={() => fetchTracks(1, true)}
                                         onPlayClick={() => handlePlayTrack(track)}
                                     />
@@ -703,71 +748,90 @@ const MusicPage: React.FC = () => {
 
     return (
         <div className={styles.musicPage}>
-            {/* Поисковая строка */}
-            <div className={styles.searchContainer}>
-                <div className={styles.searchInputContainer}>
-                    <SearchIcon className={styles.searchIcon} />
-                    <input
-                        type="text"
-                        className={styles.searchInput}
-                        placeholder="Поиск треков..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={handleSearchKeyDown}
-                        ref={searchInputRef}
-                    />
-                    {searchQuery && (
-                        <button
-                            className={styles.clearSearchInputButton}
-                            onClick={() => setSearchQuery('')}
-                        >
-                            <CloseIcon sx={{ 
-                                    fontSize: SECONDARY_ICON_SIZE,
-                                    color: 'var(--vseti-color-text-muted)'
-                                }} />
-                        </button>
-                    )}
+            {isViewingOtherUser && (
+                <div className={styles.otherUserHeader}>
+                    <div className={styles.otherUserInfo}>
+                        <Person className={styles.userIcon} />
+                        <h1 className={styles.otherUserName}>
+                            {otherUserName || `Пользователь №${targetUserId}`}
+                        </h1>
+                    </div>
                 </div>
-                <button
-                    className={`${styles.searchButton} ${!searchQuery ? styles.disabled : ''}`}
-                    onClick={handleSearch}
-                    disabled={!searchQuery}
-                >
-                    Найти
-                </button>
-            </div>
+            )}
+        
+            {/* Поисковая строка */}
+            {!isViewingOtherUser && (
+                <div className={styles.searchContainer}>
+                    <div className={styles.searchInputContainer}>
+                        <SearchIcon className={styles.searchIcon} />
+                        <input
+                            type="text"
+                            className={styles.searchInput}
+                            placeholder="Поиск треков..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={handleSearchKeyDown}
+                            ref={searchInputRef}
+                        />
+                        {searchQuery && (
+                            <button
+                                className={styles.clearSearchInputButton}
+                                onClick={() => setSearchQuery('')}
+                            >
+                                <CloseIcon sx={{ 
+                                        fontSize: SECONDARY_ICON_SIZE,
+                                        color: 'var(--vseti-color-text-muted)'
+                                    }} />
+                            </button>
+                        )}
+                    </div>
+                    <button
+                        className={`${styles.searchButton} ${!searchQuery ? styles.disabled : ''}`}
+                        onClick={handleSearch}
+                        disabled={!searchQuery}
+                    >
+                        Найти
+                    </button>
+                </div>
+            )}
 
             {/* Основной контент страницы */}
             {renderContent()}
 
             {/* Модальное окно создания альбома */}
-            <CreateAlbumModal
-                isOpen={isCreateAlbumModalOpen}
-                onClose={() => setIsCreateAlbumModalOpen(false)}
-                onAlbumCreated={handleAlbumCreated}
-                availableTracks={tracks}
-                userId={user?.id}
-            />
+            {!isViewingOtherUser && (
+                <CreateAlbumModal
+                    isOpen={isCreateAlbumModalOpen}
+                    onClose={() => setIsCreateAlbumModalOpen(false)}
+                    onAlbumCreated={handleAlbumCreated}
+                    availableTracks={tracks}
+                    userId={user?.id}
+                />
+            )}
 
             {/* Плавающая кнопка добавления */}
-            <UploadAudio
-                onTrackUploaded={handleTrackUploaded}
-                maxFileSize={100 * 1024 * 1024} // 100 МБ
-            >
-                <div className={styles.floatingAddButton}>
-                    <AddIcon />
-                </div>
-            </UploadAudio>
+            {!isViewingOtherUser && (
+                <UploadAudio
+                    onTrackUploaded={handleTrackUploaded}
+                    maxFileSize={100 * 1024 * 1024} // 100 МБ
+                >
+                    <div className={styles.floatingAddButton}>
+                        <AddIcon />
+                    </div>
+                </UploadAudio>
+            )}
 
             {/* Кнопка для массовой загрузки треков */}
-            <MultiUploadAudio
-                onTracksUploaded={handleTracksUploaded}
-                maxFileSize={100 * 1024 * 1024} // 100 МБ
-            >
-                <button className={styles.multiUploadButton}>
-                    Загрузить музыку
-                </button>
-            </MultiUploadAudio>
+            {!isViewingOtherUser && (
+                <MultiUploadAudio
+                    onTracksUploaded={handleTracksUploaded}
+                    maxFileSize={100 * 1024 * 1024} // 100 МБ
+                >
+                    <button className={styles.multiUploadButton}>
+                        Загрузить музыку
+                    </button>
+                </MultiUploadAudio>
+            )}
         </div>
     );
 };

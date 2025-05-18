@@ -152,12 +152,11 @@
 
 /* Список треков */
 .tracksList {
-    max-height: 200px;
+    background-color: var(--vseti-color-card);
+    border-radius: 12px;
     overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--bg-color-tertiary);
-    padding: 8px;
+    max-height: 600px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Новые стили для выбора треков */
@@ -540,16 +539,10 @@
     font-weight: 600;
 }
 
-.tracksList {
-    background-color: var(--vseti-color-card);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
 .inTable {
     border-radius: 0;
     margin-bottom: 0;
+    border-bottom: 1px solid var(--vseti-color-border);
 }
 
 .inTable:last-child {
@@ -845,4 +838,76 @@
     .tracksTable td:nth-child(3) {
         width: calc(100% - 120px);
     }
+}
+
+/* Стили для бесконечной ленты */
+.loadingMoreContainer {
+    padding: 16px;
+    text-align: center;
+    color: var(--vseti-color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.loadMoreButton {
+    padding: 12px;
+    text-align: center;
+    background-color: var(--vseti-color-card-item);
+    color: var(--vseti-color-text-primary);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: 500;
+}
+
+.loadMoreButton:hover {
+    background-color: var(--vseti-color-card-item-hover);
+}
+
+/* Стили для заголовка секции треков с сортировкой */
+.tracksSectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.tracksSectionHeader h2 {
+    margin: 0;
+}
+
+.sortControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.sortControls span {
+    color: var(--vseti-color-text-secondary);
+    font-size: 0.9rem;
+}
+
+.sortButton {
+    background: none;
+    border: 1px solid var(--vseti-color-border);
+    padding: 6px 10px;
+    border-radius: 4px;
+    color: var(--vseti-color-text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sortButton:hover {
+    background-color: var(--vseti-color-card-item);
+}
+
+.sortButton.active {
+    background-color: var(--vseti-color-green-hover);
+    border-color: var(--vseti-color-green-active);
+    color: var(--vseti-color-text-primary);
+    font-weight: 500;
 } 

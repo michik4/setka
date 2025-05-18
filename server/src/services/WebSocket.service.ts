@@ -62,6 +62,9 @@ export class WebSocketService {
     this.conversationService = new ConversationService();
     this.messageService = new MessageService();
     this.setupSocketHandlers();
+    
+    // Запускаем периодическую очистку временных файлов
+    this.setupPeriodicCleanup();
   }
 
   private setupSocketHandlers() {
@@ -281,11 +284,19 @@ export class WebSocketService {
       });
 
       // Выход из системы
-      socket.on('logout', () => {
+      socket.on('logout', async () => {
         const userId = this.findUserIdBySocketId(socket.id);
         if (userId) {
           this.userSockets.delete(userId);
           socket.leave(`user_${userId}`);
+          
+          // Очищаем временные файлы при выходе из системы
+          try {
+            await PhotoPlaceholder.cleanupTempFiles();
+            console.log(`[WebSocket] Очищены временные файлы при выходе пользователя ${userId}`);
+          } catch (error) {
+            console.error('[WebSocket] Ошибка при очистке временных файлов при выходе:', error);
+          }
         }
         socket.emit('logout_success');
       });
@@ -485,16 +496,21 @@ export class WebSocketService {
       // Отключение
       socket.on('disconnect', async () => {
         const userId = this.findUserIdBySocketId(socket.id);
+        
+        console.log(`[WebSocket] Отключение сокета: ${socket.id}, связанный пользователь: ${userId || 'не найден'}`);
+        
         if (userId) {
           this.userSockets.delete(userId);
-          // Очищаем временные файлы при отключении
-          try {
-            await PhotoPlaceholder.cleanupTempFiles();
-            console.log(`[WebSocket] Очищены временные файлы для пользователя ${userId}`);
-          } catch (error) {
-            console.error('[WebSocket] Ошибка при очистке временных файлов:', error);
-          }
         }
+        
+        // Очищаем временные файлы при отключении всегда, независимо от наличия userId
+        try {
+          await PhotoPlaceholder.cleanupTempFiles();
+          console.log(`[WebSocket] Очищены временные файлы при отключении сокета ${socket.id}`);
+        } catch (error) {
+          console.error('[WebSocket] Ошибка при очистке временных файлов при отключении:', error);
+        }
+        
         console.log('Клиент отключился:', socket.id);
       });
     });
@@ -518,5 +534,25 @@ export class WebSocketService {
   // Метод для отправки обновления всем подключенным клиентам
   public broadcastUpdate(update: any) {
     this.io.emit('update', update);
+  }
+
+  // Настройка периодической очистки временных файлов
+  private setupPeriodicCleanup() {
+    // Очистка каждые 30 минут
+    const CLEANUP_INTERVAL = 30 * 60 * 1000;
+    
+    setInterval(async () => {
+      try {
+        await PhotoPlaceholder.cleanupTempFiles();
+        console.log('[WebSocket] Выполнена плановая очистка временных файлов');
+      } catch (error) {
+        console.error('[WebSocket] Ошибка при плановой очистке временных файлов:', error);
+      }
+    }, CLEANUP_INTERVAL);
+    
+    // Первоначальная очистка при запуске
+    PhotoPlaceholder.cleanupTempFiles()
+        .then(() => console.log('[WebSocket] Выполнена начальная очистка временных файлов'))
+        .catch(error => console.error('[WebSocket] Ошибка при начальной очистке временных файлов:', error));
   }
 } 

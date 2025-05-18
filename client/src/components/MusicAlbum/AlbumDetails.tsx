@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MusicAlbumService } from '../../services/music-album.service';
 import { MusicAlbum, Track } from '../../types/music.types';
@@ -6,7 +6,7 @@ import { DEFAULT_COVER_URL } from '../../config/constants';
 import UploadTracksToAlbumModal from './UploadTracksToAlbumModal';
 import { usePlayer } from '../../contexts/PlayerContext';
 import { useQueue } from '../../contexts/QueueContext';
-import TrackItem from '../TrackItem/TrackItem';
+import UniversalTrackItem from '../UniversalTrackItem/UniversalTrackItem';
 import styles from './MusicAlbum.module.css';
 import { Spinner } from '../Spinner/Spinner';
 import { PlayArrow, DeleteForever, Add as AddIcon, PlaylistAdd, Edit, PlaylistAddCheck } from '@mui/icons-material';
@@ -26,23 +26,128 @@ const AlbumDetails: React.FC = () => {
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
     const [isAddingToLibrary, setIsAddingToLibrary] = useState(false);
     const [isInLibrary, setIsInLibrary] = useState(false);
+    
+    // Состояния для серверной пагинации
+    const [tracks, setTracks] = useState<Track[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [totalTracks, setTotalTracks] = useState(0);
+    const [sortBy, setSortBy] = useState<string>('id');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const tracksPerPage = 10;
+    const tracksListRef = useRef<HTMLDivElement>(null);
 
     // Определяем, является ли текущий пользователь владельцем альбома
     const isOwner = album && user && album.userId === user.id;
 
     // Используем ref для отслеживания, выполнен ли первоначальный запрос
     const initialFetchDone = useRef(false);
-
+    
+    // Обработчик скролла для бесконечной ленты
+    const handleScroll = useCallback(() => {
+        if (!tracksListRef.current || isLoadingMore || !hasMore) return;
+        
+        const { scrollTop, scrollHeight, clientHeight } = tracksListRef.current;
+        
+        // Если пользователь прокрутил до конца списка (с небольшим запасом)
+        if (scrollTop + clientHeight >= scrollHeight - 100) {
+            loadMoreTracks();
+        }
+    }, [isLoadingMore, hasMore]);
+    
+    // Наблюдатель за скроллом
     useEffect(() => {
-        // Сохраняем состояние плеера
-        const wasPlaying = isPlaying;
-        const currentlyPlayingTrack = currentTrack;
-
+        const currentRef = tracksListRef.current;
+        if (currentRef) {
+            currentRef.addEventListener('scroll', handleScroll);
+        }
+        
+        return () => {
+            if (currentRef) {
+                currentRef.removeEventListener('scroll', handleScroll);
+            }
+        };
+    }, [handleScroll]);
+    
+    // При загрузке компонента получаем данные альбома и первую страницу треков
+    useEffect(() => {
         if (albumId && !initialFetchDone.current) {
+            // Загружаем альбом
             fetchAlbum(parseInt(albumId));
+            // Загружаем первую страницу треков
+            fetchInitialTracks(parseInt(albumId));
             initialFetchDone.current = true;
         }
     }, [albumId]);
+    
+    // При изменении параметров сортировки, обновляем список треков
+    useEffect(() => {
+        if (albumId && initialFetchDone.current) {
+            setTracks([]);
+            setCurrentPage(1);
+            setHasMore(true);
+            fetchInitialTracks(parseInt(albumId));
+        }
+    }, [sortBy, sortOrder]);
+    
+    // Загрузка первой страницы треков
+    const fetchInitialTracks = async (id: number) => {
+        try {
+            const response = await MusicAlbumService.getAlbumTracks(id, 1, tracksPerPage, sortBy, sortOrder);
+            setTracks(response.tracks);
+            setCurrentPage(1);
+            setHasMore(response.pagination.hasMore);
+            setTotalTracks(response.pagination.totalTracks);
+        } catch (error) {
+            console.error('Ошибка при загрузке треков:', error);
+            setError('Не удалось загрузить треки альбома');
+        }
+    };
+    
+    // Функция загрузки дополнительных треков с сервера
+    const loadMoreTracks = useCallback(async () => {
+        if (!albumId || isLoadingMore) return;
+        
+        const nextPage = currentPage + 1;
+        setIsLoadingMore(true);
+        
+        try {
+            const response = await MusicAlbumService.getAlbumTracks(
+                parseInt(albumId), 
+                nextPage, 
+                tracksPerPage,
+                sortBy,
+                sortOrder
+            );
+            
+            if (response.tracks.length === 0) {
+                setHasMore(false);
+            } else {
+                setTracks(prev => [...prev, ...response.tracks]);
+                setCurrentPage(nextPage);
+                setHasMore(response.pagination.hasMore);
+                setTotalTracks(response.pagination.totalTracks);
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке треков:', error);
+            setError('Не удалось загрузить треки альбома');
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [albumId, currentPage, isLoadingMore, sortBy, sortOrder]);
+    
+    // Обработчик изменения сортировки
+    const handleSortChange = (field: string) => {
+        if (field === sortBy) {
+            // Если выбрано то же поле, меняем порядок сортировки
+            setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            // Если выбрано новое поле, устанавливаем его и сбрасываем порядок на asc
+            setSortBy(field);
+            setSortOrder('asc');
+        }
+    };
 
     // Проверка наличия альбома в библиотеке при загрузке данных альбома
     useEffect(() => {
@@ -76,26 +181,17 @@ const AlbumDetails: React.FC = () => {
     };
 
     const handleTrackPlay = (track: Track) => {
-        // Заменяем очередь треками альбома, начиная с выбранного трека
-        if (album && album.tracks && album.tracks.length > 0) {
-            const trackIndex = album.tracks.findIndex(t => t.id === track.id);
-            if (trackIndex !== -1) {
-                replaceQueue(album.tracks);
-                playTrack(track);
-            } else {
-                playTrack(track);
-            }
-        } else {
-            playTrack(track);
-        }
+        // Заменяем очередь треками альбома с сервера
+        replaceQueue(tracks);
+        playTrack(track);
     };
 
     const handlePlayAllTracks = () => {
-        if (album && album.tracks && album.tracks.length > 0) {
+        if (tracks && tracks.length > 0) {
             // Заменяем текущую очередь треками из альбома
-            replaceQueue(album.tracks);
+            replaceQueue(tracks);
             // Воспроизводим первый трек
-            playTrack(album.tracks[0]);
+            playTrack(tracks[0]);
         }
     };
 
@@ -126,7 +222,13 @@ const AlbumDetails: React.FC = () => {
 
     const handleUploadSuccess = () => {
         if (albumId) {
+            // Обновляем информацию об альбоме
             fetchAlbum(parseInt(albumId));
+            // Сбрасываем и заново загружаем треки
+            setTracks([]);
+            setCurrentPage(1);
+            setHasMore(true);
+            fetchInitialTracks(parseInt(albumId));
         }
     };
 
@@ -242,7 +344,7 @@ const AlbumDetails: React.FC = () => {
                                     <circle cx="6" cy="19" r="3" stroke="currentColor" strokeWidth="2" />
                                     <circle cx="18" cy="17" r="3" stroke="currentColor" strokeWidth="2" />
                                 </svg>
-                                {album.tracksCount} {getTrackWord(album.tracksCount)}
+                                {totalTracks} {getTrackWord(totalTracks)}
                             </span>
                             <span>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -289,9 +391,35 @@ const AlbumDetails: React.FC = () => {
             </div>
 
             <div className={styles.tracksSection}>
-                <h2>Треки в альбоме</h2>
+                <div className={styles.tracksSectionHeader}>
+                    <h2>Треки в альбоме</h2>
+                    <div className={styles.sortControls}>
+                        <span>Сортировать по:</span>
+                        <button 
+                            className={`${styles.sortButton} ${sortBy === 'title' ? styles.active : ''}`}
+                            onClick={() => handleSortChange('title')}
+                            title={`Названию ${sortBy === 'title' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}`}
+                        >
+                            Название {sortBy === 'title' && (sortOrder === 'asc' ? '▲' : '▼')}
+                        </button>
+                        <button 
+                            className={`${styles.sortButton} ${sortBy === 'artist' ? styles.active : ''}`}
+                            onClick={() => handleSortChange('artist')}
+                            title={`Исполнителю ${sortBy === 'artist' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}`}
+                        >
+                            Исполнитель {sortBy === 'artist' && (sortOrder === 'asc' ? '▲' : '▼')}
+                        </button>
+                        <button 
+                            className={`${styles.sortButton} ${sortBy === 'duration' ? styles.active : ''}`}
+                            onClick={() => handleSortChange('duration')}
+                            title={`Длительности ${sortBy === 'duration' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}`}
+                        >
+                            Длительность {sortBy === 'duration' && (sortOrder === 'asc' ? '▲' : '▼')}
+                        </button>
+                    </div>
+                </div>
 
-                {!album.tracks || album.tracks.length === 0 ? (
+                {tracks.length === 0 && !isLoading ? (
                     <div className={styles.emptyTracks}>
                         <p>В этом альбоме пока нет треков.</p>
                         {isOwner && (
@@ -305,21 +433,30 @@ const AlbumDetails: React.FC = () => {
                         )}
                     </div>
                 ) : (
-                    <div className={styles.tracksList}>
-                        {album.tracks.map((track, index) => (
-                            <TrackItem
+                    <div className={styles.tracksList} ref={tracksListRef}>
+                        {tracks.map((track, index) => (
+                            <UniversalTrackItem
                                 key={track.id}
                                 track={track}
                                 index={index + 1}
+                                variant="album"
                                 isInLibrary={true}
-                                showArtist={true}
-                                showDuration={true}
-                                showControls={true}
-                                onRemove={isOwner ? handleRemoveTrack : undefined}
-                                onAddToQueue={(track) => addToQueue(track)}
+                                onLibraryStatusChange={() => fetchAlbum(parseInt(albumId || '0'))}
                                 className={styles.inTable}
+                                onPlayClick={() => handleTrackPlay(track)}
                             />
                         ))}
+                        {isLoadingMore && (
+                            <div className={styles.loadingMoreContainer}>
+                                <Spinner />
+                                <span>Загрузка треков...</span>
+                            </div>
+                        )}
+                        {!isLoadingMore && hasMore && (
+                            <div className={styles.loadMoreButton} onClick={loadMoreTracks}>
+                                Загрузить еще треки
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

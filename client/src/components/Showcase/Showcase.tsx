@@ -103,21 +103,32 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                     try {
                         console.log('Загрузка музыкальных данных для пользователя:', userId);
                         
-                        // Получаем треки пользователя через MusicService
-                        // Пока API не поддерживает получение треков других пользователей
+                        // Получаем треки пользователя
                         let userTracks: Track[] = [];
-                        if (isAuthor) {
-                            try {
+                        try {
+                            console.log(`[Showcase] Загрузка треков для пользователя ${userId}, isAuthor=${isAuthor}`);
+                            
+                            if (isAuthor) {
+                                // Для автора используем существующий метод
+                                console.log(`[Showcase] Загрузка треков для автора через getUserTracks()`);
                                 const musicResponse = await MusicService.getUserTracks();
                                 userTracks = musicResponse.tracks || [];
-                            } catch (tracksErr) {
-                                console.error('Ошибка при загрузке треков текущего пользователя:', tracksErr);
+                                console.log(`[Showcase] Получено ${userTracks.length} треков автора:`, userTracks);
+                            } else {
+                                // Для других пользователей получаем треки из библиотеки "Моя музыка"
+                                console.log(`[Showcase] Загрузка библиотеки для другого пользователя через getUserLibraryByUserId(${parseInt(userId)})`);
+                                const response = await MusicService.getUserLibraryByUserId(parseInt(userId));
+                                console.log(`[Showcase] Ответ API для библиотеки пользователя ${userId}:`, response);
+                                userTracks = response.tracks || [];
+                                console.log(`[Showcase] Получено ${userTracks.length} треков из библиотеки пользователя ${userId}:`, userTracks);
                             }
+                            console.log(`Загружено ${userTracks.length} треков пользователя ${userId}`);
+                        } catch (tracksErr) {
+                            console.error(`Ошибка при загрузке треков пользователя ${userId}:`, tracksErr);
                         }
                         setTracks(userTracks);
 
                         // Получаем музыкальные альбомы пользователя через MusicAlbumService
-                        // Пока API не поддерживает получение альбомов других пользователей
                         let userAlbums: MusicAlbum[] = [];
                         if (isAuthor) {
                             try {
@@ -125,6 +136,16 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                                 userAlbums = albumsResponse.slice(0, 4) || [];
                             } catch (albumsErr) {
                                 console.error('Ошибка при загрузке музыкальных альбомов текущего пользователя:', albumsErr);
+                            }
+                        } else {
+                            // Для других пользователей получаем альбомы из их библиотеки
+                            try {
+                                console.log(`[Showcase] Загрузка альбомов из библиотеки пользователя ${userId}`);
+                                const albumsResponse = await MusicAlbumService.getUserLibraryAlbumsByUserId(parseInt(userId));
+                                userAlbums = albumsResponse.slice(0, 4) || [];
+                                console.log(`[Showcase] Получено ${userAlbums.length} альбомов из библиотеки пользователя ${userId}:`, userAlbums);
+                            } catch (albumsErr) {
+                                console.error(`Ошибка при загрузке музыкальных альбомов пользователя ${userId}:`, albumsErr);
                             }
                         }
                         setMusicAlbums(userAlbums);
@@ -173,7 +194,7 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
     };
 
     const handleMusicAlbumClick = (albumId: number) => {
-        navigate(`/music-albums/${albumId}`);
+        navigate(`/music/albums/${albumId}`);
     };
 
     const handleTrackPlay = (track: Track) => {
@@ -258,12 +279,17 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
     }
 
     const tabs = [
-        { id: 'photos' as Tab, label: 'Фотографии' }
+        { id: 'photos' as Tab, label: 'Фотографии' },
+        { id: 'music' as Tab, label: 'Музыка' } // Всегда показываем вкладку Музыка
     ];
     
-    if (tracks.length > 0 || musicAlbums.length > 0 || isAuthor) {
-        tabs.push({ id: 'music' as Tab, label: 'Музыка' });
-    }
+    console.log('Showcase данные:', {
+        isAuthor,
+        userId,
+        tracksCount: tracks.length,
+        musicAlbumsCount: musicAlbums.length,
+        activeTab
+    });
 
     // Создаем значение для контекста showcase
     const showcaseContextValue = {
@@ -409,27 +435,19 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                         </div>
                     )}
                     
-                    {musicAlbums.length === 0 && activeTab === 'music' && !loading && (
+                    {musicAlbums.length === 0 && isAuthor && activeTab === 'music' && !loading && (
                         <div className={styles.emptySection}>
                             <div className={styles.emptyIcon}>💿</div>
                             <div className={styles.emptyTitle}>Нет музыкальных альбомов</div>
-                            {isAuthor ? (
-                                <>
-                                    <div className={styles.emptyText}>
-                                        Создайте свой первый музыкальный альбом, чтобы организовать свою музыку!
-                                    </div>
-                                    <button 
-                                        className={styles.addMusicButton}
-                                        onClick={() => navigate('/music-albums/create')}
-                                    >
-                                        Создать альбом
-                                    </button>
-                                </>
-                            ) : (
-                                <div className={styles.emptyText}>
-                                    Просмотр музыкальных альбомов других пользователей пока недоступен. Функция появится в следующих обновлениях.
-                                </div>
-                            )}
+                            <div className={styles.emptyText}>
+                                Создайте свой первый музыкальный альбом, чтобы организовать свою музыку!
+                            </div>
+                            <button 
+                                className={styles.addMusicButton}
+                                onClick={() => navigate('/music-albums/create')}
+                            >
+                                Создать альбом
+                            </button>
                         </div>
                     )}
 
@@ -476,8 +494,7 @@ export const Showcase: React.FC<ShowcaseProps> = ({ userId }) => {
                                 </div>
                             ) : (
                                 <div className={styles.emptyText}>
-                                    {/* Более точное сообщение о том, что просмотр музыки других пользователей пока недоступен */}
-                                    Просмотр музыки других пользователей пока недоступен. Функция появится в следующих обновлениях.
+                                    У этого пользователя пока нет загруженной музыки.
                                 </div>
                             )}
                             {isAuthor && (

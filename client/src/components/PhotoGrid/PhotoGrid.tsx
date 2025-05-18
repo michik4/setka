@@ -3,6 +3,7 @@ import { Photo } from '../../types/photo.types';
 import { ServerImage } from '../ServerImage/ServerImage';
 import { createPhotoGrid, gridItemToStyle } from '../../utils/photoGridUtils';
 import styles from './PhotoGrid.module.css';
+import { DragIndicator as DragIcon } from '@mui/icons-material';
 
 interface PhotoGridProps {
     photos: Photo[];
@@ -11,6 +12,7 @@ interface PhotoGridProps {
     isEditing?: boolean;
     isWallPost?: boolean;
     onPhotoClick?: (photo: Photo, index: number) => void;
+    onPhotosReorder?: (reorderedPhotos: Photo[]) => void;
 }
 
 export const PhotoGrid: React.FC<PhotoGridProps> = ({
@@ -18,15 +20,24 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({
     onPhotoDelete,
     canDelete = false,
     isEditing = false,
-    onPhotoClick
+    onPhotoClick,
+    onPhotosReorder
 }) => {
     const gridRef = useRef<HTMLDivElement>(null);
     const [gridItems, setGridItems] = useState<any[]>([]);
     const [containerWidth, setContainerWidth] = useState<number>(0);
     const [gridHeight, setGridHeight] = useState<number>(0);
+    const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+    const [orderedPhotos, setOrderedPhotos] = useState<Photo[]>([]);
+    
+    // Инициализируем orderedPhotos из props
+    useEffect(() => {
+        setOrderedPhotos([...photos]);
+    }, [photos]);
     
     useEffect(() => {
-        if (!photos.length) return;
+        if (!orderedPhotos.length) return;
         
         // Функция для расчета сетки при изменении ширины контейнера
         const calculateGrid = () => {
@@ -39,7 +50,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({
                 
                 // Для альбомов с преимущественно горизонтальными фото используем более широкое соотношение
                 // Для альбомов с преимущественно вертикальными фото - более узкое
-                const photoRatios = photos.map(photo => {
+                const photoRatios = orderedPhotos.map(photo => {
                     // Пытаемся извлечь размеры из имени файла
                     const dimensions = photo.path ? photo.path.match(/(\d+)x(\d+)/i) : null;
                     if (dimensions && dimensions.length === 3) {
@@ -70,7 +81,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({
                 }
                 
                 // Используем минимальную высоту 120px для лучшего отображения фотографий
-                const items = createPhotoGrid(photos, width, targetRatio, 120);
+                const items = createPhotoGrid(orderedPhotos, width, targetRatio, 120);
                 setGridItems(items);
                 
                 // Устанавливаем высоту сетки
@@ -93,14 +104,15 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({
         return () => {
             window.removeEventListener('resize', handleResize);
         };
-    }, [photos]);
+    }, [orderedPhotos]);
     
     // Проверка на наличие фотографий после объявления всех хуков
-    if (!photos.length) return null;
+    if (!orderedPhotos.length) return null;
 
     const handlePhotoClick = (e: React.MouseEvent, photo: Photo, index: number) => {
-        // Проверяем, что клик был не по кнопке удаления
-        if (!(e.target as HTMLElement).closest(`.${styles.deleteButton}`)) {
+        // Проверяем, что клик был не по кнопке удаления и не по кнопке перетаскивания
+        if (!(e.target as HTMLElement).closest(`.${styles.deleteButton}`) && 
+            !(e.target as HTMLElement).closest(`.${styles.dragHandle}`)) {
             onPhotoClick?.(photo, index);
         }
     };
@@ -119,9 +131,92 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({
         onPhotoDelete?.(photo);
     };
 
+    // Обработчики событий перетаскивания
+    const handleDragStart = (e: React.DragEvent, index: number) => {
+        e.stopPropagation();
+        setDraggingIndex(index);
+        e.dataTransfer.effectAllowed = 'move';
+        // Добавляем прозрачное изображение для лучшего визуального эффекта
+        const img = new Image();
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+        e.dataTransfer.setDragImage(img, 0, 0);
+        
+        // Добавляем класс dragging для элемента, который перетаскивается
+        if (e.currentTarget.classList) {
+            e.currentTarget.classList.add(styles.dragging);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (draggingIndex === null) return;
+        
+        // Устанавливаем индекс, над которым находится перетаскиваемый элемент
+        setDragOverIndex(index);
+        
+        // Добавляем стили для визуализации места вставки
+        const gridItems = Array.from(gridRef.current?.children || []);
+        gridItems.forEach((item, i) => {
+            if (i === index && i !== draggingIndex) {
+                (item as HTMLElement).classList.add(styles.dragOver);
+            } else {
+                (item as HTMLElement).classList.remove(styles.dragOver);
+            }
+        });
+    };
+
+    const handleDragEnd = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Удаляем класс dragging
+        if (e.currentTarget.classList) {
+            e.currentTarget.classList.remove(styles.dragging);
+        }
+
+        // Если есть перетаскиваемый элемент и целевой индекс
+        if (draggingIndex !== null && dragOverIndex !== null && draggingIndex !== dragOverIndex) {
+            // Создаем новый массив с переупорядоченными фотографиями
+            const updatedPhotos = [...orderedPhotos];
+            const [movedItem] = updatedPhotos.splice(draggingIndex, 1);
+            updatedPhotos.splice(dragOverIndex, 0, movedItem);
+            
+            // Обновляем локальное состояние
+            setOrderedPhotos(updatedPhotos);
+            
+            // Вызываем callback, если он предоставлен
+            if (onPhotosReorder) {
+                onPhotosReorder(updatedPhotos);
+            }
+        }
+        
+        // Удаляем стили для визуализации места вставки
+        const gridItems = Array.from(gridRef.current?.children || []);
+        gridItems.forEach(item => {
+            (item as HTMLElement).classList.remove(styles.dragOver);
+        });
+        
+        // Сбрасываем состояние перетаскивания
+        setDraggingIndex(null);
+        setDragOverIndex(null);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Удаляем стили для визуализации места вставки при выходе из зоны
+        const gridItems = Array.from(gridRef.current?.children || []);
+        gridItems.forEach(item => {
+            (item as HTMLElement).classList.remove(styles.dragOver);
+        });
+    };
+
     // Количество дополнительных фотографий, если показываем не все
     const maxVisiblePhotos = 10;
-    const remainingPhotos = photos.length > maxVisiblePhotos ? photos.length - maxVisiblePhotos : 0;
+    const remainingPhotos = orderedPhotos.length > maxVisiblePhotos ? orderedPhotos.length - maxVisiblePhotos : 0;
 
     return (
         <div 
@@ -137,10 +232,15 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({
                 index < maxVisiblePhotos && (
                     <div
                         key={item.photo.id}
-                        className={styles.photoWrapper}
+                        className={`${styles.photoWrapper} ${draggingIndex === index ? styles.dragging : ''}`}
                         style={gridItemToStyle(item)}
                         onClick={(e) => handlePhotoClick(e, item.photo, index)}
                         data-remaining={index === maxVisiblePhotos - 1 ? remainingPhotos : 0}
+                        draggable={isEditing}
+                        onDragStart={(e) => isEditing && handleDragStart(e, index)}
+                        onDragOver={(e) => isEditing && handleDragOver(e, index)}
+                        onDragEnd={(e) => isEditing && handleDragEnd(e)}
+                        onDragLeave={(e) => isEditing && handleDragLeave(e)}
                     >
                         <ServerImage
                             path={item.photo.path}
@@ -149,13 +249,23 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({
                             isDeleted={item.photo.isDeleted}
                             extension={item.photo.extension}
                         />
-                        {isEditing && canDelete && !item.photo.isDeleted && (
-                            <button
-                                type="button"
-                                className={styles.deleteButton}
-                                onClick={(e) => handleDelete(e, item.photo)}
-                                title="Удалить фото"
-                            />
+                        {isEditing && (
+                            <>
+                                {canDelete && !item.photo.isDeleted && (
+                                    <button
+                                        type="button"
+                                        className={styles.deleteButton}
+                                        onClick={(e) => handleDelete(e, item.photo)}
+                                        title="Удалить фото"
+                                    />
+                                )}
+                                <div 
+                                    className={styles.dragHandle}
+                                    title="Перетащите для изменения порядка"
+                                >
+                                    <DragIcon />
+                                </div>
+                            </>
                         )}
                         
                         {/* Показываем индикатор количества оставшихся фото */}

@@ -668,6 +668,137 @@ export class MusicAlbumController {
             return false;
         }
     }
+
+    // Получение публичных альбомов конкретного пользователя
+    async getPublicUserAlbums(userId: number, res: Response) {
+        try {
+            console.log(`[MusicAlbumController] Запрос на получение публичных альбомов пользователя ID:${userId}`);
+            
+            // Получаем все публичные альбомы пользователя
+            const albums = await this.albumRepository.find({
+                where: { 
+                    userId: userId,
+                    isPrivate: false,  // Только публичные альбомы
+                    isInLibrary: true  // Только те, что находятся в библиотеке
+                },
+                order: { createdAt: 'DESC' }
+            });
+            
+            console.log(`[MusicAlbumController] Найдено ${albums.length} публичных альбомов пользователя ID:${userId}`);
+            
+            return res.status(200).json({
+                albums,
+                message: 'Публичные альбомы пользователя успешно получены'
+            });
+        } catch (error) {
+            console.error(`[MusicAlbumController] Ошибка при получении публичных альбомов пользователя ID:${userId}:`, error);
+            return res.status(500).json({ message: 'Ошибка при получении альбомов' });
+        }
+    }
+
+    // Получение альбомов из библиотеки пользователя
+    async getUserLibraryAlbums(userId: number, res: Response) {
+        try {
+            console.log(`[MusicAlbumController] Запрос на получение альбомов из библиотеки пользователя ID:${userId}`);
+            
+            // Получаем все альбомы пользователя, которые находятся в его библиотеке
+            const albums = await this.albumRepository.find({
+                where: { 
+                    userId: userId,
+                    isInLibrary: true  // Только те, что находятся в библиотеке
+                },
+                order: { createdAt: 'DESC' }
+            });
+            
+            console.log(`[MusicAlbumController] Найдено ${albums.length} альбомов в библиотеке пользователя ID:${userId}`);
+            
+            return res.status(200).json({
+                albums,
+                message: 'Альбомы из библиотеки пользователя успешно получены'
+            });
+        } catch (error) {
+            console.error(`[MusicAlbumController] Ошибка при получении альбомов из библиотеки пользователя ID:${userId}:`, error);
+            return res.status(500).json({ message: 'Ошибка при получении альбомов из библиотеки' });
+        }
+    }
+
+    // Получение треков альбома с пагинацией
+    async getAlbumTracks(req: AuthenticatedRequest, res: Response) {
+        try {
+            const { albumId } = req.params;
+            const userId = req.user?.id;
+            const { page = 1, limit = 10, sortBy = 'id', sortOrder = 'asc' } = req.query;
+
+            // Преобразуем параметры в числа
+            const pageNum = parseInt(page as string) || 1;
+            const limitNum = parseInt(limit as string) || 10;
+            const offset = (pageNum - 1) * limitNum;
+
+            if (!userId) {
+                return res.status(401).json({ message: 'Необходима авторизация' });
+            }
+
+            // Получаем альбом со всеми треками для проверки прав доступа
+            const album = await this.albumRepository.findOne({
+                where: { id: parseInt(albumId) },
+                relations: ['tracks']
+            });
+
+            if (!album) {
+                return res.status(404).json({ message: 'Альбом не найден' });
+            }
+
+            // Проверка прав доступа
+            if (album.userId !== userId && album.isPrivate) {
+                return res.status(403).json({ message: 'Нет доступа к этому альбому' });
+            }
+
+            // Получаем общее количество треков
+            const totalTracks = album.tracks?.length || 0;
+            
+            // Сортируем треки, если нужно
+            if (album.tracks && album.tracks.length > 0) {
+                const sortByField = sortBy as string;
+                const sortDirection = (sortOrder as string).toLowerCase() === 'desc' ? -1 : 1;
+                
+                album.tracks.sort((a, b) => {
+                    if (sortByField === 'title') {
+                        return sortDirection * a.title.localeCompare(b.title);
+                    } else if (sortByField === 'artist') {
+                        return sortDirection * a.artist.localeCompare(b.artist);
+                    } else if (sortByField === 'duration') {
+                        return sortDirection * a.duration.localeCompare(b.duration);
+                    } else {
+                        // По умолчанию сортируем по ID
+                        return sortDirection * (a.id - b.id);
+                    }
+                });
+            }
+            
+            // Вычисляем треки для текущей страницы
+            const paginatedTracks = album.tracks?.slice(offset, offset + limitNum) || [];
+            
+            // Вычисляем общее количество страниц
+            const totalPages = Math.ceil(totalTracks / limitNum);
+            const hasMore = pageNum < totalPages;
+
+            console.log(`[MusicAlbumController] Получены треки для альбома ${albumId}, страница ${pageNum}/${totalPages}, всего треков: ${totalTracks}, сортировка: ${sortBy} ${sortOrder}`);
+
+            return res.status(200).json({
+                tracks: paginatedTracks,
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    totalTracks,
+                    totalPages,
+                    hasMore
+                }
+            });
+        } catch (error) {
+            console.error(`[MusicAlbumController] Ошибка при получении треков альбома:`, error);
+            return res.status(500).json({ message: 'Ошибка при получении треков альбома' });
+        }
+    }
 }
 
 export default new MusicAlbumController(); 

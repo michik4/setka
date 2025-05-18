@@ -13,7 +13,9 @@ interface PhotosByYear {
     [year: string]: Photo[];
 }
 
-export const PhotosPage: React.FC = () => {
+interface PhotosPageProps {}
+
+export const PhotosPage: React.FC<PhotosPageProps> = () => {
     const { userId } = useParams<{ userId: string }>();
     const navigate = useNavigate();
     const { user: currentUser } = useAuth();
@@ -24,6 +26,7 @@ export const PhotosPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [showCreateAlbum, setShowCreateAlbum] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+    const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(-1);
     const isAuthor = currentUser?.id === parseInt(userId || '0');
 
     useEffect(() => {
@@ -107,6 +110,18 @@ export const PhotosPage: React.FC = () => {
 
     const handlePhotoClick = (photo: Photo) => {
         setSelectedPhoto(photo);
+        
+        // Находим индекс выбранной фотографии среди всех фотографий
+        const index = photos.findIndex(p => p.id === photo.id);
+        setCurrentPhotoIndex(index);
+    };
+
+    const handlePhotoChange = (photo: Photo) => {
+        setSelectedPhoto(photo);
+    };
+
+    const handleIndexChange = (index: number) => {
+        setCurrentPhotoIndex(index);
     };
 
     const handlePhotoDelete = async (photo: Photo) => {
@@ -247,9 +262,16 @@ export const PhotosPage: React.FC = () => {
             {selectedPhoto && (
                 <PhotoViewer
                     photo={selectedPhoto}
-                    onClose={() => setSelectedPhoto(null)}
+                    onClose={() => {
+                        setSelectedPhoto(null);
+                        setCurrentPhotoIndex(-1);
+                    }}
                     onDelete={isAuthor ? () => handlePhotoDelete(selectedPhoto) : undefined}
                     canDelete={isAuthor}
+                    allPhotos={photos.length > 0 ? photos : undefined}
+                    currentIndex={currentPhotoIndex >= 0 ? currentPhotoIndex : undefined}
+                    onPhotoChange={handlePhotoChange}
+                    onIndexChange={handleIndexChange}
                 />
             )}
         </div>

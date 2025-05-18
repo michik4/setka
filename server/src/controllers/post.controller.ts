@@ -80,6 +80,39 @@ export class PostController {
                 .getOne();
                 
             if (post) {
+                // Загружаем фотографии с учетом порядка
+                try {
+                    // Проверяем, есть ли информация о порядке в базе данных
+                    const orderedPhotos = await AppDataSource.query(
+                        `SELECT p.* FROM photos p
+                         JOIN posts_photos pp ON p.id = pp."photoId"
+                         WHERE pp."postId" = $1
+                         ORDER BY pp."order" ASC`,
+                        [postId]
+                    );
+                    
+                    // Если удалось получить упорядоченные фотографии, заменяем ими текущие
+                    if (orderedPhotos && orderedPhotos.length > 0) {
+                        console.log(`[PostController] Загружено ${orderedPhotos.length} фотографий с сохранением порядка для поста ${postId}`);
+                        post.photos = orderedPhotos;
+                    } else if (!post.photos || post.photos.length === 0) {
+                        // Если фотографии не загрузились через связующую таблицу, но они есть у поста
+                        const photosFromPost = await AppDataSource.query(
+                            `SELECT p.* FROM photos p
+                             JOIN posts_photos pp ON p.id = pp."photoId"
+                             WHERE pp."postId" = $1`,
+                            [postId]
+                        );
+                            
+                        if (photosFromPost && photosFromPost.length > 0) {
+                            console.log(`[PostController] Загружено ${photosFromPost.length} фотографий прямым SQL-запросом для поста ${postId}`);
+                            post.photos = photosFromPost;
+                        }
+                    }
+                } catch (error) {
+                    console.error(`[PostController] Ошибка при загрузке упорядоченных фотографий для поста ${postId}:`, error);
+                }
+                
                 // Загружаем фотоальбомы для поста через TypeORM
                 const postAlbums = await AppDataSource.getRepository(PostAlbum)
                     .createQueryBuilder('postAlbum')
@@ -217,6 +250,24 @@ export class PostController {
             const posts = [];
             try {
                 for (const post of postsQuery) {
+                    // Загружаем фотографии с учетом порядка для каждого поста
+                    try {
+                        const orderedPhotos = await AppDataSource.query(
+                            `SELECT p.* FROM photos p
+                            JOIN posts_photos pp ON p.id = pp."photoId"
+                            WHERE pp."postId" = $1
+                            ORDER BY pp."order" ASC`,
+                            [post.id]
+                        );
+                        
+                        if (orderedPhotos && orderedPhotos.length > 0) {
+                            console.log(`[PostController] Загружено ${orderedPhotos.length} фотографий с сохранением порядка для поста ${post.id} в ленте`);
+                            post.photos = orderedPhotos;
+                        }
+                    } catch (photosError) {
+                        console.error(`[PostController] Ошибка при загрузке упорядоченных фотографий для поста ${post.id} в ленте:`, photosError);
+                    }
+                    
                     const postWithAlbums = await this.getPostWithRelations(post.id);
                     if (postWithAlbums) {
                         posts.push(postWithAlbums);
@@ -348,12 +399,33 @@ export class PostController {
             const hasAttachments = 
                 (attachments && attachments.length > 0) || 
                 (photoIds && photoIds.length > 0) || 
-                (albumIds && albumIds.length > 0) || 
                 (trackIds && trackIds.length > 0) || 
                 (musicAlbumIds && musicAlbumIds.length > 0);
+            
+            let hasValidAlbums = false;
+            
+            // Проверяем, что альбомы не пустые и не содержат только удаленные фотографии
+            if (albumIds && albumIds.length > 0) {
+                for (const albumId of albumIds) {
+                    const album = await AppDataSource.manager.findOne('Album', {
+                        where: { id: Number(albumId) },
+                        relations: ['photos']
+                    }) as Album;
+                    
+                    // Если альбом существует и содержит неудаленные фотографии, считаем его валидным вложением
+                    if (album && album.photos && album.photos.length > 0) {
+                        // Проверяем, что в альбоме есть хотя бы одна неудаленная фотография
+                        const activePhotos = album.photos.filter(photo => !photo.isDeleted);
+                        if (activePhotos.length > 0) {
+                            hasValidAlbums = true;
+                            break;
+                        }
+                    }
+                }
+            }
                 
-            if (!content && !hasAttachments) {
-                res.status(400).json({ message: "Пост должен содержать текст или вложения" });
+            if (!content && !hasAttachments && !hasValidAlbums) {
+                res.status(400).json({ message: "Пост должен содержать текст или вложения. Пустые альбомы не считаются валидным вложением." });
                 return;
             }
 
@@ -426,11 +498,43 @@ export class PostController {
             // Обрабатываем photoIds (новый формат)
             if (photoIds && photoIds.length > 0) {
                 if (!post.photos) post.photos = [];
-                const photos = await AppDataSource.manager.find('Photo', {
-                    where: photoIds.map((id: number) => ({ id: Number(id) }))
-                }) as Photo[];
+                
+                // Создаем массив с фотографиями в том же порядке, в котором переданы ID
+                const photos = [];
+                for (const photoId of photoIds) {
+                    const photo = await AppDataSource.manager.findOne('Photo', {
+                        where: { id: Number(photoId) }
+                    }) as Photo;
+                    if (photo) {
+                        photos.push(photo);
+                    }
+                }
+                
                 post.photos = photos;
-                console.log(`[PostController] Добавлено ${photos.length} фотографий к посту ${post.id}`);
+                console.log(`[PostController] Добавлено ${photos.length} фотографий к посту ${post.id} с сохранением порядка`);
+                
+                // Обновляем порядок в связующей таблице
+                if (photos.length > 0 && savedPost) {
+                    try {
+                        // Сначала удаляем существующие связи (если есть)
+                        await AppDataSource.query(
+                            `DELETE FROM posts_photos WHERE "postId" = $1`,
+                            [savedPost.id]
+                        );
+                        
+                        // Затем создаем новые связи в нужном порядке
+                        for (let i = 0; i < photos.length; i++) {
+                            await AppDataSource.query(
+                                `INSERT INTO posts_photos ("postId", "photoId", "order") VALUES ($1, $2, $3)`,
+                                [savedPost.id, photos[i].id, i]
+                            );
+                        }
+                        
+                        console.log(`[PostController] Установлен порядок ${photos.length} фотографий в связующей таблице для нового поста ${savedPost.id}`);
+                    } catch (orderError) {
+                        console.error('[PostController] Ошибка при установке порядка фотографий для нового поста:', orderError);
+                    }
+                }
             }
             
             // Обрабатываем albumIds (новый формат)
@@ -512,15 +616,78 @@ export class PostController {
                 return;
             }
             
+            // Проверяем наличие контента или вложений после обновления
+            const hasAttachments = 
+                (photoIds && photoIds.length > 0) || 
+                (trackIds && trackIds.length > 0) || 
+                (musicAlbumIds && musicAlbumIds.length > 0);
+                
+            let hasValidAlbums = false;
+            
+            // Проверяем, что альбомы не пустые и не содержат только удаленные фотографии
+            if (photoAlbumIds && photoAlbumIds.length > 0) {
+                for (const albumId of photoAlbumIds) {
+                    const album = await AppDataSource.manager.findOne('Album', {
+                        where: { id: Number(albumId) },
+                        relations: ['photos']
+                    }) as Album;
+                    
+                    // Если альбом существует и содержит неудаленные фотографии, считаем его валидным вложением
+                    if (album && album.photos && album.photos.length > 0) {
+                        // Проверяем, что в альбоме есть хотя бы одна неудаленная фотография
+                        const activePhotos = album.photos.filter(photo => !photo.isDeleted);
+                        if (activePhotos.length > 0) {
+                            hasValidAlbums = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (!content && !hasAttachments && !hasValidAlbums) {
+                res.status(400).json({ message: "Пост должен содержать текст или вложения. Пустые альбомы не считаются валидным вложением." });
+                return;
+            }
+            
             post.content = content;
             
             // Обрабатываем изменение фотографий
             if (Array.isArray(photoIds)) {
-                const photos = await AppDataSource.manager.find('Photo', {
-                    where: photoIds.map(id => ({ id: Number(id) }))
-                }) as Photo[];
+                // Создаем массив с фотографиями в том же порядке, в котором переданы ID
+                const photos = [];
+                for (const photoId of photoIds) {
+                    const photo = await AppDataSource.manager.findOne('Photo', {
+                        where: { id: Number(photoId) }
+                    }) as Photo;
+                    if (photo) {
+                        photos.push(photo);
+                    }
+                }
                 post.photos = photos;
-                console.log(`[PostController] Установлено ${photos.length} фотографий для поста ${id}`);
+                console.log(`[PostController] Установлено ${photos.length} фотографий для поста ${id} в заданном порядке`);
+                
+                // Также обновляем порядок в связующей таблице, если она используется
+                if (photos.length > 0) {
+                    try {
+                        // Сначала удаляем все связи с фотографиями
+                        await AppDataSource.query(
+                            `DELETE FROM posts_photos WHERE "postId" = $1`,
+                            [id]
+                        );
+                        
+                        // Затем создаем новые связи в нужном порядке
+                        for (let i = 0; i < photos.length; i++) {
+                            await AppDataSource.query(
+                                `INSERT INTO posts_photos ("postId", "photoId", "order") VALUES ($1, $2, $3)`,
+                                [id, photos[i].id, i]
+                            );
+                        }
+                        
+                        console.log(`[PostController] Обновлён порядок ${photos.length} фотографий в связующей таблице для поста ${id}`);
+                    } catch (orderError) {
+                        console.error('[PostController] Ошибка при обновлении порядка фотографий:', orderError);
+                    }
+                }
             }
             
             // Обрабатываем изменение треков
@@ -682,6 +849,24 @@ export class PostController {
             const posts = [];
             try {
                 for (const post of postsQuery) {
+                    // Загружаем фотографии с учетом порядка для каждого поста пользователя
+                    try {
+                        const orderedPhotos = await AppDataSource.query(
+                            `SELECT p.* FROM photos p
+                            JOIN posts_photos pp ON p.id = pp."photoId"
+                            WHERE pp."postId" = $1
+                            ORDER BY pp."order" ASC`,
+                            [post.id]
+                        );
+                        
+                        if (orderedPhotos && orderedPhotos.length > 0) {
+                            console.log(`[PostController] Загружено ${orderedPhotos.length} фотографий с сохранением порядка для поста ${post.id} пользователя ${userId}`);
+                            post.photos = orderedPhotos;
+                        }
+                    } catch (photosError) {
+                        console.error(`[PostController] Ошибка при загрузке упорядоченных фотографий для поста ${post.id} пользователя ${userId}:`, photosError);
+                    }
+                    
                     const postWithRelations = await this.getPostWithRelations(post.id);
                     if (postWithRelations) {
                         posts.push(postWithRelations);
@@ -1007,6 +1192,24 @@ export class PostController {
             // Для каждого поста загружаем альбомы и музыкальные альбомы
             const posts = [];
             for (const post of postsQuery) {
+                // Загружаем фотографии с учетом порядка для каждого поста из групп
+                try {
+                    const orderedPhotos = await AppDataSource.query(
+                        `SELECT p.* FROM photos p
+                        JOIN posts_photos pp ON p.id = pp."photoId"
+                        WHERE pp."postId" = $1
+                        ORDER BY pp."order" ASC`,
+                        [post.id]
+                    );
+                    
+                    if (orderedPhotos && orderedPhotos.length > 0) {
+                        console.log(`[PostController] Загружено ${orderedPhotos.length} фотографий с сохранением порядка для поста ${post.id} из подписанных групп пользователя ${userId}`);
+                        post.photos = orderedPhotos;
+                    }
+                } catch (photosError) {
+                    console.error(`[PostController] Ошибка при загрузке упорядоченных фотографий для поста ${post.id} из подписанных групп:`, photosError);
+                }
+                
                 const postWithRelations = await this.getPostWithRelations(post.id);
                 if (postWithRelations) {
                     posts.push(postWithRelations);

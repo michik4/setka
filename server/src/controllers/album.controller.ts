@@ -56,8 +56,23 @@ export class AlbumController {
             console.log('Getting albums for user:', userId);
             console.log('Authenticated user:', req.user);
 
+            // Получаем идентификатор текущего пользователя
+            const currentUserId = req.user?.id;
+            
+            // Формируем условие запроса
+            let whereCondition: any = { userId: parseInt(userId) };
+            
+            // Если текущий пользователь не является владельцем альбомов,
+            // то добавляем условие для скрытия приватных альбомов
+            if (currentUserId !== parseInt(userId)) {
+                whereCondition = {
+                    ...whereCondition,
+                    isPrivate: false
+                };
+            }
+
             const albums = await this.albumRepository.find({
-                where: { userId: parseInt(userId) },
+                where: whereCondition,
                 relations: ['photos'],
                 order: { createdAt: 'DESC' }
             });

@@ -1546,4 +1546,33 @@
         padding: 10px 12px;
         font-size: 14px;
     }
+}
+
+.otherUserHeader {
+    background-color: var(--vseti-color-bg-subtle);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.otherUserInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.userIcon {
+    font-size: 32px;
+    color: var(--vseti-color-primary);
+    background-color: var(--vseti-color-bg-accent);
+    border-radius: 50%;
+    padding: 8px;
+}
+
+.otherUserName {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--vseti-color-text);
+    margin: 0;
 } 

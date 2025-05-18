@@ -289,7 +289,7 @@ export const GroupPage: React.FC = () => {
                     <GroupShowcase groupId={parseInt(id!, 10)} />
                 </div>
                 {/* Форма создания поста */}
-                {(isMember || isAdmin || isCreator) && (
+                {(isAdmin || isCreator) && (
                     <div className={styles.createPostForm}>
                         <CreatePostForm 
                             onSuccess={handlePostCreated}

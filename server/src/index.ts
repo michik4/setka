@@ -168,7 +168,7 @@ const startServer = async () => {
       console.warn('Папка public не существует! React-приложение не будет доступно. Создайте папку и скопируйте туда файлы сборки.');
     }
 
-    const PORT = process.env.PORT || 3000
+    const PORT = config.PORT || 3000
     // Изменяем адрес с умолчания на 0.0.0.0 (все IP)
     const HOST = config.HOST
     server.listen(Number(PORT), HOST, () => {

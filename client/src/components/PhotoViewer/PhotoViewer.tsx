@@ -17,6 +17,7 @@ interface PhotoViewerProps {
     allPhotos?: Photo[];
     currentIndex?: number;
     onPhotoChange?: (photo: Photo) => void;
+    onIndexChange?: (index: number) => void;
 }
 
 // Глобальный кэш для предотвращения повторной загрузки
@@ -63,7 +64,8 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
     isWallPost = false,
     allPhotos,
     currentIndex,
-    onPhotoChange
+    onPhotoChange,
+    onIndexChange
 }) => {
     const [displayedPhoto, setDisplayedPhoto] = useState<Photo>(photo);
     const [displayedIndex, setDisplayedIndex] = useState<number | undefined>(currentIndex);
@@ -132,6 +134,7 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
             
             setTimeout(() => {
                 onPhotoChange?.(allPhotos[index]);
+                onIndexChange?.(index);
                 setTransitioning(false);
             }, 150);
         }
@@ -173,6 +176,7 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
         // Уменьшаем задержку до 150мс
         setTimeout(() => {
             onPhotoChange?.(allPhotos[newIndex]);
+            onIndexChange?.(newIndex);
             setTransitioning(false);
         }, 150);
     };
@@ -191,6 +195,7 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
         // Уменьшаем задержку до 150мс
         setTimeout(() => {
             onPhotoChange?.(allPhotos[newIndex]);
+            onIndexChange?.(newIndex);
             setTransitioning(false);
         }, 150);
     };

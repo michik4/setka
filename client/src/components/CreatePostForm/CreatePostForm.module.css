@@ -22,17 +22,19 @@
 }
 
 .textarea {
-    box-sizing: border-box;
     width: 100%;
-    padding: 12px;
-    border: 1px solid var(--vseti-color-border);
+    min-height: 80px;
+    padding: 14px;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     resize: none;
-    font-size: 14px;
-    line-height: 1.4;
-    transition: height 0.3s ease;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background-color: var(--background-paper);
+    transition: all 0.2s ease;
     overflow: hidden;
-    background-color: var(--vseti-color-card);
+    box-sizing: border-box;
 }
 
 .expanded .textarea {
@@ -511,20 +513,6 @@
     margin-bottom: 16px;
 }
 
-.textarea {
-    width: 100%;
-    min-height: 80px;
-    padding: 14px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    resize: vertical;
-    font-size: 15px;
-    line-height: 1.5;
-    color: var(--text-primary);
-    background-color: var(--background-paper);
-    transition: all 0.2s ease;
-}
-
 .textarea:hover {
     border-color: rgba(var(--primary-rgb), 0.5);
 }
@@ -601,7 +589,8 @@
 }
 
 .error {
-    color: var(--error-color);
+    color: var(--vseti-color-error);
+    border: 1px solid var(--vseti-color-error);
     font-size: 14px;
     padding: 8px 12px;
     margin: 8px 0;

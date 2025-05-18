@@ -2,15 +2,28 @@ import { api } from '../utils/api';
 import { MusicAlbum, Track } from '../types/music.types';
 
 export class MusicAlbumService {
-    private static API_ENDPOINT = '/music-albums';
+    private static API_ENDPOINT = '/music/albums';
 
     // Получение всех альбомов пользователя
     static async getUserAlbums(): Promise<MusicAlbum[]> {
         try {
             console.log('[MusicAlbumService] Запрос альбомов пользователя из библиотеки...');
-            const albums = await api.get(this.API_ENDPOINT);
-            console.log(`[MusicAlbumService] Получено ${albums.length} альбомов из библиотеки пользователя`);
-            return albums;
+            const response = await api.get(`${this.API_ENDPOINT}/user/current`);
+            console.log(`[MusicAlbumService] Получено ответ при запросе альбомов пользователя:`, response);
+            
+            // Проверяем формат ответа: если это массив, используем его напрямую,
+            // если это объект с полем albums, используем это поле
+            if (Array.isArray(response)) {
+                console.log(`[MusicAlbumService] Получен массив из ${response.length} альбомов`);
+                return response;
+            } else if (response && typeof response === 'object' && response.albums) {
+                console.log(`[MusicAlbumService] Получен объект с ${response.albums.length} альбомами`);
+                return response.albums || [];
+            }
+            
+            // Если не подходит ни один из форматов, возвращаем пустой массив
+            console.warn(`[MusicAlbumService] Неожиданный формат ответа:`, response);
+            return [];
         } catch (error) {
             console.error('[MusicAlbumService] Ошибка при получении альбомов пользователя:', error);
             throw error;
@@ -246,6 +259,95 @@ export class MusicAlbumService {
             
             // Не делаем никаких дополнительных проверок, просто возвращаем false
             return false;
+        }
+    }
+
+    // Получение альбомов конкретного пользователя
+    static async getUserAlbumsByUserId(userId: number | string) {
+        try {
+            console.log(`[MusicAlbumService] Запрос альбомов пользователя ${userId}`);
+            const url = `/music/albums/user/${userId}`;
+            console.log(`[MusicAlbumService] URL запроса: ${url}`);
+            
+            const response = await api.get(url);
+            console.log(`[MusicAlbumService] Получены альбомы пользователя ${userId}:`, response);
+            
+            // Проверяем формат ответа: если это массив, используем его напрямую,
+            // если это объект с полем albums, используем это поле
+            if (Array.isArray(response)) {
+                console.log(`[MusicAlbumService] Получен массив из ${response.length} альбомов`);
+                return response;
+            } else if (response && typeof response === 'object' && response.albums) {
+                console.log(`[MusicAlbumService] Получен объект с ${response.albums.length} альбомами`);
+                return response.albums || [];
+            }
+            
+            // Если не подходит ни один из форматов, возвращаем пустой массив
+            console.warn(`[MusicAlbumService] Неожиданный формат ответа:`, response);
+            return [];
+        } catch (error) {
+            console.error(`[MusicAlbumService] Ошибка при получении альбомов пользователя ${userId}:`, error);
+            return [];
+        }
+    }
+
+    // Получение альбомов из библиотеки пользователя
+    static async getUserLibraryAlbumsByUserId(userId: number | string) {
+        try {
+            console.log(`[MusicAlbumService] Запрос альбомов из библиотеки пользователя ${userId}`);
+            const url = `/music/albums/library/${userId}`;
+            console.log(`[MusicAlbumService] URL запроса: ${url}`);
+            
+            const response = await api.get(url);
+            console.log(`[MusicAlbumService] Получены альбомы из библиотеки пользователя ${userId}:`, response);
+            
+            // Проверяем формат ответа: если это массив, используем его напрямую,
+            // если это объект с полем albums, используем это поле
+            if (Array.isArray(response)) {
+                console.log(`[MusicAlbumService] Получен массив из ${response.length} альбомов из библиотеки`);
+                return response;
+            } else if (response && typeof response === 'object' && response.albums) {
+                console.log(`[MusicAlbumService] Получен объект с ${response.albums.length} альбомами из библиотеки`);
+                return response.albums || [];
+            }
+            
+            // Если не подходит ни один из форматов, возвращаем пустой массив
+            console.warn(`[MusicAlbumService] Неожиданный формат ответа:`, response);
+            return [];
+        } catch (error) {
+            console.error(`[MusicAlbumService] Ошибка при получении альбомов из библиотеки пользователя ${userId}:`, error);
+            return [];
+        }
+    }
+
+    // Получение треков альбома с пагинацией
+    static async getAlbumTracks(
+        albumId: number, 
+        page: number = 1, 
+        limit: number = 10,
+        sortBy: string = 'id',
+        sortOrder: 'asc' | 'desc' = 'asc'
+    ): Promise<{
+        tracks: Track[],
+        pagination: {
+            page: number,
+            limit: number,
+            totalTracks: number,
+            totalPages: number,
+            hasMore: boolean
+        }
+    }> {
+        try {
+            console.log(`[MusicAlbumService] Запрос треков альбома ${albumId}, страница ${page}, лимит ${limit}, сортировка: ${sortBy} ${sortOrder}`);
+            const response = await api.get(
+                `${this.API_ENDPOINT}/${albumId}/tracks?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`
+            );
+            
+            console.log(`[MusicAlbumService] Получено ${response.tracks?.length} треков для альбома ${albumId}, страница ${page}/${response.pagination?.totalPages || 1}`);
+            return response;
+        } catch (error) {
+            console.error(`[MusicAlbumService] Ошибка при получении треков альбома ${albumId}:`, error);
+            throw error;
         }
     }
 }

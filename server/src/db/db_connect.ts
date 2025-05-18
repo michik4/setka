@@ -32,21 +32,21 @@ import { AddWallOwnerIdToPosts1742846973457 } from "../migrations/1742846973457-
 import { CreateFriendsSystem1743001000000 } from "../migrations/1743001000000-CreateFriendsSystem"
 import { CreateMusicAlbums1720000000001 } from "../migrations/1720000000001-CreateMusicAlbums"
 import { CreatePostMusicAlbums1720000000010 } from "../migrations/1720000000010-CreatePostMusicAlbums"
-
+import { config } from "../config"
 // Загружаем переменные окружения
 dotenv.config()
 
 // Создаем подключение к базе данных
 export const AppDataSource = new DataSource({
     type: "postgres",
-    host: process.env.DB_HOST || "localhost",
-    port: parseInt(process.env.DB_PORT || "5432"),
-    username: process.env.DB_USERNAME || "postgres",
-    password: process.env.DB_PASSWORD || "postgres",
-    database: process.env.DB_NAME || "setka",
+    host: config.DB_HOST || "localhost",
+    port: parseInt(config.DB_PORT as string) || 5432,
+    username: config.DB_USERNAME || "postgres",
+    password: config.DB_PASSWORD || "postgres",
+    database: config.DB_DATABASE || "setka",
     synchronize: false,
     dropSchema: false,
-    logging: process.env.NODE_ENV !== "production",
+    logging: config.NODE_ENV !== "production",
     entities: [User, Post, Photo, Session, Chat, Message, WallPost, Like, Album, MusicTrack, Group, GroupMember, PostAlbum, PostMusicAlbum, Comment, Friend, FriendRequest, Conversation, MusicAlbum],
     migrations: [
         AddUserStatus1710000000000,

@@ -6,8 +6,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { authenticateSession } from '../middleware/auth.middleware';
 import musicAlbumController from '../controllers/music_album.controller';
 import { AuthenticatedRequest } from '../types/auth.types';
+import { AppDataSource } from '../db/db_connect';
+import { User } from '../entities/user.entity';
 
 const router = Router();
+const userRepository = AppDataSource.getRepository(User);
 
 // Настройка хранилища для multer
 const storage = multer.diskStorage({
@@ -43,6 +46,94 @@ const storage = multer.diskStorage({
 router.get('/', authenticateSession, (req: Request, res: Response, next: NextFunction) => {
     const authenticatedReq = req as AuthenticatedRequest;
     musicAlbumController.getUserAlbums(authenticatedReq, res);
+});
+
+// Получение альбомов конкретного пользователя по userId
+router.get('/user/:userId', authenticateSession, async (req: Request, res: Response) => {
+    try {
+        console.log('[API MusicAlbum] GET /user/:userId - Запрос на получение альбомов определенного пользователя');
+        
+        const targetUserId = req.params.userId;
+        
+        // Обработка специального случая 'current' для текущего пользователя
+        if (targetUserId === 'current') {
+            const authenticatedReq = req as AuthenticatedRequest;
+            if (!authenticatedReq.user?.id) {
+                return res.status(401).json({ message: 'Пользователь не аутентифицирован' });
+            }
+            console.log(`[API MusicAlbum] Получение альбомов текущего пользователя ID:${authenticatedReq.user.id}`);
+            return musicAlbumController.getUserAlbums(authenticatedReq, res);
+        }
+        
+        // Обычная обработка для конкретного userId
+        const userId = parseInt(targetUserId);
+        
+        if (isNaN(userId)) {
+            console.error('[API MusicAlbum] Некорректный ID пользователя');
+            return res.status(400).json({ message: 'Некорректный ID пользователя' });
+        }
+        
+        // Проверяем существование пользователя
+        const userExists = await userRepository.findOne({
+            where: { id: userId }
+        });
+        
+        if (!userExists) {
+            console.error(`[API MusicAlbum] Пользователь с ID ${userId} не найден`);
+            return res.status(404).json({ message: 'Пользователь не найден' });
+        }
+        
+        // Вызываем метод контроллера для получения публичных альбомов пользователя
+        await musicAlbumController.getPublicUserAlbums(userId, res);
+        
+    } catch (error) {
+        console.error('[API MusicAlbum] Ошибка при получении альбомов пользователя:', error);
+        return res.status(500).json({ message: 'Ошибка при получении альбомов пользователя' });
+    }
+});
+
+// Получение альбомов из библиотеки пользователя по userId
+router.get('/library/:userId', authenticateSession, async (req: Request, res: Response) => {
+    try {
+        console.log('[API MusicAlbum] GET /library/:userId - Запрос на получение альбомов из библиотеки пользователя');
+        
+        const targetUserId = req.params.userId;
+        
+        // Обработка специального случая 'current' для текущего пользователя
+        if (targetUserId === 'current') {
+            const authenticatedReq = req as AuthenticatedRequest;
+            if (!authenticatedReq.user?.id) {
+                return res.status(401).json({ message: 'Пользователь не аутентифицирован' });
+            }
+            console.log(`[API MusicAlbum] Получение альбомов из библиотеки текущего пользователя ID:${authenticatedReq.user.id}`);
+            return musicAlbumController.getUserLibraryAlbums(authenticatedReq.user.id, res);
+        }
+        
+        // Обычная обработка для конкретного userId
+        const userId = parseInt(targetUserId);
+        
+        if (isNaN(userId)) {
+            console.error('[API MusicAlbum] Некорректный ID пользователя');
+            return res.status(400).json({ message: 'Некорректный ID пользователя' });
+        }
+        
+        // Проверяем существование пользователя
+        const userExists = await userRepository.findOne({
+            where: { id: userId }
+        });
+        
+        if (!userExists) {
+            console.error(`[API MusicAlbum] Пользователь с ID ${userId} не найден`);
+            return res.status(404).json({ message: 'Пользователь не найден' });
+        }
+        
+        // Вызываем метод контроллера для получения альбомов из библиотеки пользователя
+        await musicAlbumController.getUserLibraryAlbums(userId, res);
+        
+    } catch (error) {
+        console.error('[API MusicAlbum] Ошибка при получении альбомов из библиотеки пользователя:', error);
+        return res.status(500).json({ message: 'Ошибка при получении альбомов из библиотеки пользователя' });
+    }
 });
 
 // Получение альбома по ID
@@ -153,6 +244,12 @@ router.get('/:albumId/in-library', authenticateSession, async (req: Request, res
         console.error('[MusicAlbum] Ошибка при проверке наличия альбома в библиотеке:', error);
         return res.status(500).json({ message: 'Не удалось проверить наличие альбома в библиотеке' });
     }
+});
+
+// Получение треков альбома с пагинацией
+router.get('/:albumId/tracks', authenticateSession, (req: Request, res: Response, next: NextFunction) => {
+    const authenticatedReq = req as AuthenticatedRequest;
+    musicAlbumController.getAlbumTracks(authenticatedReq, res);
 });
 
 export default router; 

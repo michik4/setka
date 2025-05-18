@@ -3,6 +3,7 @@
 server/public/
 build/
 dist/
+server/dist/
 
 ## зависимости
 node_modules/

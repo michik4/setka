@@ -194,4 +194,31 @@ export class MusicService {
             return { libraryTracks: [], serverTracks: [] };
         }
     }
+
+    // Получение треков конкретного пользователя
+    static async getUserTracksByUserId(userId: number, page: number = 1, limit: number = 50) {
+        try {
+            const response = await api.get(`/music/user/${userId}?page=${page}&limit=${limit}`);
+            return response;
+        } catch (error) {
+            console.error(`Ошибка при получении треков пользователя ${userId}:`, error);
+            return { tracks: [], pagination: { total: 0, page, limit, pages: 0, hasMore: false } };
+        }
+    }
+    
+    // Получение треков из библиотеки "Моя музыка" конкретного пользователя
+    static async getUserLibraryByUserId(userId: number, page: number = 1, limit: number = 50) {
+        try {
+            console.log(`[MusicService] Запрос библиотеки пользователя ${userId}, страница ${page}, лимит ${limit}`);
+            const url = `/music/library/${userId}?page=${page}&limit=${limit}`;
+            console.log(`[MusicService] URL запроса: ${url}`);
+            
+            const response = await api.get(url);
+            console.log(`[MusicService] Получен ответ библиотеки пользователя ${userId}:`, response);
+            return response;
+        } catch (error) {
+            console.error(`Ошибка при получении библиотеки пользователя ${userId}:`, error);
+            return { tracks: [], pagination: { total: 0, page, limit, pages: 0, hasMore: false } };
+        }
+    }
 } 

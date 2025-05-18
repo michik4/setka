@@ -79,7 +79,7 @@ const ServerImage = forwardRef<HTMLImageElement, ServerImageProps>(({
 
     // Предзагрузка изображения
     useEffect(() => {
-        if (!imageSrc || isDeleted || imageCache[imageSrc]) {
+        if (!imageSrc || imageCache[imageSrc]) {
             // Если нет URL или изображение уже в кэше
             if (imageSrc && imageCache[imageSrc]) {
                 setImageLoaded(true);
@@ -110,8 +110,6 @@ const ServerImage = forwardRef<HTMLImageElement, ServerImageProps>(({
             console.error('[ServerImage] Ошибка предзагрузки изображения:', {
                 imageSrc,
                 error,
-                isDeleted,
-                extension,
                 path,
                 imageId
             });
@@ -121,39 +119,13 @@ const ServerImage = forwardRef<HTMLImageElement, ServerImageProps>(({
             img.onload = null;
             img.onerror = null;
         };
-    }, [imageSrc, isDeleted, onLoad]);
+    }, [imageSrc, onLoad]);
 
-    useEffect(() => {
-        // Добавляем обработчик для очистки временных файлов при закрытии вкладки
-        const handleBeforeUnload = () => {
-            if (path?.startsWith('placeholder_')) {
-                // Отправляем запрос на очистку временных файлов
-                fetch(`${API_URL}/auth/cleanup-temp`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    keepalive: true // Важно для завершения запроса даже при закрытии вкладки
-                }).catch(console.error);
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [path]);
-
-    // Если нет URL, отображаем заглушку
-    if (!imageSrc || isDeleted || (imageError && !fallback)) {
+    // Если нет URL или есть ошибка загрузки и нет fallback, показываем дефолтную заглушку
+    if (!imageSrc || (imageError && !fallback)) {
         return (
             <div className={`${styles.defaultImage} ${className || ''}`}>
-                {isDeleted ? (
-                    <div className={styles.deletedImage}>
-                        <span className={styles.extension}>{extension}</span>
-                        <span className={styles.message}>Фотография была удалена</span>
-                    </div>
-                ) : (
-                    <span>{alt.split(' ').map(word => word[0] || '').join('').toUpperCase()}</span>
-                )}
+                <span>{alt.split(' ').map(word => word[0] || '').join('').toUpperCase()}</span>
             </div>
         );
     }
@@ -193,8 +165,6 @@ const ServerImage = forwardRef<HTMLImageElement, ServerImageProps>(({
                 console.error('[ServerImage] Ошибка загрузки изображения:', {
                     imageSrc,
                     error: e,
-                    isDeleted,
-                    extension,
                     path,
                     imageId
                 });

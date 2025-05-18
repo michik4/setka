@@ -26,6 +26,7 @@ import UniversalMusicAlbumItem from '../UniversalAlbumItem/UniversalAlbumItem';
 import { Button } from '@mui/material';
 import { MusicService } from '../../services/music.service';
 import { Spinner } from '../Spinner/Spinner';
+import PostEditor from './PostEditor';
 
 // Получаем URL API из переменных окружения
 const API_URL = process.env.REACT_APP_API_URL || '/api';
@@ -174,11 +175,6 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
-    const [editedContent, setEditedContent] = useState(post.content || '');
-    const [editedPhotos, setEditedPhotos] = useState<Photo[]>(post.photos || []);
-    const [editedTracks, setEditedTracks] = useState<Track[]>(post.tracks || []);
-    const [editedPhotoAlbums, setEditedPhotoAlbums] = useState<Album[]>(post.albums || []);
-    const [editedMusicAlbums, setEditedMusicAlbums] = useState<MusicAlbum[]>(post.musicAlbums || []);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [liked, setLiked] = useState(false);
@@ -186,12 +182,11 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
     const [isLikeLoading, setIsLikeLoading] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number>(0);
-    const [showPhotoSelector, setShowPhotoSelector] = useState(false);
-    const [showTrackSelector, setShowTrackSelector] = useState(false);
-    const [showPhotoAlbumSelector, setShowPhotoAlbumSelector] = useState(false);
-    const [showMusicAlbumSelector, setShowMusicAlbumSelector] = useState(false);
     const [savedTrackIds, setSavedTrackIds] = useState<number[]>([]);
     const [group, setGroup] = useState<Group | null>(post.group as Group || null);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [needsExpansion, setNeedsExpansion] = useState(false);
+    const postContentRef = useRef<HTMLDivElement>(null);
 
     // Импортируем контекст плеера
     const { playTrack, currentTrack: playerCurrentTrack, isPlaying: playerIsPlaying, togglePlay, tracks: playerTracks, addToQueue } = usePlayer();
@@ -311,7 +306,14 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         }
     };
 
-    const handleEdit = async () => {
+    // Обработчик сохранения изменений 
+    const handleSaveEdit = async (postData: {
+        content: string;
+        photos: Photo[];
+        tracks: Track[];
+        albums: Album[];
+        musicAlbums: MusicAlbum[];
+    }) => {
         if (!user) return;
 
         setIsSubmitting(true);
@@ -320,39 +322,28 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         try {
             const endpoint = post.wallOwnerId ? `/wall/${post.id}` : `/posts/${post.id}`;
 
-            // Проверяем наличие контента или вложений
-            if (!editedContent.trim() && editedPhotos.length === 0 && editedTracks.length === 0 &&
-                editedPhotoAlbums.length === 0 && editedMusicAlbums.length === 0) {
-                setError('Добавьте текст или выберите медиа');
-                setIsSubmitting(false);
-                return;
-            }
-
-            // Фильтруем только не удаленные фотографии для передачи их ID
-            const activePhotos = editedPhotos.filter(photo => !photo.isDeleted);
-
             // Получаем массивы ID для вложений
-            const photoIds = activePhotos.map(photo => photo.id);
-            const trackIds = editedTracks.map(track => track.id);
-            const photoAlbumIds = editedPhotoAlbums.map(album => album.id);
-            const musicAlbumIds = editedMusicAlbums.map(album => album.id);
+            const photoIds = postData.photos.map(photo => photo.id);
+            const trackIds = postData.tracks.map(track => track.id);
+            const photoAlbumIds = postData.albums.map(album => album.id);
+            const musicAlbumIds = postData.musicAlbums.map(album => album.id);
 
             console.log('[Post] Редактирование поста', {
                 postId: post.id,
-                content: editedContent.trim(),
-                photoIds: photoIds,
-                trackIds: trackIds,
-                photoAlbumIds: photoAlbumIds,
-                musicAlbumIds: musicAlbumIds
+                content: postData.content,
+                photoIds,
+                trackIds,
+                photoAlbumIds,
+                musicAlbumIds
             });
 
             // Обновляем пост с новым контентом и вложениями
             const response = await api.put(endpoint, {
-                content: editedContent.trim(),
-                photoIds: photoIds,
-                trackIds: trackIds,
-                photoAlbumIds: photoAlbumIds,
-                musicAlbumIds: musicAlbumIds
+                content: postData.content,
+                photoIds,
+                trackIds,
+                photoAlbumIds,
+                musicAlbumIds
             });
 
             console.log('[Post] Ответ сервера после редактирования:', response);
@@ -363,138 +354,28 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
             // Обновляем пост локально с измененными данными
             const updatedPost = {
                 ...post,
-                content: editedContent.trim(),
-                photos: activePhotos,
-                tracks: editedTracks,
-                albums: editedPhotoAlbums,
-                musicAlbums: editedMusicAlbums
+                content: postData.content,
+                photos: postData.photos,
+                tracks: postData.tracks,
+                albums: postData.albums,
+                musicAlbums: postData.musicAlbums
             };
 
             // Вызываем колбэк обновления
             onUpdate?.(updatedPost);
 
             // Обновляем локальное состояние
-            post.content = editedContent.trim();
-            post.photos = activePhotos;
-            post.tracks = editedTracks;
-            post.albums = editedPhotoAlbums;
-            post.musicAlbums = editedMusicAlbums;
+            post.content = postData.content;
+            post.photos = postData.photos;
+            post.tracks = postData.tracks;
+            post.albums = postData.albums;
+            post.musicAlbums = postData.musicAlbums;
         } catch (err) {
             console.error('Ошибка при редактировании поста:', err);
             setError('Не удалось отредактировать пост');
+            throw err; // Пробрасываем ошибку наверх для обработки в PostEditor
         } finally {
             setIsSubmitting(false);
-        }
-    };
-
-    const handlePhotoDelete = async (photo: Photo) => {
-        if (!window.confirm('Вы уверены, что хотите удалить эту фотографию?')) {
-            return;
-        }
-
-        try {
-            // Удаляем фотографию
-            await api.delete(`/photos/${photo.id}`);
-
-            // Обновляем локальное состояние
-            const updatedPhoto = { ...photo, isDeleted: true };
-
-            // Обновляем editedPhotos, сохраняя удаленную фотографию
-            setEditedPhotos(prev => prev.map(p =>
-                p.id === photo.id ? updatedPhoto : p
-            ));
-
-            // Обновляем фотографии в посте, сохраняя удаленную фотографию
-            post.photos = post.photos.map(p =>
-                p.id === photo.id ? updatedPhoto : p
-            );
-            onUpdate?.(post);
-        } catch (err) {
-            console.error('Ошибка при удалении фотографии:', err);
-            setError('Не удалось удалить фотографию');
-        }
-    };
-
-    const handleEditPhotoRemove = (photo: Photo) => {
-        // В режиме редактирования просто удаляем фотографию из локального состояния
-        setEditedPhotos(prev => prev.filter(p => p.id !== photo.id));
-        setError(null);
-    };
-
-    const handleImageUploaded = async (photo: Photo) => {
-        // Проверяем, не превышает ли общее количество фотографий максимально допустимое (20)
-        if (editedPhotos.length >= 20) {
-            setError('Достигнуто максимальное количество фотографий (20)');
-            return;
-        }
-
-        try {
-            // Находим или создаем альбом "Загруженное"
-            const uploadAlbum = await findOrCreateUploadAlbum();
-
-            if (!uploadAlbum) {
-                setError('Не удалось найти или создать альбом для загрузки фотографий');
-                return;
-            }
-
-            // Добавляем фото в альбом "Загруженное" 
-            console.log('Добавляем фото в альбом "Загруженное":', {
-                photoId: photo.id,
-                albumId: uploadAlbum.id
-            });
-
-            const addToAlbumResponse = await api.post(`/albums/${uploadAlbum.id}/photos`, {
-                photoIds: [photo.id]
-            });
-
-            if (!addToAlbumResponse) {
-                throw new Error('Нет ответа от сервера при добавлении фото в альбом');
-            }
-
-            // Добавляем новую фотографию к списку
-            setEditedPhotos(prev => [...prev, photo]);
-            setError(null);
-
-        } catch (err) {
-            console.error('Ошибка при загрузке или добавлении фотографии:', err);
-            setError('Не удалось добавить фотографию');
-        }
-    };
-
-    // Функция для поиска или создания альбома "Загруженное"
-    const findOrCreateUploadAlbum = async () => {
-        if (!user) return null;
-
-        try {
-            // Получаем все альбомы пользователя
-            const response = await api.get(`/users/${user.id}/albums`);
-            const albums = response.data || response;
-
-            // Ищем альбом "Загруженное"
-            let uploadAlbum = albums.find((album: Album) => album.title === 'Загруженное');
-
-            if (uploadAlbum) {
-                console.log('Найден существующий альбом:', uploadAlbum);
-                return uploadAlbum;
-            } else {
-                console.log('Создаем новый альбом "Загруженное"');
-                // Создаем новый альбом если не существует
-                const newAlbumResponse = await api.post('/albums', {
-                    title: 'Загруженное',
-                    description: 'Автоматически загруженные фотографии',
-                    isPrivate: true,
-                    userId: user.id
-                });
-
-                if (!newAlbumResponse) {
-                    throw new Error('Нет ответа от сервера при создании альбома');
-                }
-
-                return newAlbumResponse;
-            }
-        } catch (error) {
-            console.error('Ошибка при поиске или создании альбома:', error);
-            return null;
         }
     };
 
@@ -507,111 +388,6 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         setSelectedPhoto(photo);
         const index = post.photos.findIndex(p => p.id === photo.id);
         setSelectedPhotoIndex(index);
-    };
-
-    const handleTrackRemove = (track: Track) => {
-        // Удаляем трек из редактируемого списка
-        setEditedTracks(prev => prev.filter(t => t.id !== track.id));
-    };
-
-    // Добавляем функцию проверки состояния окна плеера
-    const checkPlayerWindowState = () => {
-        const playerWindowOpened = localStorage.getItem('player_window_opened');
-        const playerWindowClosed = localStorage.getItem('player_window_closed');
-        let isPlayerWindowActive = false;
-
-        if (playerWindowOpened && playerWindowClosed) {
-            const openedTime = parseInt(playerWindowOpened);
-            const closedTime = parseInt(playerWindowClosed);
-            isPlayerWindowActive = openedTime > closedTime;
-        } else if (playerWindowOpened && !playerWindowClosed) {
-            isPlayerWindowActive = true;
-        }
-
-        return isPlayerWindowActive;
-    };
-
-    // Логгирование треков для отладки
-    useEffect(() => {
-        const postTracks = post?.tracks || [];
-        if (postTracks.length > 0) {
-            console.log('Треки поста для отображения:', JSON.stringify(postTracks, null, 2));
-
-            // Проверяем и обновляем audioUrl у треков при необходимости
-            const updatedTracks = postTracks.map(track => {
-                // Если у трека нет audioUrl, но есть filename, формируем URL
-                if (!track.audioUrl && track.filename) {
-                    return {
-                        ...track,
-                        audioUrl: `/api/music/file/${track.filename}`
-                    };
-                }
-                return track;
-            });
-
-            // Если были обновления в треках, обновляем state
-            if (JSON.stringify(updatedTracks) !== JSON.stringify(postTracks)) {
-                console.log('Обновлены URL для треков:', updatedTracks);
-                // Если трек в editedTracks, обновляем его там
-                if (isEditing) {
-                    setEditedTracks(updatedTracks);
-                }
-            }
-
-            console.log('Присутствует ли audioUrl у треков:', updatedTracks.every(track => Boolean(track.audioUrl)));
-            if (!updatedTracks.every(track => Boolean(track.audioUrl))) {
-                console.error('ВНИМАНИЕ: У некоторых треков отсутствует audioUrl!');
-                for (const track of updatedTracks) {
-                    if (!track.audioUrl) {
-                        console.error('Трек без audioUrl:', track);
-                    }
-                }
-            }
-        }
-    }, [post?.tracks, isEditing]);
-
-    // Функция для правильного склонения слов в зависимости от числа
-    const getProperWordForm = (count: number, forms: [string, string, string]): string => {
-        const remainder100 = Math.abs(count) % 100;
-        const remainder10 = remainder100 % 10;
-
-        if (remainder100 > 10 && remainder100 < 20) {
-            return forms[2];
-        }
-
-        if (remainder10 > 1 && remainder10 < 5) {
-            return forms[1];
-        }
-
-        if (remainder10 === 1) {
-            return forms[0];
-        }
-
-        return forms[2];
-    };
-
-    // Добавляем обработчик для выбора фотографий из галереи
-    const handlePhotoSelection = (photos: Photo[]) => {
-        // Добавляем выбранные фотографии к уже имеющимся
-        const newPhotos = [...editedPhotos];
-
-        // Проверяем, не превышает ли общее количество фотографий максимально допустимое (20)
-        const totalPhotos = newPhotos.length + photos.length;
-        if (totalPhotos > 20) {
-            setError(`Максимальное количество фотографий в посте: 20. Выбрано: ${totalPhotos}`);
-            // Добавляем только часть фотографий до лимита
-            const availableSlots = 20 - newPhotos.length;
-            if (availableSlots > 0) {
-                newPhotos.push(...photos.slice(0, availableSlots));
-            }
-        } else {
-            // Добавляем все выбранные фотографии
-            newPhotos.push(...photos);
-            setError(null);
-        }
-
-        setEditedPhotos(newPhotos);
-        setShowPhotoSelector(false);
     };
 
     // Загружаем информацию о группе только если её нет в посте
@@ -655,72 +431,64 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
         fetchGroupInfo();
     }, [post.groupId, post.group]);
 
-    // Добавляем обработчик для выбора треков
-    const handleTracksSelected = (tracks: Track[]) => {
-        // Проверяем, не превышает ли общее количество треков максимально допустимое (10)
-        const currentTrackCount = editedTracks.length;
-        const totalTracks = currentTrackCount + tracks.length;
+    // Логгирование треков для отладки
+    useEffect(() => {
+        const postTracks = post?.tracks || [];
+        if (postTracks.length > 0) {
+            console.log('Треки поста для отображения:', JSON.stringify(postTracks, null, 2));
 
-        if (totalTracks > 10) {
-            setError(`Максимальное количество треков в посте: 10. Выбрано: ${totalTracks}`);
-            // Добавляем только часть треков до лимита
-            const availableSlots = 10 - currentTrackCount;
-            if (availableSlots > 0) {
-                setEditedTracks(prev => [...prev, ...tracks.slice(0, availableSlots)]);
+            // Проверяем и обновляем audioUrl у треков при необходимости
+            const updatedTracks = postTracks.map(track => {
+                // Если у трека нет audioUrl, но есть filename, формируем URL
+                if (!track.audioUrl && track.filename) {
+                    return {
+                        ...track,
+                        audioUrl: `/api/music/file/${track.filename}`
+                    };
+                }
+                return track;
+            });
+
+            // Если были обновления в треках, обновляем state
+            if (JSON.stringify(updatedTracks) !== JSON.stringify(postTracks)) {
+                console.log('Обновлены URL для треков:', updatedTracks);
             }
-        } else {
-            // Добавляем все выбранные треки
-            setEditedTracks(prev => [...prev, ...tracks]);
-            setError(null);
-        }
 
-        setShowTrackSelector(false);
-    };
-
-    // Функция для обработки выбора фотоальбомов
-    const handlePhotoAlbumsSelected = (albums: Album[]) => {
-        // Проверяем, не превышает ли общее кол-во альбомов максимально допустимое (5)
-        const currentAlbumCount = editedPhotoAlbums.length;
-        if (currentAlbumCount + albums.length > 5) {
-            setError(`Максимальное количество фотоальбомов в посте: 5. Выбрано: ${currentAlbumCount + albums.length}`);
-            // Добавляем только часть альбомов до лимита
-            const availableSlots = 5 - currentAlbumCount;
-            if (availableSlots > 0) {
-                setEditedPhotoAlbums(prev => [...prev, ...albums.slice(0, availableSlots)]);
+            console.log('Присутствует ли audioUrl у треков:', updatedTracks.every(track => Boolean(track.audioUrl)));
+            if (!updatedTracks.every(track => Boolean(track.audioUrl))) {
+                console.error('ВНИМАНИЕ: У некоторых треков отсутствует audioUrl!');
+                for (const track of updatedTracks) {
+                    if (!track.audioUrl) {
+                        console.error('Трек без audioUrl:', track);
+                    }
+                }
             }
-        } else {
-            // Добавляем все выбранные альбомы
-            setEditedPhotoAlbums(prev => [...prev, ...albums]);
-            setError(null);
         }
+    }, [post?.tracks]);
 
-        setShowPhotoAlbumSelector(false);
-    };
+    // Проверяем, нужна ли кнопка "Показать больше"
+    useEffect(() => {
+        const checkHeight = () => {
+            if (postContentRef.current) {
+                const contentHeight = postContentRef.current.scrollHeight;
+                setNeedsExpansion(contentHeight > 600); // 600px - максимальная высота в свернутом состоянии
+            }
+        };
 
-    // Функция для обработки выбора музыкальных альбомов
-    const handleMusicAlbumsSelected = (albums: MusicAlbum[]) => {
-        // Проверяем, не превышает ли кол-во альбомов максимально допустимое (5)
-        if (albums.length > 5) {
-            setError(`Максимальное количество музыкальных альбомов в посте: 5. Выбрано: ${albums.length}`);
-            // Добавляем только первые 5 альбомов
-            setEditedMusicAlbums(albums.slice(0, 5));
-        } else {
-            // Заменяем текущие альбомы новыми выбранными
-            setEditedMusicAlbums(albums);
-            setError(null);
-        }
+        // Проверяем после загрузки контента
+        checkHeight();
 
-        setShowMusicAlbumSelector(false);
-    };
+        // Устанавливаем обработчик события resize окна
+        window.addEventListener('resize', checkHeight);
+        
+        // Убираем обработчик при размонтировании компонента
+        return () => {
+            window.removeEventListener('resize', checkHeight);
+        };
+    }, [post.content, post.photos, post.tracks, post.albums, post.musicAlbums]);
 
-    // Функция для удаления фотоальбома из списка выбранных
-    const handlePhotoAlbumRemove = (album: Album) => {
-        setEditedPhotoAlbums(prev => prev.filter(a => a.id !== album.id));
-    };
-
-    // Функция для удаления музыкального альбома из списка выбранных
-    const handleMusicAlbumRemove = (album: MusicAlbum) => {
-        setEditedMusicAlbums(prev => prev.filter(a => a.id !== album.id));
+    const expandPost = () => {
+        setIsExpanded(true);
     };
 
     return (
@@ -793,220 +561,28 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
             </div>
 
             {isEditing ? (
-                <div className={styles.editContainer}>
-                    <textarea
-                        className={styles.editTextarea}
-                        value={editedContent}
-                        onChange={e => setEditedContent(e.target.value)}
-                        placeholder="Что у вас нового?"
-                    />
-
-                    {/* Предпросмотр поста */}
-                    <div className={styles.postPreviewSection}>
-                        <h4 className={styles.previewTitle}>Предпросмотр</h4>
-                        <PostPreview
-                            content={editedContent}
-                            photos={editedPhotos}
-                            tracks={editedTracks}
-                            albums={editedPhotoAlbums}
-                            musicAlbums={editedMusicAlbums}
-                            author={post.author}
-                            createdAt={post.createdAt}
-                            savedTrackIds={savedTrackIds}
-                        />
-                    </div>
-
-                    {/* Отображение уже прикрепленных вложений */}
-                    {(editedPhotos.length > 0 || editedTracks.length > 0 || editedPhotoAlbums.length > 0 || editedMusicAlbums.length > 0) && (
-                        <div className={styles.attachmentsPreview}>
-                            <h5 className={styles.attachmentsTitle}>Прикрепленные файлы</h5>
-
-                            {editedPhotos.length > 0 && (
-                                <div className={styles.attachmentSection}>
-                                    <h6 className={styles.attachmentSectionTitle}>
-                                        <AddAPhoto fontSize="small" style={{ marginRight: 5 }} />
-                                        Фотографии ({editedPhotos.length})
-                                    </h6>
-                                    <PhotoGrid
-                                        photos={editedPhotos.filter(photo => !photo.isDeleted)}
-                                        onPhotoClick={(photo, index) => { }}
-                                    />
-                                </div>
-                            )}
-
-                            {editedPhotoAlbums.length > 0 && (
-                                <div className={styles.attachmentSection}>
-                                    <h6 className={styles.attachmentSectionTitle}>
-                                        <AlbumIcon fontSize="small" style={{ marginRight: 5 }} />
-                                        Фотоальбомы ({editedPhotoAlbums.length})
-                                    </h6>
-                                    <div className={styles.albumsList}>
-                                        {editedPhotoAlbums.map((album, index) => (
-                                            <div key={`album-${album.id}-${index}`} className={styles.albumItem}>
-                                                <div className={styles.albumPreview}>
-                                                    {album.photos && album.photos.length > 0 && (
-                                                        <ServerImage
-                                                            path={album.photos[0].path}
-                                                            alt={album.title}
-                                                            className={styles.albumCover}
-                                                        />
-                                                    )}
-                                                </div>
-                                                <div className={styles.albumInfo}>
-                                                    <div className={styles.albumTitle}>{album.title}</div>
-                                                    <div className={styles.albumCount}>{album.photosCount} фото</div>
-                                                </div>
-                                                <button
-                                                    className={styles.removeButton}
-                                                    onClick={() => handlePhotoAlbumRemove(album)}
-                                                    aria-label="Удалить"
-                                                >
-                                                    <Close fontSize="small" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {editedTracks.length > 0 && (
-                                <div className={styles.attachmentSection}>
-                                    <h6 className={styles.attachmentSectionTitle}>
-                                        <MusicNote fontSize="small" style={{ marginRight: 5 }} />
-                                        Музыка ({editedTracks.length})
-                                    </h6>
-                                    <div className={styles.tracks}>
-                                        {editedTracks.map((track, index) => (
-                                            <div key={`track-${track.id}-${index}`} className={styles.trackItemWithRemove}>
-                                                <UniversalTrackItem
-                                                    track={track}
-                                                    variant="post"
-                                                    isInLibrary={savedTrackIds.includes(track.id)}
-                                                    onLibraryStatusChange={() => { }}
-                                                />
-                                                <button
-                                                    className={styles.removeTrackButton}
-                                                    onClick={() => handleTrackRemove(track)}
-                                                    aria-label="Удалить"
-                                                >
-                                                    <Close fontSize="small" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {editedMusicAlbums.length > 0 && (
-                                <div className={styles.attachmentSection}>
-                                    <h6 className={styles.attachmentSectionTitle}>
-                                        <LibraryMusic fontSize="small" style={{ marginRight: 5 }} />
-                                        Музыкальные альбомы ({editedMusicAlbums.length})
-                                    </h6>
-                                    <div className={styles.albumsList}>
-                                        {editedMusicAlbums.map((album, index) => (
-                                            <div key={`music-album-${album.id}-${index}`} className={styles.albumItem}>
-                                                <UniversalMusicAlbumItem
-                                                    key={`edit-music-album-${album.id}-${index}`}
-                                                    album={album}
-                                                    variant="compact"
-                                                />
-                                                <button
-                                                    className={styles.removeButton}
-                                                    onClick={() => handleMusicAlbumRemove(album)}
-                                                    title="Удалить альбом"
-                                                >
-                                                    <Close fontSize="small" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <div className={styles.mediaSelector}>
-                        <h4 className={styles.mediaSelectorTitle}>Медиа вложения</h4>
-                        <div className={styles.mediaSelectorTabs}>
-                            <Button
-                                variant="outlined"
-                                startIcon={<AddAPhoto />}
-                                onClick={() => document.getElementById('photoUploadInput')?.click()}
-                                size="small"
-                            >
-                                Фото
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                startIcon={<MusicNote />}
-                                onClick={() => setShowTrackSelector(true)}
-                                size="small"
-                            >
-                                Музыка
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                startIcon={<AlbumIcon />}
-                                onClick={() => setShowPhotoAlbumSelector(true)}
-                                size="small"
-                            >
-                                Фотоальбомы
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                startIcon={<LibraryMusic />}
-                                onClick={() => setShowMusicAlbumSelector(true)}
-                                size="small"
-                            >
-                                Музыкальные альбомы
-                            </Button>
-                        </div>
-
-                        <div className={styles.editPhotos}>
-                            <ImageUploader
-                                onImageUploaded={handleImageUploaded}
-                                onError={(error) => setError(error)}
-                            />
-
-                            <button
-                                className={styles.selectExistingButton}
-                                onClick={() => setShowPhotoSelector(true)}
-                            >
-                                Выбрать из загруженных
-                            </button>
-                        </div>
-                    </div>
-
-                    {error && <div className={styles.error}>{error}</div>}
-
-                    <div className={styles.editButtons}>
-                        <button
-                            className={styles.cancelButton}
-                            onClick={() => {
-                                setIsEditing(false);
-                                setEditedContent(post.content || '');
-                                setEditedPhotos(post.photos || []);
-                                setEditedTracks(post.tracks || []);
-                                setEditedPhotoAlbums(post.albums || []);
-                                setEditedMusicAlbums(post.musicAlbums || []);
-                                setError(null);
-                            }}
-                            disabled={isSubmitting}
-                        >
-                            Отмена
-                        </button>
-                        <button
-                            className={styles.saveButton}
-                            onClick={handleEdit}
-                            disabled={isSubmitting || (!editedContent.trim() && editedPhotos.length === 0 && editedTracks.length === 0)}
-                        >
-                            {isSubmitting ? 'Сохранение...' : 'Сохранить'}
-                        </button>
-                    </div>
-                </div>
+                <PostEditor 
+                    post={{
+                        id: post.id,
+                        content: post.content || '',
+                        photos: post.photos || [],
+                        tracks: post.tracks || [],
+                        albums: post.albums || [],
+                        musicAlbums: post.musicAlbums || [],
+                        author: post.author,
+                        createdAt: post.createdAt,
+                        wallOwnerId: post.wallOwnerId
+                    }}
+                    savedTrackIds={savedTrackIds}
+                    onCancel={() => setIsEditing(false)}
+                    onSave={handleSaveEdit}
+                    userId={user?.id || 0}
+                />
             ) : (
-                <>
+                <div 
+                    className={`${styles.postContent} ${needsExpansion && !isExpanded ? styles.postCollapsed : isExpanded ? styles.postExpanded : ''}`} 
+                    ref={postContentRef}
+                >
                     <div className={styles.content}>{post.content}</div>
 
                     {post.photos && post.photos.length > 0 && (
@@ -1055,8 +631,15 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                             </div>
                         </div>
                     )}
-                </>
+
+                    {needsExpansion && !isExpanded && (
+                        <button className={styles.showMoreButton} onClick={expandPost}>
+                            Смотреть дальше
+                        </button>
+                    )}
+                </div>
             )}
+            
             {!isEditing && (
                 <>
                     <div className={styles.footer}>
@@ -1116,13 +699,12 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                         </div>
                     </div>
 
-
-
                     <div id={`comments-${post.id}`}>
                         <Comments postId={post.id} />
                     </div>
                 </>
             )}
+            
             {selectedPhoto && (
                 <PhotoViewer
                     photo={selectedPhoto}
@@ -1133,95 +715,6 @@ export const Post: React.FC<PostProps> = ({ post, onDelete, onUpdate }) => {
                     allPhotos={post.photos.filter(photo => !photo.isDeleted)}
                     currentIndex={selectedPhotoIndex}
                     onPhotoChange={handlePhotoChange}
-                />
-            )}
-
-            {/* Модальное окно выбора фотографий */}
-            {showPhotoSelector && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent}>
-                        <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle}>Выберите фотографии</h3>
-                            <button
-                                className={styles.modalClose}
-                                onClick={() => setShowPhotoSelector(false)}
-                            >
-                                &times;
-                            </button>
-                        </div>
-                        <div className={styles.modalBody}>
-                            <PhotoSelector
-                                userId={user?.id || 0}
-                                onSelect={(photos, albums) => {
-                                    handlePhotoSelection(photos);
-                                }}
-                                onCancel={() => setShowPhotoSelector(false)}
-                                multiple={true}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Добавляем селектор треков в конец файла перед закрывающим тегом </div> последнего блока */}
-            {showTrackSelector && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent}>
-                        <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle}>Выберите треки</h3>
-                            <button
-                                className={styles.modalClose}
-                                onClick={() => setShowTrackSelector(false)}
-                            >
-                                &times;
-                            </button>
-                        </div>
-                        <div className={styles.modalBody}>
-                            <TrackSelector
-                                userId={user?.id || 0}
-                                onSelect={handleTracksSelected}
-                                onCancel={() => setShowTrackSelector(false)}
-                                multiple={true}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showPhotoAlbumSelector && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent}>
-                        <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle}>Выберите фотоальбомы</h3>
-                            <button
-                                className={styles.modalClose}
-                                onClick={() => setShowPhotoAlbumSelector(false)}
-                            >
-                                &times;
-                            </button>
-                        </div>
-                        <div className={styles.modalBody}>
-                            <PhotoSelector
-                                userId={user?.id || 0}
-                                onSelect={(photos, albums) => {
-                                    setEditedPhotoAlbums(prev => [...prev, ...albums]);
-                                    setShowPhotoAlbumSelector(false);
-                                }}
-                                onCancel={() => setShowPhotoAlbumSelector(false)}
-                                multiple={true}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showMusicAlbumSelector && (
-                <MusicAlbumSelector
-                    isOpen={showMusicAlbumSelector}
-                    onClose={() => setShowMusicAlbumSelector(false)}
-                    onAlbumsSelected={handleMusicAlbumsSelected}
-                    maxAlbums={5}
-                    preSelectedAlbums={editedMusicAlbums}
                 />
             )}
         </div>

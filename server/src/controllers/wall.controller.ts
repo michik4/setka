@@ -38,6 +38,26 @@ export class WallController {
 
             if (post) {
                 try {
+                    // Загружаем фотографии с учетом порядка
+                    try {
+                        // Проверяем, есть ли информация о порядке в базе данных
+                        const orderedPhotos = await AppDataSource.query(
+                            `SELECT p.* FROM photos p
+                             JOIN posts_photos pp ON p.id = pp."photoId"
+                             WHERE pp."postId" = $1
+                             ORDER BY pp."order" ASC`,
+                            [postId]
+                        );
+                        
+                        // Если удалось получить упорядоченные фотографии, заменяем ими текущие
+                        if (orderedPhotos && orderedPhotos.length > 0) {
+                            console.log(`[WallController] Загружено ${orderedPhotos.length} фотографий с сохранением порядка для поста ${postId}`);
+                            post.photos = orderedPhotos;
+                        }
+                    } catch (error) {
+                        console.error(`[WallController] Ошибка при загрузке упорядоченных фотографий для поста ${postId}:`, error);
+                    }
+                    
                     // Загружаем альбомы для поста через TypeORM вместо SQL-запроса
                     const postAlbums = await AppDataSource.getRepository(PostAlbum)
                         .createQueryBuilder('postAlbum')
@@ -330,6 +350,29 @@ export class WallController {
                 // Связываем фотографии с постом
                 post.photos = photoEntities;
                 await this.postRepository.save(post);
+                
+                // Обновляем порядок фотографий в связующей таблице
+                if (photoEntities.length > 0) {
+                    try {
+                        // Сначала удаляем существующие связи (если есть)
+                        await AppDataSource.query(
+                            `DELETE FROM posts_photos WHERE "postId" = $1`,
+                            [post.id]
+                        );
+                        
+                        // Затем создаем новые связи в нужном порядке
+                        for (let i = 0; i < photoEntities.length; i++) {
+                            await AppDataSource.query(
+                                `INSERT INTO posts_photos ("postId", "photoId", "order") VALUES ($1, $2, $3)`,
+                                [post.id, photoEntities[i].id, i]
+                            );
+                        }
+                        
+                        console.log(`[WallController] Установлен порядок ${photoEntities.length} загруженных фотографий в связующей таблице для нового поста ${post.id}`);
+                    } catch (orderError) {
+                        console.error('[WallController] Ошибка при установке порядка загруженных фотографий для нового поста:', orderError);
+                    }
+                }
             }
 
             console.log('Сохранен пост:', savedPost.id);
@@ -350,6 +393,29 @@ export class WallController {
                 
                 console.log(`Добавлено ${existingPhotos.length} существующих фотографий к посту ${post.id}`);
                 await this.postRepository.save(post);
+                
+                // Обновляем порядок фотографий в связующей таблице
+                if (post.photos && post.photos.length > 0) {
+                    try {
+                        // Сначала удаляем существующие связи (если есть)
+                        await AppDataSource.query(
+                            `DELETE FROM posts_photos WHERE "postId" = $1`,
+                            [post.id]
+                        );
+                        
+                        // Затем создаем новые связи в нужном порядке
+                        for (let i = 0; i < post.photos.length; i++) {
+                            await AppDataSource.query(
+                                `INSERT INTO posts_photos ("postId", "photoId", "order") VALUES ($1, $2, $3)`,
+                                [post.id, post.photos[i].id, i]
+                            );
+                        }
+                        
+                        console.log(`[WallController] Обновлён порядок ${post.photos.length} фотографий в связующей таблице для поста ${post.id}`);
+                    } catch (orderError) {
+                        console.error('[WallController] Ошибка при обновлении порядка фотографий:', orderError);
+                    }
+                }
             }
             
             // Обработка albumIds, если они указаны
@@ -497,6 +563,29 @@ export class WallController {
                 const photos = await photoRepository.findBy({ id: In(photoIds.map(id => Number(id))) });
                 post.photos = photos;
                 console.log(`[WallController] Установлено ${photos.length} фотографий для поста ${postId}`);
+                
+                // Также обновляем порядок в связующей таблице
+                if (photos.length > 0) {
+                    try {
+                        // Сначала удаляем все связи с фотографиями
+                        await AppDataSource.query(
+                            `DELETE FROM posts_photos WHERE "postId" = $1`,
+                            [postId]
+                        );
+                        
+                        // Затем создаем новые связи в нужном порядке
+                        for (let i = 0; i < photos.length; i++) {
+                            await AppDataSource.query(
+                                `INSERT INTO posts_photos ("postId", "photoId", "order") VALUES ($1, $2, $3)`,
+                                [postId, photos[i].id, i]
+                            );
+                        }
+                        
+                        console.log(`[WallController] Обновлён порядок ${photos.length} фотографий в связующей таблице для поста ${postId}`);
+                    } catch (orderError) {
+                        console.error('[WallController] Ошибка при обновлении порядка фотографий:', orderError);
+                    }
+                }
             }
 
             // Обновляем треки

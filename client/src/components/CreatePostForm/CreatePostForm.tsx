@@ -79,6 +79,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
     const [adminGroups, setAdminGroups] = useState<Group[]>([]);
     const [selectedAuthor, setSelectedAuthor] = useState<PostAuthor | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [isSelectorOpen, setIsSelectorOpen] = useState(false);
     const selectorRef = useRef<HTMLDivElement>(null);
     const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -335,9 +336,24 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
             return;
         }
 
+        // Фильтруем только альбомы с неудаленными фотографиями
+        const nonEmptyAlbums = albums.filter(album => {
+            // Проверяем наличие фотографий
+            if (!album.photos || album.photos.length === 0) return false;
+            
+            // Проверяем наличие хотя бы одной неудаленной фотографии
+            const activePhotos = album.photos.filter(photo => !photo.isDeleted);
+            return activePhotos.length > 0;
+        });
+        
+        // Если пытались добавить пустые альбомы или альбомы только с удаленными фотографиями, показываем предупреждение
+        if (albums.length !== nonEmptyAlbums.length) {
+            setError('Пустые альбомы или альбомы только с удаленными фотографиями не будут добавлены к посту');
+        }
+
         const newAttachments: Attachment[] = [
             ...photos.map(photo => ({ type: 'photo' as const, id: photo.id, data: photo })),
-            ...albums.map(album => ({ type: 'album' as const, id: album.id, data: album }))
+            ...nonEmptyAlbums.map(album => ({ type: 'album' as const, id: album.id, data: album }))
         ];
 
         // Применяем прямое обновление состояния
@@ -348,7 +364,11 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         setIsExpanded(true);
 
         setShowPhotoSelector(false);
-        setError(null);
+        
+        // Сбрасываем ошибку только если нет новых предупреждений
+        if (albums.length === nonEmptyAlbums.length) {
+            setError(null);
+        }
     };
 
     const handleDragEnter = (e: React.DragEvent) => {
@@ -462,11 +482,32 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         setIsExpanded(true);
     };
 
+    // Функция для автоматического изменения высоты textarea
+    const autoResizeTextarea = () => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        // Сбрасываем высоту для корректного расчета
+        textarea.style.height = 'auto';
+        
+        // Устанавливаем новую высоту по содержимому (scrollHeight включает padding)
+        textarea.style.height = `${textarea.scrollHeight}px`;
+    };
+
+    // Обновляем обработчик изменения текста
     const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setContent(e.target.value);
         // Всегда разворачиваем форму при изменении текста или наличии вложений
         setIsExpanded(true);
+        
+        // Автоматически изменяем высоту
+        setTimeout(autoResizeTextarea, 0);
     };
+
+    // Инициализация автоматической высоты при монтировании и обновлении контента
+    useEffect(() => {
+        autoResizeTextarea();
+    }, [content]);
 
     const handleTracksSelected = (tracks: Track[]) => {
         // Проверяем количество уже прикрепленных треков
@@ -586,6 +627,34 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
         setShowMusicSelector(false);
     };
 
+    // Обновленный метод handlePhotoReorder для изменения порядка фотографий
+    const handlePhotoReorder = (reorderedPhotos: Photo[]) => {
+        // Получаем текущие вложения
+        const currentAttachments = [...attachments];
+        
+        // Создаем карту ID фотографий для более быстрого поиска
+        const photoMap: Record<number, PhotoAttachment> = {};
+        currentAttachments
+            .filter((a): a is PhotoAttachment => a.type === 'photo')
+            .forEach(attachment => {
+                photoMap[attachment.id] = attachment;
+            });
+        
+        // Создаем новый порядок вложений
+        const newPhotoAttachments: PhotoAttachment[] = reorderedPhotos.map(photo => {
+            return photoMap[photo.id] || { type: 'photo', id: photo.id, data: photo };
+        });
+        
+        // Фильтруем оригинальные вложения, удаляя фотографии
+        const nonPhotoAttachments = currentAttachments.filter(a => a.type !== 'photo');
+        
+        // Соединяем переупорядоченные фотографии с остальными вложениями
+        const updatedAttachments = [...newPhotoAttachments, ...nonPhotoAttachments];
+        
+        // Обновляем состояние
+        setAttachments(updatedAttachments);
+    };
+
     if (!user) {
         return (
             <div className={styles.error}>
@@ -694,6 +763,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
             </div>
             <div className={styles.content}>
                 <textarea
+                    ref={textareaRef}
                     placeholder="Что у вас нового?"
                     value={content}
                     onChange={handleTextareaChange}
@@ -718,6 +788,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSuccess, wallO
                                 onPhotoDelete={(photo) => handleAttachmentDelete({ type: 'photo', id: photo.id, data: photo })}
                                 canDelete={true}
                                 isEditing={true}
+                                onPhotosReorder={handlePhotoReorder}
                             />
                         </div>
                     )}

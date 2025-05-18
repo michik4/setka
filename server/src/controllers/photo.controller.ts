@@ -187,14 +187,42 @@ export class PhotoController {
                 // Если фото помечено как удаленное, создаем заглушку
                 if (photo.isDeleted) {
                     console.log(`[PhotoController] Фото ${id} помечено как удаленное, создаем заглушку`);
-                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                    
+                    // Получаем размеры изображения либо из photo, либо из имени файла
+                    let width = photo.width;
+                    let height = photo.height;
+                    
+                    if (!width || !height) {
+                        // Пытаемся извлечь размеры из имени файла
+                        const dimensions = ImageMetadata.extractDimensionsFromFilename(photo.path);
+                        if (dimensions) {
+                            width = dimensions.width;
+                            height = dimensions.height;
+                        }
+                    }
+                    
+                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension, width, height);
                     return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
                 }
 
                 const filePath = path.join(process.cwd(), 'uploads/photos', photo.path);
                 if (!fs.existsSync(filePath)) {
                     console.log(`[PhotoController] Файл ${filePath} не найден, создаем заглушку`);
-                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                    
+                    // Получаем размеры изображения либо из photo, либо из имени файла
+                    let width = photo.width;
+                    let height = photo.height;
+                    
+                    if (!width || !height) {
+                        // Пытаемся извлечь размеры из имени файла
+                        const dimensions = ImageMetadata.extractDimensionsFromFilename(photo.path);
+                        if (dimensions) {
+                            width = dimensions.width;
+                            height = dimensions.height;
+                        }
+                    }
+                    
+                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension, width, height);
                     return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
                 }
                 
@@ -259,22 +287,52 @@ export class PhotoController {
                 // Если фото помечено как удаленное, создаем заглушку
                 if (photo.isDeleted) {
                     console.log(`[PhotoController] Фото ${id} помечено как удаленное, создаем заглушку`);
-                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                    
+                    // Получаем размеры изображения либо из photo, либо из имени файла
+                    let width = photo.width;
+                    let height = photo.height;
+                    
+                    if (!width || !height) {
+                        // Пытаемся извлечь размеры из имени файла
+                        const dimensions = ImageMetadata.extractDimensionsFromFilename(photo.path);
+                        if (dimensions) {
+                            width = dimensions.width;
+                            height = dimensions.height;
+                        }
+                    }
+                    
+                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension, width, height);
                     return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
                 }
 
                 const filePath = path.join(process.cwd(), 'uploads/photos', photo.path);
                 if (!fs.existsSync(filePath)) {
                     console.log(`[PhotoController] Файл ${filePath} не найден, создаем заглушку`);
-                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                    
+                    // Получаем размеры изображения либо из photo, либо из имени файла
+                    let width = photo.width;
+                    let height = photo.height;
+                    
+                    if (!width || !height) {
+                        // Пытаемся извлечь размеры из имени файла
+                        const dimensions = ImageMetadata.extractDimensionsFromFilename(photo.path);
+                        if (dimensions) {
+                            width = dimensions.width;
+                            height = dimensions.height;
+                        }
+                    }
+                    
+                    const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension, width, height);
                     return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
                 }
-                return res.json(filePath);
+                return res.sendFile(filePath);
             }
 
-            
+            // Обновляем и возвращаем информацию о фото, включая размеры
             return res.json({
-                
+                ...photo,
+                width: photo.width,
+                height: photo.height
             });
         } catch (error) {
             console.error('Error getting photo:', error);
@@ -341,7 +399,21 @@ export class PhotoController {
             // Если фото помечено как удаленное, создаем заглушку
             if (photo.isDeleted) {
                 console.log(`[PhotoController] Фото ${filename} помечено как удаленное, создаем заглушку`);
-                const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension);
+                
+                // Получаем размеры изображения либо из photo, либо из имени файла
+                let width = photo.width;
+                let height = photo.height;
+                
+                if (!width || !height) {
+                    // Пытаемся извлечь размеры из имени файла
+                    const dimensions = ImageMetadata.extractDimensionsFromFilename(photo.path);
+                    if (dimensions) {
+                        width = dimensions.width;
+                        height = dimensions.height;
+                    }
+                }
+                
+                const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension, width, height);
                 return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
             }
 
@@ -350,7 +422,22 @@ export class PhotoController {
 
             if (!fs.existsSync(filePath)) {
                 console.error('Файл не найден:', filePath);
-                return res.status(404).json({ message: 'Файл изображения не найден' });
+                
+                // Получаем размеры изображения либо из photo, либо из имени файла
+                let width = photo.width;
+                let height = photo.height;
+                
+                if (!width || !height) {
+                    // Пытаемся извлечь размеры из имени файла
+                    const dimensions = ImageMetadata.extractDimensionsFromFilename(photo.path);
+                    if (dimensions) {
+                        width = dimensions.width;
+                        height = dimensions.height;
+                    }
+                }
+                
+                const placeholderPath = await PhotoPlaceholder.createPlaceholder(photo.extension, width, height);
+                return res.sendFile(path.join(process.cwd(), 'uploads/temp', placeholderPath));
             }
 
             return res.sendFile(filePath);

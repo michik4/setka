@@ -11,11 +11,13 @@
 
 - Регистрация и авторизация пользователей
 - Создание и редактирование профиля
-- Публикация постов с текстом и фотографиями
+- Публикация текстовых постов с возможностью прикрепить
+  - фото/фото альбом
+  - музыку/музыкальный альбом
 - Загрузка и управление фотографиями
 - Стена пользователя
 - Лента новостей
-- Лайки, комментарии и репосты (пока не работают)))
+- Лайки, комментарии.
 
 ## Требования
 
@@ -32,9 +34,11 @@
 
 1. Клонируйте репозиторий:
 ```bash
-git clone [url репозитория]
+git clone https://github.com/michik4/setka.git
 cd setka
 ```
+
+### если версия разработки
 
 2. Установите зависимости и запустите сервер:
 ```bash
@@ -48,6 +52,54 @@ npm run dev
 cd client
 npm install
 npm start
+```
+
+### если продакшен версия 
+
+2. установить зависимости в обеих частях проекта 
+```bash
+cd /server && npm i
+cd ../client && npm i
+```
+
+3. установить .env файлы обоих приложений
+```bash
+nano /server/.env
+nano /client/.env
+```
+>server
+```env
+PORT=${SERVER_PORT}
+HOST=${SERVER_HOST}
+
+CLIENT_URL=http://${CLIENT_HOST}:${CLIENT_PORT}
+
+DB_HOST=${DB_HOST}
+DB_PORT=${DB_PORT}
+DB_NAME=${DB_NAME}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
+JWT_SECRET=${JWT_SECRET}
+JWT_EXPIRES_IN=30d
+UPLOAD_DIR=uploads
+```
+>client
+
+```env
+REACT_APP_API_URL=http://${SERVER_HOST}:${SERVER_PORT}/api
+REACT_APP_WS_URL=http://${SERVER_HOST}:${SERVER_PORT}
+REACT_APP_MEDIA_URL=http://${SERVER_HOST}:${SERVER_PORT}/api/media
+```
+
+1. скомпилировать build версии обоих приложений 
+```bash
+cd ../server && npm run build
+cd ../client && npm run build
+```
+1. перенести статические файлы собранного клиента для раздачи сервеным приложением 
+```bash
+#>client dir
+mv /
 ```
 
 ## Конфигурация проекта

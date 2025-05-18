@@ -49,7 +49,7 @@ export const initializeRoutes = (app: Express) => {
     router.use('/music', musicRoutes);
     console.log('Подключены маршруты музыки');
 
-    router.use('/music-albums', musicAlbumRoutes);
+    router.use('/music/albums', musicAlbumRoutes);
     console.log('Подключены маршруты музыкальных альбомов');
 
     router.use('/groups', groupRoutes);
